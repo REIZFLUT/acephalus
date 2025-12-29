@@ -171,7 +171,7 @@ export function BlockItem({
     return (
         <Card 
             className={cn(
-                'relative transition-all duration-200 border-l-4',
+                'relative transition-all duration-200 border-l-4 py-2 gap-2',
                 blockColors[block.type] || 'border-l-gray-500',
                 isDragging && 'opacity-50 scale-[0.98]',
                 depth > 0 && 'bg-muted/30'
@@ -182,7 +182,7 @@ export function BlockItem({
                 draggable="true"
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
-                className="py-2 px-3 cursor-grab active:cursor-grabbing select-none"
+                className="py-1 px-3 cursor-grab active:cursor-grabbing select-none"
             >
                 <div className="flex items-center gap-2">
                     {/* Drag Handle Icon */}
@@ -253,7 +253,7 @@ export function BlockItem({
             </div>
 
             {!isCollapsed && (
-                <CardContent className="pt-0 pb-3 px-3">
+                <CardContent className="pt-0 pb-2 px-3">
                     {renderEditor()}
                     {children}
                 </CardContent>

@@ -69,11 +69,21 @@ class CollectionController extends Controller
     {
         $collection->load('contents');
 
+        // Get paginated contents
+        $contents = $collection->contents()
+            ->orderBy('updated_at', 'desc')
+            ->paginate(20);
+
+        // Manually add versions_count for each content (withCount not supported by MongoDB)
+        $contents->getCollection()->transform(function ($content) {
+            $content->versions_count = $content->versions()->count();
+
+            return $content;
+        });
+
         return Inertia::render('Collections/Show', [
             'collection' => $collection,
-            'contents' => $collection->contents()
-                ->orderBy('updated_at', 'desc')
-                ->paginate(20),
+            'contents' => $contents,
         ]);
     }
 
@@ -96,6 +106,7 @@ class CollectionController extends Controller
             'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9-]+$/'],
             'description' => ['nullable', 'string'],
             'schema' => ['nullable', 'array'],
+            'collection_meta' => ['nullable', 'array'],
         ]);
 
         $collection->update([
@@ -103,6 +114,7 @@ class CollectionController extends Controller
             'slug' => $validated['slug'],
             'description' => $validated['description'] ?? null,
             'schema' => $validated['schema'] ?? $collection->schema,
+            'collection_meta' => $validated['collection_meta'] ?? $collection->collection_meta,
         ]);
 
         return redirect()

@@ -110,6 +110,15 @@ class ContentController extends Controller
         ]);
     }
 
+    public function preview(Content $content): \Illuminate\View\View
+    {
+        $content->load('collection');
+
+        return view('contents.preview', [
+            'content' => $content,
+        ]);
+    }
+
     public function update(Request $request, Content $content): RedirectResponse
     {
         $validated = $request->validate([

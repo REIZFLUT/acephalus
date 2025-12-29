@@ -54,12 +54,14 @@ class SchemaService
 
             if (! $type) {
                 $errors[$elementPath][] = 'Element type is required.';
+
                 continue;
             }
 
             // Check if element type is allowed
             if (! $schema->isElementAllowed($type)) {
                 $errors[$elementPath][] = "Element type '{$type}' is not allowed in this collection.";
+
                 continue;
             }
 
@@ -258,7 +260,46 @@ class SchemaService
             'content_meta_fields.*.type' => 'required|string|in:text,textarea,number,boolean,date,datetime,select,multi_select,url,email,color,json',
             'content_meta_fields.*.required' => 'boolean',
             'content_meta_fields.*.options' => 'nullable|array',
+            'content_meta_fields.*.options.*.value' => 'required|string',
+            'content_meta_fields.*.options.*.label' => 'required|string',
+            'content_meta_fields.*.editor_type' => 'nullable|string|in:textarea,tinymce,codemirror',
+            'content_meta_fields.*.target_format' => 'nullable|string|in:plain,html,css,javascript,markdown,json,xml',
+            'content_meta_fields.*.input_style' => 'nullable|string|in:dropdown,combobox,tags,radio,checkbox,toggle_group',
+            'content_meta_fields.*.allow_custom' => 'nullable|boolean',
+            'content_meta_fields.*.placeholder' => 'nullable|string|max:255',
+            'content_meta_fields.*.help_text' => 'nullable|string|max:500',
+            'content_meta_fields.*.default_value' => 'nullable',
+            'collection_meta_fields' => 'nullable|array',
+            'collection_meta_fields.*.name' => 'required|string|max:50',
+            'collection_meta_fields.*.label' => 'required|string|max:100',
+            'collection_meta_fields.*.type' => 'required|string|in:text,textarea,number,boolean,date,datetime,select,multi_select,url,email,color,json',
+            'collection_meta_fields.*.required' => 'boolean',
+            'collection_meta_fields.*.options' => 'nullable|array',
+            'collection_meta_fields.*.options.*.value' => 'required|string',
+            'collection_meta_fields.*.options.*.label' => 'required|string',
+            'collection_meta_fields.*.editor_type' => 'nullable|string|in:textarea,tinymce,codemirror',
+            'collection_meta_fields.*.target_format' => 'nullable|string|in:plain,html,css,javascript,markdown,json,xml',
+            'collection_meta_fields.*.input_style' => 'nullable|string|in:dropdown,combobox,tags,radio,checkbox,toggle_group',
+            'collection_meta_fields.*.allow_custom' => 'nullable|boolean',
+            'collection_meta_fields.*.placeholder' => 'nullable|string|max:255',
+            'collection_meta_fields.*.help_text' => 'nullable|string|max:500',
+            'collection_meta_fields.*.default_value' => 'nullable',
             'element_meta_fields' => 'nullable|array',
+            'element_meta_fields.*' => 'nullable|array',
+            'element_meta_fields.*.*.name' => 'required|string|max:50',
+            'element_meta_fields.*.*.label' => 'required|string|max:100',
+            'element_meta_fields.*.*.type' => 'required|string|in:text,textarea,number,boolean,date,datetime,select,multi_select,url,email,color,json',
+            'element_meta_fields.*.*.required' => 'boolean',
+            'element_meta_fields.*.*.options' => 'nullable|array',
+            'element_meta_fields.*.*.options.*.value' => 'required|string',
+            'element_meta_fields.*.*.options.*.label' => 'required|string',
+            'element_meta_fields.*.*.editor_type' => 'nullable|string|in:textarea,tinymce,codemirror',
+            'element_meta_fields.*.*.target_format' => 'nullable|string|in:plain,html,css,javascript,markdown,json,xml',
+            'element_meta_fields.*.*.input_style' => 'nullable|string|in:dropdown,combobox,tags,radio,checkbox,toggle_group',
+            'element_meta_fields.*.*.allow_custom' => 'nullable|boolean',
+            'element_meta_fields.*.*.placeholder' => 'nullable|string|max:255',
+            'element_meta_fields.*.*.help_text' => 'nullable|string|max:500',
+            'element_meta_fields.*.*.default_value' => 'nullable',
         ];
 
         $validator = Validator::make($schema, $rules);
@@ -287,6 +328,7 @@ class SchemaService
             ],
             'content_meta_fields' => $schema->getContentMetaFields(),
             'element_meta_fields' => $schema->elementMetaFields,
+            'collection_meta_fields' => $schema->getCollectionMetaFields(),
         ];
     }
 }

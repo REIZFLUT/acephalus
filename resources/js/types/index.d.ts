@@ -28,6 +28,7 @@ export interface Collection {
     description: string | null;
     schema: Schema | null;
     settings: Record<string, unknown> | null;
+    collection_meta: Record<string, unknown> | null;
     created_at: string;
     updated_at: string;
     contents_count?: number;
@@ -39,6 +40,7 @@ export interface CollectionSchema {
     element_configs: ElementConfigs;
     content_meta_fields: MetaFieldDefinition[];
     element_meta_fields: Record<ElementType, MetaFieldDefinition[]>;
+    collection_meta_fields: MetaFieldDefinition[];
     allowed_wrapper_purposes?: string[]; // Array of WrapperPurpose slugs
 }
 
@@ -77,7 +79,22 @@ export interface MetaFieldDefinition {
     options?: MetaFieldOption[]; // For select/multi-select
     placeholder?: string;
     help_text?: string;
+    // For textarea fields
+    editor_type?: 'textarea' | 'tinymce' | 'codemirror';
+    target_format?: 'plain' | 'html' | 'css' | 'javascript' | 'markdown' | 'json' | 'xml';
+    // For select/multi-select fields
+    input_style?: SelectInputStyle;
+    allow_custom?: boolean; // For tags/combobox: allow custom values
 }
+
+// Input styles for select/multi-select fields
+export type SelectInputStyle = 
+    | 'dropdown'    // Standard ShadCN Select
+    | 'combobox'    // Searchable dropdown with Command
+    | 'tags'        // Tag input with suggestions (multi-select only)
+    | 'radio'       // Radio button group (single select only)
+    | 'checkbox'    // Checkbox group (multi-select only)
+    | 'toggle_group'; // Button toggle group
 
 export interface MetaFieldOption {
     value: string;
@@ -119,6 +136,7 @@ export interface Content {
     created_at: string;
     updated_at: string;
     collection?: Collection;
+    versions_count?: number;
 }
 
 export type ContentStatus = 'draft' | 'published' | 'archived';

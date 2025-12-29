@@ -18,9 +18,10 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Loader2, ArrowLeft, Trash2, Settings, Layers } from 'lucide-react';
-import { SchemaEditor } from '@/components/schema/SchemaEditor';
-import type { PageProps, Collection, CollectionSchema, WrapperPurpose } from '@/types';
+import { Loader2, ArrowLeft, Trash2, Settings, Layers, FolderCog, FileStack, Blocks } from 'lucide-react';
+import { SchemaEditorMeta, SchemaEditorContents, SchemaEditorElements, SchemaEditorWrappers } from '@/components/schema/SchemaEditor';
+import { MetaFieldInput } from '@/components/editor/MetaFieldInput';
+import type { PageProps, Collection, CollectionSchema, WrapperPurpose, MetaFieldDefinition } from '@/types';
 
 interface CollectionsEditProps extends PageProps {
     collection: Collection;
@@ -35,7 +36,12 @@ export default function CollectionsEdit({ collection, wrapperPurposes }: Collect
         slug: collection.slug,
         description: collection.description || '',
         schema: (collection.schema as CollectionSchema | null) || null,
+        collection_meta: (collection.collection_meta as Record<string, unknown> | null) || {},
     });
+
+    // Get collection metadata fields from schema
+    const collectionMetaFields: MetaFieldDefinition[] = data.schema?.collection_meta_fields || [];
+    const hasCollectionMetaFields = collectionMetaFields.length > 0;
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
@@ -48,6 +54,13 @@ export default function CollectionsEdit({ collection, wrapperPurposes }: Collect
 
     const handleSchemaChange = (schema: CollectionSchema) => {
         setData('schema', schema);
+    };
+
+    const handleMetaChange = (fieldName: string, value: unknown) => {
+        setData('collection_meta', {
+            ...data.collection_meta,
+            [fieldName]: value,
+        });
     };
 
     return (
@@ -84,14 +97,26 @@ export default function CollectionsEdit({ collection, wrapperPurposes }: Collect
 
             <form onSubmit={handleSubmit}>
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                    <TabsList>
+                    <TabsList className="grid w-full grid-cols-5">
                         <TabsTrigger value="general" className="gap-2">
                             <Settings className="size-4" />
                             General
                         </TabsTrigger>
-                        <TabsTrigger value="schema" className="gap-2">
+                        <TabsTrigger value="meta" className="gap-2">
+                            <FolderCog className="size-4" />
+                            Meta
+                        </TabsTrigger>
+                        <TabsTrigger value="contents" className="gap-2">
+                            <FileStack className="size-4" />
+                            Contents
+                        </TabsTrigger>
+                        <TabsTrigger value="elements" className="gap-2">
+                            <Blocks className="size-4" />
+                            Elements
+                        </TabsTrigger>
+                        <TabsTrigger value="wrappers" className="gap-2">
                             <Layers className="size-4" />
-                            Schema
+                            Wrappers
                         </TabsTrigger>
                     </TabsList>
 
@@ -186,9 +211,59 @@ export default function CollectionsEdit({ collection, wrapperPurposes }: Collect
                         </Card>
                     </TabsContent>
 
-                    {/* Schema Tab */}
-                    <TabsContent value="schema">
-                        <SchemaEditor
+                    {/* Meta Tab - Collection Metadata Fields Definition + Values */}
+                    <TabsContent value="meta" className="space-y-6">
+                        {/* Collection metadata values (if fields are defined) */}
+                        {hasCollectionMetaFields && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <FolderCog className="size-5" />
+                                        Collection Metadata Values
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Current metadata values for this collection
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    {collectionMetaFields.map((field) => (
+                                        <MetaFieldInput
+                                            key={field.name}
+                                            field={field}
+                                            value={data.collection_meta?.[field.name]}
+                                            onChange={(value) => handleMetaChange(field.name, value)}
+                                        />
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        )}
+                        
+                        {/* Collection metadata field definitions */}
+                        <SchemaEditorMeta
+                            schema={data.schema}
+                            onChange={handleSchemaChange}
+                        />
+                    </TabsContent>
+
+                    {/* Contents Tab - Content Metadata Fields */}
+                    <TabsContent value="contents">
+                        <SchemaEditorContents
+                            schema={data.schema}
+                            onChange={handleSchemaChange}
+                        />
+                    </TabsContent>
+
+                    {/* Elements Tab - Element Types + Element Meta */}
+                    <TabsContent value="elements">
+                        <SchemaEditorElements
+                            schema={data.schema}
+                            onChange={handleSchemaChange}
+                        />
+                    </TabsContent>
+
+                    {/* Wrappers Tab - Wrapper Purposes */}
+                    <TabsContent value="wrappers">
+                        <SchemaEditorWrappers
                             schema={data.schema}
                             onChange={handleSchemaChange}
                             wrapperPurposes={wrapperPurposes}

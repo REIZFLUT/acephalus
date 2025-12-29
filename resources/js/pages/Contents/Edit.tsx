@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useMemo } from 'react';
+import { FormEvent, useCallback, useMemo, useState } from 'react';
 import { Link, useForm, router } from '@inertiajs/react';
 import AppLayout from '@/components/layouts/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,9 @@ import {
     Trash2,
     RotateCcw,
     Clock,
+    Eye,
+    ChevronsUpDown,
+    ChevronsDownUp,
 } from 'lucide-react';
 import type { PageProps, Content, ContentVersion, BlockElement, ElementType, CollectionSchema, WrapperPurpose } from '@/types';
 import { BlockEditor } from '@/components/editor/BlockEditor';
@@ -69,6 +72,44 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes }:
         metadata: content.metadata || {},
     });
 
+    // Collapse state for block editor
+    const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(new Set());
+    
+    // Get all block IDs recursively
+    const getAllBlockIds = (elements: BlockElement[]): string[] => {
+        const ids: string[] = [];
+        for (const element of elements) {
+            ids.push(element.id);
+            if (element.children) {
+                ids.push(...getAllBlockIds(element.children));
+            }
+        }
+        return ids;
+    };
+
+    const allBlockIds = useMemo(() => getAllBlockIds(data.elements), [data.elements]);
+    const allCollapsed = allBlockIds.length > 0 && allBlockIds.every(id => collapsedBlocks.has(id));
+
+    const toggleAllBlocks = useCallback(() => {
+        if (allCollapsed) {
+            setCollapsedBlocks(new Set());
+        } else {
+            setCollapsedBlocks(new Set(allBlockIds));
+        }
+    }, [allCollapsed, allBlockIds]);
+
+    const toggleCollapseBlock = useCallback((id: string) => {
+        setCollapsedBlocks(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                next.add(id);
+            }
+            return next;
+        });
+    }, []);
+
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
         put(`/contents/${content._id}`);
@@ -103,6 +144,10 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes }:
     const handleMetadataChange = useCallback((metadata: Record<string, unknown>) => {
         setData('metadata', metadata);
     }, [setData]);
+
+    const handlePreview = () => {
+        window.open(`/contents/${content._id}/preview`, '_blank');
+    };
 
     const getStatusBadge = () => {
         switch (content.status) {
@@ -165,13 +210,47 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes }:
                     </div>
 
                     <Tabs defaultValue="content" className="space-y-6">
-                        <TabsList>
-                            <TabsTrigger value="content">Content</TabsTrigger>
-                            <TabsTrigger value="settings">Settings</TabsTrigger>
-                            <TabsTrigger value="versions">
-                                Versions ({content.versions?.length || 0})
-                            </TabsTrigger>
-                        </TabsList>
+                        <div className="flex items-center justify-between gap-4">
+                            <TabsList>
+                                <TabsTrigger value="content">Content</TabsTrigger>
+                                <TabsTrigger value="settings">Settings</TabsTrigger>
+                                <TabsTrigger value="versions">
+                                    Versions ({content.versions?.length || 0})
+                                </TabsTrigger>
+                            </TabsList>
+                            
+                            <div className="flex items-center gap-2">
+                                {data.elements.length > 0 && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={toggleAllBlocks}
+                                        className="h-8 text-xs"
+                                    >
+                                        {allCollapsed ? (
+                                            <>
+                                                <ChevronsUpDown className="size-3 mr-1.5" />
+                                                Expand All
+                                            </>
+                                        ) : (
+                                            <>
+                                                <ChevronsDownUp className="size-3 mr-1.5" />
+                                                Collapse All
+                                            </>
+                                        )}
+                                    </Button>
+                                )}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handlePreview}
+                                    className="h-8"
+                                >
+                                    <Eye className="size-4 mr-2" />
+                                    Preview
+                                </Button>
+                            </div>
+                        </div>
 
                         <TabsContent value="content" className="space-y-4">
                             {/* Content Metadata - Mobile only */}
@@ -193,6 +272,8 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes }:
                                 onChange={handleElementsChange}
                                 schema={schema}
                                 wrapperPurposes={wrapperPurposes}
+                                collapsedBlocks={collapsedBlocks}
+                                onToggleCollapse={toggleCollapseBlock}
                             />
                         </TabsContent>
 
@@ -369,7 +450,7 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes }:
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">Version</span>
-                                <span className="font-mono">v{content.current_version}</span>
+                                <span className="font-mono">v{content.versions?.length || content.current_version || 1}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">Elements</span>

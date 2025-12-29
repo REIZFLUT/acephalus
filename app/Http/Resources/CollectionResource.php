@@ -23,6 +23,7 @@ class CollectionResource extends JsonResource
             'description' => $this->description,
             'schema' => $this->schema,
             'settings' => $this->settings,
+            'collection_meta' => $this->collection_meta,
             'contents_count' => $this->whenCounted('contents'),
             'contents' => ContentResource::collection($this->whenLoaded('contents')),
             'created_at' => $this->created_at?->toIso8601String(),
@@ -30,5 +31,3 @@ class CollectionResource extends JsonResource
         ];
     }
 }
-
-

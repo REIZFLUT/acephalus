@@ -39,11 +39,24 @@ interface BlockEditorProps {
     schema?: CollectionSchema | null;
     allowedTypes?: ElementType[];
     wrapperPurposes?: WrapperPurpose[];
+    collapsedBlocks?: Set<string>;
+    onToggleCollapse?: (id: string) => void;
 }
 
-export function BlockEditor({ elements, onChange, schema, allowedTypes: propAllowedTypes, wrapperPurposes = [] }: BlockEditorProps) {
+export function BlockEditor({ 
+    elements, 
+    onChange, 
+    schema, 
+    allowedTypes: propAllowedTypes, 
+    wrapperPurposes = [],
+    collapsedBlocks: externalCollapsedBlocks,
+    onToggleCollapse: externalToggleCollapse,
+}: BlockEditorProps) {
     const [draggedId, setDraggedId] = useState<string | null>(null);
-    const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(new Set());
+    const [internalCollapsedBlocks, setInternalCollapsedBlocks] = useState<Set<string>>(new Set());
+
+    // Use external or internal collapsed state
+    const collapsedBlocks = externalCollapsedBlocks !== undefined ? externalCollapsedBlocks : internalCollapsedBlocks;
 
     // Determine allowed types from schema or props
     const allowedTypes = propAllowedTypes || schema?.allowed_elements || 
@@ -51,29 +64,24 @@ export function BlockEditor({ elements, onChange, schema, allowedTypes: propAllo
 
     // Toggle collapse state for a block
     const toggleCollapse = useCallback((id: string) => {
-        setCollapsedBlocks(prev => {
-            const next = new Set(prev);
-            if (next.has(id)) {
-                next.delete(id);
-            } else {
-                next.add(id);
-            }
-            return next;
-        });
-    }, []);
+        if (externalToggleCollapse) {
+            externalToggleCollapse(id);
+        } else {
+            setInternalCollapsedBlocks(prev => {
+                const next = new Set(prev);
+                if (next.has(id)) {
+                    next.delete(id);
+                } else {
+                    next.add(id);
+                }
+                return next;
+            });
+        }
+    }, [externalToggleCollapse]);
 
     // Check if all blocks are collapsed
     const allBlockIds = useMemo(() => getAllBlockIds(elements), [elements]);
     const allCollapsed = allBlockIds.length > 0 && allBlockIds.every(id => collapsedBlocks.has(id));
-
-    // Toggle all blocks
-    const toggleAll = useCallback(() => {
-        if (allCollapsed) {
-            setCollapsedBlocks(new Set());
-        } else {
-            setCollapsedBlocks(new Set(allBlockIds));
-        }
-    }, [allCollapsed, allBlockIds]);
 
     // Schema context value
     const schemaContextValue: SchemaContextType = {
@@ -192,26 +200,6 @@ export function BlockEditor({ elements, onChange, schema, allowedTypes: propAllo
                     </Card>
                 ) : (
                     <>
-                        <div className="flex justify-end">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={toggleAll}
-                                className="h-8 text-xs"
-                            >
-                                {allCollapsed ? (
-                                    <>
-                                        <ChevronsUpDown className="size-3 mr-1.5" />
-                                        Expand All
-                                    </>
-                                ) : (
-                                    <>
-                                        <ChevronsDownUp className="size-3 mr-1.5" />
-                                        Collapse All
-                                    </>
-                                )}
-                            </Button>
-                        </div>
                         <BlockList
                             blocks={elements}
                             onUpdate={updateBlock}

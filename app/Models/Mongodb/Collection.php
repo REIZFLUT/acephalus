@@ -24,7 +24,7 @@ class Collection extends Model
      *
      * @var array<string>
      */
-    protected array $mongoArrayAttributes = ['schema', 'settings'];
+    protected array $mongoArrayAttributes = ['schema', 'settings', 'collection_meta'];
 
     protected $fillable = [
         'name',
@@ -32,6 +32,7 @@ class Collection extends Model
         'description',
         'schema',
         'settings',
+        'collection_meta',
     ];
 
     /**
@@ -52,6 +53,7 @@ class Collection extends Model
     public function getSchemaObject(): CollectionSchema
     {
         $schemaData = $this->schema ?? [];
+
         return CollectionSchema::fromArray($schemaData);
     }
 

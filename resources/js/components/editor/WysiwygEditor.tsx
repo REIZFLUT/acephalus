@@ -6,9 +6,18 @@ import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Toggle } from '@/components/ui/toggle';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -16,6 +25,14 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import {
     Bold,
     Italic,
@@ -55,6 +72,10 @@ export function WysiwygEditor({
     placeholder = 'Start writing...', 
     className 
 }: WysiwygEditorProps) {
+    const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+    const [linkUrl, setLinkUrl] = useState('');
+    const [linkTarget, setLinkTarget] = useState('_self');
+    
     const editor = useEditor({
         extensions: [
             StarterKit.configure({
@@ -68,7 +89,7 @@ export function WysiwygEditor({
             Link.configure({
                 openOnClick: false,
                 HTMLAttributes: {
-                    class: 'text-primary underline',
+                    class: 'text-primary underline cursor-pointer',
                 },
             }),
             Table.configure({
@@ -99,7 +120,7 @@ export function WysiwygEditor({
         },
         editorProps: {
             attributes: {
-                class: 'prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[150px] px-4 py-3',
+                class: 'tiptap max-w-none focus:outline-none min-h-[150px] px-4 py-3',
             },
         },
     });
@@ -113,18 +134,32 @@ export function WysiwygEditor({
 
     if (!editor) return null;
 
+    const openLinkDialog = () => {
+        const previousUrl = editor.getAttributes('link').href || '';
+        const previousTarget = editor.getAttributes('link').target || '_self';
+        setLinkUrl(previousUrl);
+        setLinkTarget(previousTarget);
+        setLinkDialogOpen(true);
+    };
+
     const setLink = () => {
-        const previousUrl = editor.getAttributes('link').href;
-        const url = window.prompt('URL', previousUrl);
-
-        if (url === null) return;
-
-        if (url === '') {
+        if (linkUrl === '') {
             editor.chain().focus().extendMarkRange('link').unsetLink().run();
-            return;
+        } else {
+            editor
+                .chain()
+                .focus()
+                .extendMarkRange('link')
+                .setLink({ href: linkUrl, target: linkTarget })
+                .run();
         }
+        setLinkDialogOpen(false);
+        setLinkUrl('');
+        setLinkTarget('_self');
+    };
 
-        editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+    const removeLink = () => {
+        editor.chain().focus().unsetLink().run();
     };
 
     const insertTable = () => {
@@ -132,7 +167,8 @@ export function WysiwygEditor({
     };
 
     return (
-        <div className={cn('border rounded-md bg-background', className)}>
+        <>
+            <div className={cn('border rounded-md bg-background', className)}>
             {/* Toolbar */}
             <div className="flex flex-wrap items-center gap-1 p-2 border-b bg-muted/30">
                 {/* Headings */}
@@ -246,7 +282,7 @@ export function WysiwygEditor({
                     <Toggle
                         size="sm"
                         pressed={editor.isActive('link')}
-                        onPressedChange={setLink}
+                        onPressedChange={openLinkDialog}
                         aria-label="Link"
                     >
                         <LinkIcon className="size-4" />
@@ -255,7 +291,7 @@ export function WysiwygEditor({
                         <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => editor.chain().focus().unsetLink().run()}
+                            onClick={removeLink}
                             className="h-8 px-2"
                         >
                             <Unlink className="size-4" />
@@ -371,5 +407,67 @@ export function WysiwygEditor({
             {/* Editor Content */}
             <EditorContent editor={editor} />
         </div>
+
+        {/* Link Dialog */}
+        <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Link einfügen/bearbeiten</DialogTitle>
+                    <DialogDescription>
+                        Geben Sie die URL und das Link-Ziel ein.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="link-url">URL</Label>
+                        <Input
+                            id="link-url"
+                            placeholder="https://example.com"
+                            value={linkUrl}
+                            onChange={(e) => setLinkUrl(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    setLink();
+                                }
+                            }}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="link-target">Ziel</Label>
+                        <Select value={linkTarget} onValueChange={setLinkTarget}>
+                            <SelectTrigger id="link-target">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="_self">Gleiches Fenster (_self)</SelectItem>
+                                <SelectItem value="_blank">Neues Fenster (_blank)</SelectItem>
+                                <SelectItem value="_parent">Eltern-Frame (_parent)</SelectItem>
+                                <SelectItem value="_top">Oberstes Fenster (_top)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+
+                <DialogFooter>
+                    <Button
+                        variant="outline"
+                        onClick={() => {
+                            setLinkDialogOpen(false);
+                            setLinkUrl('');
+                            setLinkTarget('_self');
+                        }}
+                    >
+                        Abbrechen
+                    </Button>
+                    <Button onClick={setLink}>
+                        {linkUrl === '' ? 'Link entfernen' : 'Link setzen'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    </>
     );
 }

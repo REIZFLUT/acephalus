@@ -151,7 +151,7 @@ export default function CollectionsShow({ collection, contents }: CollectionsSho
                                         </TableCell>
                                         <TableCell>
                                             <span className="text-muted-foreground">
-                                                v{content.current_version}
+                                                v{content.versions_count ?? content.current_version}
                                             </span>
                                         </TableCell>
                                         <TableCell className="text-muted-foreground">

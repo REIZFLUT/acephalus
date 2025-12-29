@@ -110,6 +110,7 @@ class ContentService
             'published_version_id' => $latestVersion?->_id,
         ]);
 
+        $content->increment('current_version');
         $this->versionService->createVersion($content, $user, 'Published');
 
         return $content->fresh();
@@ -125,6 +126,7 @@ class ContentService
             'published_version_id' => null,
         ]);
 
+        $content->increment('current_version');
         $this->versionService->createVersion($content, $user, 'Unpublished');
 
         return $content->fresh();
@@ -139,6 +141,7 @@ class ContentService
             'status' => ContentStatus::ARCHIVED,
         ]);
 
+        $content->increment('current_version');
         $this->versionService->createVersion($content, $user, 'Archived');
 
         return $content->fresh();

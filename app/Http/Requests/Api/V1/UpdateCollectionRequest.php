@@ -47,6 +47,24 @@ class UpdateCollectionRequest extends FormRequest
             'schema.required_fields' => ['nullable', 'array'],
             'schema.min_elements' => ['nullable', 'integer', 'min:0'],
             'schema.max_elements' => ['nullable', 'integer', 'min:1'],
+            'schema.collection_meta_fields' => ['nullable', 'array'],
+            'schema.collection_meta_fields.*.name' => ['required_with:schema.collection_meta_fields', 'string', 'max:255'],
+            'schema.collection_meta_fields.*.label' => ['required_with:schema.collection_meta_fields', 'string', 'max:255'],
+            'schema.collection_meta_fields.*.type' => ['required_with:schema.collection_meta_fields', 'string'],
+            'schema.collection_meta_fields.*.required' => ['nullable', 'boolean'],
+            'schema.collection_meta_fields.*.options' => ['nullable', 'array'],
+            'schema.collection_meta_fields.*.input_style' => ['nullable', 'string', 'in:dropdown,combobox,tags,radio,checkbox,toggle_group'],
+            'schema.collection_meta_fields.*.allow_custom' => ['nullable', 'boolean'],
+            'schema.content_meta_fields' => ['nullable', 'array'],
+            'schema.content_meta_fields.*.name' => ['required_with:schema.content_meta_fields', 'string', 'max:255'],
+            'schema.content_meta_fields.*.label' => ['required_with:schema.content_meta_fields', 'string', 'max:255'],
+            'schema.content_meta_fields.*.type' => ['required_with:schema.content_meta_fields', 'string'],
+            'schema.content_meta_fields.*.required' => ['nullable', 'boolean'],
+            'schema.content_meta_fields.*.options' => ['nullable', 'array'],
+            'schema.content_meta_fields.*.input_style' => ['nullable', 'string', 'in:dropdown,combobox,tags,radio,checkbox,toggle_group'],
+            'schema.content_meta_fields.*.allow_custom' => ['nullable', 'boolean'],
+            'schema.element_meta_fields' => ['nullable', 'array'],
+            'collection_meta' => ['nullable', 'array'],
             'settings' => ['nullable', 'array'],
         ];
     }
@@ -64,5 +82,3 @@ class UpdateCollectionRequest extends FormRequest
         ];
     }
 }
-
-

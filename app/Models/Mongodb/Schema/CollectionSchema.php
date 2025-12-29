@@ -61,6 +61,7 @@ class CollectionSchema
             elementConfigs: $data['element_configs'] ?? [],
             contentMetaFields: $data['content_meta_fields'] ?? [],
             elementMetaFields: $data['element_meta_fields'] ?? [],
+            collectionMetaFields: $data['collection_meta_fields'] ?? [],
         );
     }
 
@@ -74,6 +75,7 @@ class CollectionSchema
             elementConfigs: self::DEFAULT_ELEMENT_CONFIGS,
             contentMetaFields: [],
             elementMetaFields: [],
+            collectionMetaFields: [],
         );
     }
 
@@ -86,6 +88,8 @@ class CollectionSchema
         public array $contentMetaFields = [],
         /** @var array<string, array<array{name: string, type: string, required: bool, options?: array}>> Element-level metadata fields per type */
         public array $elementMetaFields = [],
+        /** @var array<array{name: string, type: string, required: bool, options?: array}> Collection-level metadata field definitions */
+        public array $collectionMetaFields = [],
     ) {}
 
     /**
@@ -117,6 +121,7 @@ class CollectionSchema
     public function getTextFormats(): array
     {
         $config = $this->getElementConfig('text');
+
         return $config['formats'] ?? ['plain', 'markdown', 'html'];
     }
 
@@ -128,6 +133,7 @@ class CollectionSchema
     public function getMediaTypes(): array
     {
         $config = $this->getElementConfig('media');
+
         return $config['types'] ?? ['image', 'video', 'audio', 'document'];
     }
 
@@ -152,6 +158,16 @@ class CollectionSchema
     }
 
     /**
+     * Get collection-level metadata field definitions.
+     *
+     * @return array<array{name: string, type: string, required: bool, options?: array}>
+     */
+    public function getCollectionMetaFields(): array
+    {
+        return $this->collectionMetaFields;
+    }
+
+    /**
      * Convert to array for storage.
      *
      * @return array<string, mixed>
@@ -163,7 +179,7 @@ class CollectionSchema
             'element_configs' => $this->elementConfigs,
             'content_meta_fields' => $this->contentMetaFields,
             'element_meta_fields' => $this->elementMetaFields,
+            'collection_meta_fields' => $this->collectionMetaFields,
         ];
     }
 }
-

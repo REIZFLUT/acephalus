@@ -52,6 +52,7 @@ Route::middleware('auth')->group(function () {
         ->name('collections.contents.store');
     Route::get('contents/{content}', [ContentController::class, 'show'])->name('contents.show');
     Route::get('contents/{content}/edit', [ContentController::class, 'edit'])->name('contents.edit');
+    Route::get('contents/{content}/preview', [ContentController::class, 'preview'])->name('contents.preview');
     Route::put('contents/{content}', [ContentController::class, 'update'])->name('contents.update');
     Route::delete('contents/{content}', [ContentController::class, 'destroy'])->name('contents.destroy');
     Route::post('contents/{content}/publish', [ContentController::class, 'publish'])->name('contents.publish');

@@ -43,6 +43,7 @@ interface ContentsEditProps extends PageProps {
             name: string; 
             slug: string;
             schema?: CollectionSchema | null;
+            current_edition?: string;
         }; 
         versions: ContentVersion[] 
     };
@@ -463,6 +464,12 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes }:
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">Version</span>
                                 <span className="font-mono">v{content.versions?.length || content.current_version || 1}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Edition</span>
+                                <Badge variant="outline" className="text-xs">
+                                    {content.versions?.[0]?.edition || content.collection?.current_edition || 'Basis'}
+                                </Badge>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">Elements</span>

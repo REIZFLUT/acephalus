@@ -21,6 +21,7 @@ import {
 import { Loader2, ArrowLeft, Trash2, Settings, Layers, FolderCog, FileStack, Blocks } from 'lucide-react';
 import { SchemaEditorMeta, SchemaEditorContents, SchemaEditorElements, SchemaEditorWrappers } from '@/components/schema/SchemaEditor';
 import { MetaFieldInput } from '@/components/editor/MetaFieldInput';
+import { EditionManager } from '@/components/editions/EditionManager';
 import type { PageProps, Collection, CollectionSchema, WrapperPurpose, MetaFieldDefinition } from '@/types';
 
 interface CollectionsEditProps extends PageProps {
@@ -172,6 +173,9 @@ export default function CollectionsEdit({ collection, wrapperPurposes }: Collect
                                 </div>
                             </CardContent>
                         </Card>
+
+                        {/* Edition Manager */}
+                        <EditionManager collection={collection} />
 
                         {/* Danger Zone */}
                         <Card className="border-destructive/50">

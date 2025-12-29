@@ -33,6 +33,8 @@ class ContentVersion extends Model
         'created_by',
         'change_note',
         'snapshot',
+        'edition',
+        'is_edition_end',
     ];
 
     /**
@@ -44,6 +46,7 @@ class ContentVersion extends Model
     {
         return [
             'version_number' => 'integer',
+            'is_edition_end' => 'boolean',
             // Note: 'elements' and 'snapshot' are handled by HasMongoArrays trait
         ];
     }
@@ -82,5 +85,25 @@ class ContentVersion extends Model
     public function scopeVersion($query, int $versionNumber): mixed
     {
         return $query->where('version_number', $versionNumber);
+    }
+
+    /**
+     * Scope a query to find edition end versions (protected from deletion).
+     *
+     * @param  \MongoDB\Laravel\Eloquent\Builder  $query
+     */
+    public function scopeEditionEnds($query): mixed
+    {
+        return $query->where('is_edition_end', true);
+    }
+
+    /**
+     * Scope a query to find versions by edition.
+     *
+     * @param  \MongoDB\Laravel\Eloquent\Builder  $query
+     */
+    public function scopeByEdition($query, string $edition): mixed
+    {
+        return $query->where('edition', $edition);
     }
 }

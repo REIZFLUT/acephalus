@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\CollectionController;
+use App\Http\Controllers\Web\CollectionEditionController;
 use App\Http\Controllers\Web\ContentController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\MediaController;
@@ -42,6 +43,14 @@ Route::middleware('auth')->group(function () {
 
     // Collections
     Route::resource('collections', CollectionController::class);
+
+    // Collection Editions
+    Route::post('collections/{collection}/editions', [CollectionEditionController::class, 'store'])
+        ->name('collections.editions.store');
+    Route::delete('collections/{collection}/versions/purge', [CollectionEditionController::class, 'purge'])
+        ->name('collections.versions.purge');
+    Route::get('collections/{collection}/versions/purge-preview', [CollectionEditionController::class, 'purgePreview'])
+        ->name('collections.versions.purge-preview');
 
     // Contents
     Route::get('collections/{collection}/contents', [ContentController::class, 'index'])

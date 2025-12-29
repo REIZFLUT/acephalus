@@ -21,6 +21,12 @@ export interface Permission {
     guard_name: string;
 }
 
+export interface CollectionEdition {
+    name: string;
+    created_at: string;
+    created_by?: number;
+}
+
 export interface Collection {
     _id: string;
     name: string;
@@ -29,6 +35,8 @@ export interface Collection {
     schema: Schema | null;
     settings: Record<string, unknown> | null;
     collection_meta: Record<string, unknown> | null;
+    current_edition?: string;
+    editions?: CollectionEdition[];
     created_at: string;
     updated_at: string;
     contents_count?: number;
@@ -264,6 +272,8 @@ export interface ContentVersion {
     metadata: Record<string, unknown> | null;
     created_by: number | null;
     change_note: string | null;
+    edition?: string;
+    is_edition_end?: boolean;
     created_at: string;
 }
 

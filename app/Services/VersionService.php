@@ -18,12 +18,18 @@ class VersionService
     {
         $elements = $this->getElementsSnapshot($content);
 
+        // Get the edition from the parent collection
+        $collection = $content->collection;
+        $edition = $collection?->current_edition ?? EditionService::DEFAULT_EDITION;
+
         return ContentVersion::create([
             'content_id' => $content->_id,
             'version_number' => $content->current_version,
             'elements' => $elements,
             'created_by' => $user?->id,
             'change_note' => $changeNote,
+            'edition' => $edition,
+            'is_edition_end' => false,
             'snapshot' => [
                 'title' => $content->title,
                 'slug' => $content->slug,
@@ -193,5 +199,3 @@ class VersionService
         ];
     }
 }
-
-

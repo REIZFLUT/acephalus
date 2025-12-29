@@ -30,6 +30,7 @@ import {
     Eye,
     ChevronsUpDown,
     ChevronsDownUp,
+    Shield,
 } from 'lucide-react';
 import type { PageProps, Content, ContentVersion, BlockElement, ElementType, CollectionSchema, WrapperPurpose } from '@/types';
 import { BlockEditor } from '@/components/editor/BlockEditor';
@@ -377,6 +378,17 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes }:
                                                                 {version.version_number === content.current_version && (
                                                                     <Badge variant="secondary" className="text-xs">
                                                                         Current
+                                                                    </Badge>
+                                                                )}
+                                                                {version.is_edition_end && (
+                                                                    <Badge variant="outline" className="text-xs gap-1">
+                                                                        <Shield className="size-3" />
+                                                                        Protected
+                                                                    </Badge>
+                                                                )}
+                                                                {version.edition && (
+                                                                    <Badge variant="secondary" className="text-xs">
+                                                                        {version.edition}
                                                                     </Badge>
                                                                 )}
                                                             </div>

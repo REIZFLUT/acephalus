@@ -1,4 +1,5 @@
-import type { CollectionSchema, ElementType, MetaFieldDefinition, MetaFieldType, TextElementConfig, MediaElementConfig, WrapperPurpose, SelectInputStyle } from '@/types';
+import { useMemo } from 'react';
+import type { CollectionSchema, ElementType, MetaFieldDefinition, MetaFieldType, TextElementConfig, MediaElementConfig, WrapperPurpose, Edition, SelectInputStyle, CustomElementDefinition, ListViewSettings, ListViewColumn, ListViewBaseColumn } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -11,6 +12,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import * as LucideIcons from 'lucide-react';
 import { 
     Type, 
     Image, 
@@ -26,9 +28,27 @@ import {
     FolderCog,
     FileStack,
     Blocks,
+    Link2,
+    Box,
+    TableProperties,
+    Eye,
+    EyeOff,
+    ArrowUpDown,
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown } from 'lucide-react';
+import { useCustomElements } from '@/hooks/use-custom-elements';
+
+// Helper to get Lucide icon by name
+function getLucideIcon(iconName: string): React.ComponentType<{ className?: string }> {
+    const pascalName = iconName
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join('');
+    
+    const IconComponent = (LucideIcons as Record<string, React.ComponentType<{ className?: string }>>)[pascalName];
+    return IconComponent || Box;
+}
 
 interface SchemaEditorBaseProps {
     schema: CollectionSchema | null;
@@ -39,7 +59,19 @@ interface SchemaEditorWrappersProps extends SchemaEditorBaseProps {
     wrapperPurposes?: WrapperPurpose[];
 }
 
-const elementTypes: { type: ElementType; label: string; icon: React.ComponentType<{ className?: string }>; description: string }[] = [
+interface SchemaEditorEditionsProps extends SchemaEditorBaseProps {
+    editions?: Edition[];
+}
+
+interface ElementTypeInfo {
+    type: ElementType | string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    description: string;
+    isCustom?: boolean;
+}
+
+const builtInElementTypes: ElementTypeInfo[] = [
     { type: 'text', label: 'Text', icon: Type, description: 'Rich text, Markdown, or plain text' },
     { type: 'media', label: 'Media', icon: Image, description: 'Images, videos, audio files' },
     { type: 'html', label: 'HTML', icon: Code, description: 'Custom HTML code' },
@@ -48,6 +80,7 @@ const elementTypes: { type: ElementType; label: string; icon: React.ComponentTyp
     { type: 'svg', label: 'SVG', icon: FileText, description: 'Vector graphics' },
     { type: 'katex', label: 'KaTeX', icon: Hash, description: 'Mathematical formulas' },
     { type: 'wrapper', label: 'Wrapper', icon: Layers, description: 'Container for nested elements' },
+    { type: 'reference', label: 'Reference', icon: Link2, description: 'Internal reference to other content' },
 ];
 
 const metaFieldTypes: { value: MetaFieldType; label: string }[] = [
@@ -75,8 +108,40 @@ const selectInputStyles: { value: SelectInputStyle; label: string; singleSelect:
     { value: 'toggle_group', label: 'Toggle Group', singleSelect: true, multiSelect: true },
 ];
 
+// Default list view columns
+const defaultListViewColumns: ListViewColumn[] = [
+    { id: 'title', label: 'Title', type: 'base', visible: true, toggleable: false, sortable: true },
+    { id: 'status', label: 'Status', type: 'base', visible: true, toggleable: true, sortable: true },
+    { id: 'current_version', label: 'Version', type: 'base', visible: true, toggleable: true, sortable: true },
+    { id: 'updated_at', label: 'Updated', type: 'base', visible: true, toggleable: true, sortable: true },
+    { id: 'slug', label: 'Slug', type: 'base', visible: false, toggleable: true, sortable: true },
+    { id: 'created_at', label: 'Created', type: 'base', visible: false, toggleable: true, sortable: true },
+    { id: 'current_release', label: 'Release', type: 'base', visible: false, toggleable: true, sortable: true },
+    { id: 'editions', label: 'Editions', type: 'base', visible: false, toggleable: true, sortable: false },
+];
+
+const defaultListViewSettings: ListViewSettings = {
+    columns: defaultListViewColumns,
+    default_per_page: 20,
+    per_page_options: [10, 20, 50, 100],
+    default_sort_column: 'updated_at',
+    default_sort_direction: 'desc',
+};
+
+// Available base columns for content list view
+const baseColumnDefinitions: { id: ListViewBaseColumn; label: string; description: string }[] = [
+    { id: 'title', label: 'Title', description: 'Content title and slug path' },
+    { id: 'slug', label: 'Slug', description: 'URL-friendly identifier' },
+    { id: 'status', label: 'Status', description: 'Publication status (draft, published, archived)' },
+    { id: 'current_version', label: 'Version', description: 'Current version number' },
+    { id: 'updated_at', label: 'Updated', description: 'Last modification date' },
+    { id: 'created_at', label: 'Created', description: 'Creation date' },
+    { id: 'current_release', label: 'Release', description: 'Current release name' },
+    { id: 'editions', label: 'Editions', description: 'Associated edition tags' },
+];
+
 const defaultSchema: CollectionSchema = {
-    allowed_elements: ['text', 'media', 'html', 'json', 'xml', 'svg', 'katex', 'wrapper'],
+    allowed_elements: ['text', 'media', 'html', 'json', 'xml', 'svg', 'katex', 'wrapper', 'reference'],
     element_configs: {
         text: { enabled: true, formats: ['plain', 'markdown', 'html'] },
         media: { enabled: true, types: ['image', 'video', 'audio', 'document'] },
@@ -86,11 +151,15 @@ const defaultSchema: CollectionSchema = {
         svg: { enabled: true },
         katex: { enabled: true },
         wrapper: { enabled: true },
+        reference: { enabled: true },
     },
     content_meta_fields: [],
     element_meta_fields: {} as Record<ElementType, MetaFieldDefinition[]>,
     collection_meta_fields: [],
     allowed_wrapper_purposes: [],
+    allowed_editions: undefined,
+    meta_only_content: false,
+    list_view_settings: defaultListViewSettings,
 };
 
 // Helper to build currentSchema from props
@@ -106,11 +175,20 @@ function buildCurrentSchema(schema: CollectionSchema | null): CollectionSchema {
             svg: { ...defaultSchema.element_configs.svg, ...schema?.element_configs?.svg },
             katex: { ...defaultSchema.element_configs.katex, ...schema?.element_configs?.katex },
             wrapper: { ...defaultSchema.element_configs.wrapper, ...schema?.element_configs?.wrapper },
+            reference: { ...defaultSchema.element_configs.reference, ...schema?.element_configs?.reference },
+            // Include any custom element configs
+            ...Object.fromEntries(
+                Object.entries(schema?.element_configs || {})
+                    .filter(([key]) => key.startsWith('custom_'))
+            ),
         },
         content_meta_fields: schema?.content_meta_fields || defaultSchema.content_meta_fields,
         element_meta_fields: schema?.element_meta_fields || defaultSchema.element_meta_fields,
         collection_meta_fields: schema?.collection_meta_fields || defaultSchema.collection_meta_fields,
         allowed_wrapper_purposes: schema?.allowed_wrapper_purposes || [],
+        allowed_editions: schema?.allowed_editions,
+        meta_only_content: schema?.meta_only_content ?? defaultSchema.meta_only_content,
+        list_view_settings: schema?.list_view_settings ?? defaultSchema.list_view_settings,
     };
 }
 
@@ -204,6 +282,51 @@ export function SchemaEditorContents({ schema, onChange }: SchemaEditorBaseProps
     const updateMetaField = (index: number, updates: Partial<MetaFieldDefinition>) => {
         const fields = [...currentSchema.content_meta_fields];
         fields[index] = { ...fields[index], ...updates };
+        
+        // If the field name changed, update the corresponding list view column
+        const oldField = currentSchema.content_meta_fields[index];
+        if (updates.name && oldField.name !== updates.name) {
+            const listViewSettings = currentSchema.list_view_settings;
+            if (listViewSettings?.columns) {
+                const oldColumnId = `meta_${oldField.name}`;
+                const newColumnId = `meta_${updates.name}`;
+                const updatedColumns = listViewSettings.columns.map(col => 
+                    col.id === oldColumnId 
+                        ? { ...col, id: newColumnId, meta_field: updates.name, label: updates.label || col.label }
+                        : col
+                );
+                onChange({
+                    ...currentSchema,
+                    content_meta_fields: fields,
+                    list_view_settings: {
+                        ...listViewSettings,
+                        columns: updatedColumns,
+                    },
+                });
+                return;
+            }
+        }
+        
+        // If the label changed, update the corresponding list view column label
+        if (updates.label) {
+            const listViewSettings = currentSchema.list_view_settings;
+            if (listViewSettings?.columns) {
+                const columnId = `meta_${currentSchema.content_meta_fields[index].name}`;
+                const updatedColumns = listViewSettings.columns.map(col => 
+                    col.id === columnId ? { ...col, label: updates.label } : col
+                );
+                onChange({
+                    ...currentSchema,
+                    content_meta_fields: fields,
+                    list_view_settings: {
+                        ...listViewSettings,
+                        columns: updatedColumns,
+                    },
+                });
+                return;
+            }
+        }
+        
         onChange({
             ...currentSchema,
             content_meta_fields: fields,
@@ -211,41 +334,109 @@ export function SchemaEditorContents({ schema, onChange }: SchemaEditorBaseProps
     };
 
     const removeMetaField = (index: number) => {
+        const fieldToRemove = currentSchema.content_meta_fields[index];
+        const columnIdToRemove = `meta_${fieldToRemove.name}`;
+        
+        // Also remove the corresponding column from list_view_settings
+        const listViewSettings = currentSchema.list_view_settings;
+        let updatedListViewSettings = listViewSettings;
+        
+        if (listViewSettings?.columns) {
+            const updatedColumns = listViewSettings.columns.filter(col => col.id !== columnIdToRemove);
+            
+            // Also check if default_sort_column references the removed field
+            let defaultSortColumn = listViewSettings.default_sort_column;
+            if (defaultSortColumn === columnIdToRemove) {
+                defaultSortColumn = 'updated_at'; // Reset to default
+            }
+            
+            updatedListViewSettings = {
+                ...listViewSettings,
+                columns: updatedColumns,
+                default_sort_column: defaultSortColumn,
+            };
+        }
+        
         onChange({
             ...currentSchema,
             content_meta_fields: currentSchema.content_meta_fields.filter((_, i) => i !== index),
+            list_view_settings: updatedListViewSettings,
+        });
+    };
+
+    const toggleMetaOnlyContent = (enabled: boolean) => {
+        onChange({
+            ...currentSchema,
+            meta_only_content: enabled,
         });
     };
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <FileStack className="size-5" />
-                    Content Metadata Fields
-                </CardTitle>
-                <CardDescription>
-                    Define additional metadata fields for each content item in this collection
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <MetaFieldList
-                    fields={currentSchema.content_meta_fields}
-                    onUpdate={updateMetaField}
-                    onRemove={removeMetaField}
-                />
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addMetaField}
-                    className="w-full"
-                >
-                    <Plus className="size-4 mr-2" />
-                    Add Content Metadata Field
-                </Button>
-            </CardContent>
-        </Card>
+        <div className="space-y-6">
+            {/* Meta Only Content Option */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <FileStack className="size-5" />
+                        Content Mode
+                    </CardTitle>
+                    <CardDescription>
+                        Configure how content items in this collection are structured
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                        <div>
+                            <Label className="text-sm font-medium">Meta Only Content</Label>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                When enabled, contents only display metadata fields without the block editor.
+                                <br />
+                                Ideal for collections with a fixed set of content types defined via metadata.
+                            </p>
+                        </div>
+                        <Switch
+                            checked={currentSchema.meta_only_content ?? false}
+                            onCheckedChange={toggleMetaOnlyContent}
+                        />
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Content Metadata Fields */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <FileStack className="size-5" />
+                        Content Metadata Fields
+                    </CardTitle>
+                    <CardDescription>
+                        Define additional metadata fields for each content item in this collection
+                        {currentSchema.meta_only_content && (
+                            <span className="block mt-1 text-primary font-medium">
+                                These fields will be displayed prominently in the content editor.
+                            </span>
+                        )}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <MetaFieldList
+                        fields={currentSchema.content_meta_fields}
+                        onUpdate={updateMetaField}
+                        onRemove={removeMetaField}
+                    />
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addMetaField}
+                        className="w-full"
+                    >
+                        <Plus className="size-4 mr-2" />
+                        Add Content Metadata Field
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
     );
 }
 
@@ -257,10 +448,25 @@ export function SchemaEditorElements({ schema, onChange }: SchemaEditorBaseProps
     const textConfig = currentSchema.element_configs.text as TextElementConfig | undefined;
     const mediaConfig = currentSchema.element_configs.media as MediaElementConfig | undefined;
 
-    const toggleElement = (type: ElementType) => {
-        const allowed = currentSchema.allowed_elements.includes(type)
+    // Get custom elements
+    const { definitions: customElements } = useCustomElements();
+
+    // Combine built-in and custom element types
+    const allElementTypes = useMemo((): ElementTypeInfo[] => {
+        const customTypes: ElementTypeInfo[] = customElements.map(ce => ({
+            type: ce.type,
+            label: ce.label,
+            icon: getLucideIcon(ce.icon || 'box'),
+            description: ce.description || '',
+            isCustom: true,
+        }));
+        return [...builtInElementTypes, ...customTypes];
+    }, [customElements]);
+
+    const toggleElement = (type: ElementType | string) => {
+        const allowed = currentSchema.allowed_elements.includes(type as ElementType)
             ? currentSchema.allowed_elements.filter(t => t !== type)
-            : [...currentSchema.allowed_elements, type];
+            : [...currentSchema.allowed_elements, type as ElementType];
         
         onChange({
             ...currentSchema,
@@ -346,20 +552,27 @@ export function SchemaEditorElements({ schema, onChange }: SchemaEditorBaseProps
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                {elementTypes.map(({ type, label, icon: Icon, description }) => {
-                    const isEnabled = currentSchema.allowed_elements.includes(type);
-                    const metaFields = currentSchema.element_meta_fields[type] || [];
+                {allElementTypes.map(({ type, label, icon: Icon, description, isCustom }) => {
+                    const isEnabled = currentSchema.allowed_elements.includes(type as ElementType);
+                    const metaFields = currentSchema.element_meta_fields[type as ElementType] || [];
                     const hasMetaFields = metaFields.length > 0;
 
                     return (
                         <Collapsible key={type} defaultOpen={isEnabled && hasMetaFields}>
-                            <div className="border rounded-lg">
+                            <div className={`border rounded-lg ${isCustom ? 'border-dashed border-primary/30' : ''}`}>
                                 {/* Element header with toggle */}
                                 <div className="flex items-center justify-between p-4">
                                     <div className="flex items-center gap-3">
                                         <Icon className="size-5 text-muted-foreground" />
                                         <div>
-                                            <Label className="text-sm font-medium">{label}</Label>
+                                            <div className="flex items-center gap-2">
+                                                <Label className="text-sm font-medium">{label}</Label>
+                                                {isCustom && (
+                                                    <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                                                        Custom
+                                                    </span>
+                                                )}
+                                            </div>
                                             <p className="text-xs text-muted-foreground">{description}</p>
                                         </div>
                                     </div>
@@ -374,7 +587,7 @@ export function SchemaEditorElements({ schema, onChange }: SchemaEditorBaseProps
                                             onCheckedChange={() => toggleElement(type)}
                                             disabled={type === 'wrapper'}
                                         />
-                                        {isEnabled && (
+                                        {isEnabled && !isCustom && (
                                             <CollapsibleTrigger asChild>
                                                 <Button variant="ghost" size="icon" className="size-8">
                                                     <ChevronDown className="size-4 transition-transform duration-200 [[data-state=open]_&]:rotate-180" />
@@ -385,7 +598,7 @@ export function SchemaEditorElements({ schema, onChange }: SchemaEditorBaseProps
                                 </div>
 
                                 {/* Expanded content with configs and meta fields */}
-                                {isEnabled && (
+                                {isEnabled && !isCustom && (
                                     <CollapsibleContent>
                                         <div className="border-t p-4 space-y-4 bg-muted/20">
                                             {/* Text-specific config */}
@@ -572,6 +785,121 @@ export function SchemaEditorWrappers({ schema, onChange, wrapperPurposes = [] }:
                                             {purpose.description && (
                                                 <p className="text-xs text-muted-foreground mt-0.5 truncate">
                                                     {purpose.description}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </label>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
+// ============================================================
+// Editions Tab (Allowed Editions)
+// ============================================================
+export function SchemaEditorEditions({ schema, onChange, editions = [] }: SchemaEditorEditionsProps) {
+    const currentSchema = buildCurrentSchema(schema);
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Layers className="size-5" />
+                    Allowed Editions
+                </CardTitle>
+                <CardDescription>
+                    Select which editions can be used in this collection for filtering content.
+                    If none are selected, all editions are available.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {editions.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                        <Layers className="size-12 mx-auto mb-4 opacity-50" />
+                        <p>No editions defined yet.</p>
+                        <p className="text-sm">
+                            <a href="/settings/editions" className="text-primary hover:underline">
+                                Create editions
+                            </a> to configure them here.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between mb-4 p-3 bg-muted/30 rounded-md">
+                            <div>
+                                <Label className="text-sm font-medium">Allow all editions</Label>
+                                <p className="text-xs text-muted-foreground">
+                                    When enabled, all editions are available for filtering
+                                </p>
+                            </div>
+                            <Switch
+                                checked={!currentSchema.allowed_editions || currentSchema.allowed_editions.length === 0}
+                                onCheckedChange={(checked) => {
+                                    if (checked) {
+                                        onChange({
+                                            ...currentSchema,
+                                            allowed_editions: undefined,
+                                        });
+                                    } else {
+                                        // Start with first edition selected
+                                        const firstEdition = editions[0];
+                                        onChange({
+                                            ...currentSchema,
+                                            allowed_editions: firstEdition ? [firstEdition.slug] : [],
+                                        });
+                                    }
+                                }}
+                            />
+                        </div>
+                        
+                        {currentSchema.allowed_editions && currentSchema.allowed_editions.length > 0 && (
+                            <div className="grid gap-2 sm:grid-cols-2">
+                                {editions.map((edition) => (
+                                    <label
+                                        key={edition.slug}
+                                        className={`flex items-start gap-3 p-3 border rounded-md cursor-pointer transition-colors ${
+                                            currentSchema.allowed_editions?.includes(edition.slug)
+                                                ? 'bg-primary/5 border-primary/50'
+                                                : 'hover:bg-muted/50'
+                                        } ${edition.is_system ? 'opacity-75' : ''}`}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={currentSchema.allowed_editions?.includes(edition.slug) || false}
+                                            onChange={(e) => {
+                                                const editionSlugs = currentSchema.allowed_editions || [];
+                                                if (e.target.checked) {
+                                                    onChange({
+                                                        ...currentSchema,
+                                                        allowed_editions: [...editionSlugs, edition.slug],
+                                                    });
+                                                } else {
+                                                    if (editionSlugs.length > 1) {
+                                                        onChange({
+                                                            ...currentSchema,
+                                                            allowed_editions: editionSlugs.filter(e => e !== edition.slug),
+                                                        });
+                                                    }
+                                                }
+                                            }}
+                                            disabled={currentSchema.allowed_editions?.length === 1 && currentSchema.allowed_editions.includes(edition.slug)}
+                                            className="mt-1 rounded"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium text-sm">{edition.name}</span>
+                                                {edition.is_system && (
+                                                    <span className="text-xs bg-muted px-1.5 py-0.5 rounded">System</span>
+                                                )}
+                                            </div>
+                                            {edition.description && (
+                                                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                                                    {edition.description}
                                                 </p>
                                             )}
                                         </div>
@@ -861,6 +1189,331 @@ function MetaFieldList({ fields, onUpdate, onRemove }: MetaFieldListProps) {
                     </div>
                 </div>
             ))}
+        </div>
+    );
+}
+
+// ============================================================
+// List View Tab (Data Table Configuration)
+// ============================================================
+export function SchemaEditorListView({ schema, onChange }: SchemaEditorBaseProps) {
+    const currentSchema = buildCurrentSchema(schema);
+    const listViewSettings = currentSchema.list_view_settings || defaultListViewSettings;
+    const contentMetaFields = currentSchema.content_meta_fields || [];
+
+    // Build combined columns list: base columns + metadata columns
+    const allAvailableColumns = useMemo(() => {
+        const baseColumns = baseColumnDefinitions.map(col => ({
+            id: col.id,
+            label: col.label,
+            type: 'base' as const,
+            description: col.description,
+        }));
+
+        const metaColumns = contentMetaFields.map(field => ({
+            id: `meta_${field.name}`,
+            label: field.label,
+            type: 'meta' as const,
+            meta_field: field.name,
+            description: `Custom metadata field (${field.type})`,
+        }));
+
+        return [...baseColumns, ...metaColumns];
+    }, [contentMetaFields]);
+
+    // Get current column configuration or build from defaults
+    const getCurrentColumns = (): ListViewColumn[] => {
+        const existingColumns = listViewSettings.columns || [];
+        
+        // Ensure all available columns are represented
+        return allAvailableColumns.map(availableCol => {
+            const existing = existingColumns.find(c => c.id === availableCol.id);
+            if (existing) {
+                return existing;
+            }
+            // New column, use defaults
+            return {
+                id: availableCol.id,
+                label: availableCol.label,
+                type: availableCol.type,
+                meta_field: availableCol.type === 'meta' ? availableCol.meta_field : undefined,
+                visible: false,
+                toggleable: true,
+                sortable: availableCol.type !== 'meta' || contentMetaFields.find(f => f.name === availableCol.meta_field)?.type !== 'multi_select',
+            };
+        });
+    };
+
+    const columns = getCurrentColumns();
+
+    const updateSettings = (updates: Partial<ListViewSettings>) => {
+        onChange({
+            ...currentSchema,
+            list_view_settings: {
+                ...listViewSettings,
+                ...updates,
+            },
+        });
+    };
+
+    const updateColumn = (columnId: string, updates: Partial<ListViewColumn>) => {
+        const newColumns = columns.map(col => 
+            col.id === columnId ? { ...col, ...updates } : col
+        );
+        updateSettings({ columns: newColumns });
+    };
+
+    const handlePerPageOptionsChange = (value: string) => {
+        const options = value
+            .split(',')
+            .map(s => parseInt(s.trim(), 10))
+            .filter(n => !isNaN(n) && n > 0)
+            .sort((a, b) => a - b);
+        updateSettings({ per_page_options: options });
+    };
+
+    return (
+        <div className="space-y-6">
+            {/* General Settings */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <TableProperties className="size-5" />
+                        List View Settings
+                    </CardTitle>
+                    <CardDescription>
+                        Configure how the content list is displayed, including pagination and default sorting.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    {/* Pagination Settings */}
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label>Default Results per Page</Label>
+                            <Select
+                                value={String(listViewSettings.default_per_page)}
+                                onValueChange={(value) => updateSettings({ default_per_page: parseInt(value, 10) })}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {[5, 10, 15, 20, 25, 30, 50, 100].map(n => (
+                                        <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                                How many items are shown per page by default
+                            </p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Page Size Options</Label>
+                            <Input
+                                value={listViewSettings.per_page_options.join(', ')}
+                                onChange={(e) => handlePerPageOptionsChange(e.target.value)}
+                                placeholder="10, 20, 50, 100"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Comma-separated values for the dropdown. Leave empty to hide the dropdown.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Default Sorting */}
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label>Default Sort Column</Label>
+                            <Select
+                                value={listViewSettings.default_sort_column || 'updated_at'}
+                                onValueChange={(value) => updateSettings({ default_sort_column: value })}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {columns.filter(c => c.sortable).map(col => (
+                                        <SelectItem key={col.id} value={col.id}>{col.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Default Sort Direction</Label>
+                            <Select
+                                value={listViewSettings.default_sort_direction || 'desc'}
+                                onValueChange={(value: 'asc' | 'desc') => updateSettings({ default_sort_direction: value })}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="asc">Ascending (A → Z, oldest first)</SelectItem>
+                                    <SelectItem value="desc">Descending (Z → A, newest first)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Column Configuration */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Layers className="size-5" />
+                        Column Configuration
+                    </CardTitle>
+                    <CardDescription>
+                        Configure which columns are shown by default and which can be toggled by users.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {/* Base Columns */}
+                    <div className="space-y-2">
+                        <Label className="text-sm font-medium">Base Columns</Label>
+                        <p className="text-xs text-muted-foreground mb-3">
+                            Standard content fields available in every collection
+                        </p>
+                        <div className="space-y-2">
+                            {columns.filter(c => c.type === 'base').map((column) => (
+                                <div 
+                                    key={column.id} 
+                                    className={`flex items-center justify-between p-3 border rounded-lg ${
+                                        column.visible ? 'bg-primary/5 border-primary/30' : 'bg-muted/20'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <GripVertical className="size-4 text-muted-foreground cursor-move" />
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium text-sm">{column.label}</span>
+                                                <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{column.id}</code>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        {/* Visible */}
+                                        <label className="flex items-center gap-2 text-xs cursor-pointer">
+                                            {column.visible ? (
+                                                <Eye className="size-4 text-primary" />
+                                            ) : (
+                                                <EyeOff className="size-4 text-muted-foreground" />
+                                            )}
+                                            <Switch
+                                                checked={column.visible}
+                                                onCheckedChange={(checked) => updateColumn(column.id, { visible: checked })}
+                                                disabled={column.id === 'title'} // Title is always visible
+                                            />
+                                        </label>
+                                        {/* Toggleable */}
+                                        <label className="flex items-center gap-1.5 text-xs cursor-pointer" title="Can user toggle visibility?">
+                                            <input
+                                                type="checkbox"
+                                                checked={column.toggleable}
+                                                onChange={(e) => updateColumn(column.id, { toggleable: e.target.checked })}
+                                                disabled={column.id === 'title'}
+                                                className="rounded"
+                                            />
+                                            Toggleable
+                                        </label>
+                                        {/* Sortable */}
+                                        <label className="flex items-center gap-1.5 text-xs cursor-pointer" title="Can column be sorted?">
+                                            <ArrowUpDown className="size-3 text-muted-foreground" />
+                                            <input
+                                                type="checkbox"
+                                                checked={column.sortable}
+                                                onChange={(e) => updateColumn(column.id, { sortable: e.target.checked })}
+                                                disabled={column.id === 'editions'} // Editions can't be sorted
+                                                className="rounded"
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Metadata Columns */}
+                    {contentMetaFields.length > 0 && (
+                        <div className="space-y-2 mt-6 pt-6 border-t">
+                            <Label className="text-sm font-medium">Metadata Columns</Label>
+                            <p className="text-xs text-muted-foreground mb-3">
+                                Custom metadata fields defined for this collection's contents
+                            </p>
+                            <div className="space-y-2">
+                                {columns.filter(c => c.type === 'meta').map((column) => (
+                                    <div 
+                                        key={column.id} 
+                                        className={`flex items-center justify-between p-3 border rounded-lg border-dashed ${
+                                            column.visible ? 'bg-primary/5 border-primary/30' : 'bg-muted/20'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <GripVertical className="size-4 text-muted-foreground cursor-move" />
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-medium text-sm">{column.label}</span>
+                                                    <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                                                        Meta
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Field: {column.meta_field}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            {/* Visible */}
+                                            <label className="flex items-center gap-2 text-xs cursor-pointer">
+                                                {column.visible ? (
+                                                    <Eye className="size-4 text-primary" />
+                                                ) : (
+                                                    <EyeOff className="size-4 text-muted-foreground" />
+                                                )}
+                                                <Switch
+                                                    checked={column.visible}
+                                                    onCheckedChange={(checked) => updateColumn(column.id, { visible: checked })}
+                                                />
+                                            </label>
+                                            {/* Toggleable */}
+                                            <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={column.toggleable}
+                                                    onChange={(e) => updateColumn(column.id, { toggleable: e.target.checked })}
+                                                    className="rounded"
+                                                />
+                                                Toggleable
+                                            </label>
+                                            {/* Sortable */}
+                                            <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                                                <ArrowUpDown className="size-3 text-muted-foreground" />
+                                                <input
+                                                    type="checkbox"
+                                                    checked={column.sortable}
+                                                    onChange={(e) => updateColumn(column.id, { sortable: e.target.checked })}
+                                                    className="rounded"
+                                                />
+                                            </label>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {contentMetaFields.length === 0 && (
+                        <div className="mt-4 p-4 bg-muted/30 rounded-lg text-center text-muted-foreground text-sm">
+                            No content metadata fields defined.
+                            <br />
+                            <span className="text-xs">
+                                Define metadata fields in the "Contents" tab to add them as list columns.
+                            </span>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     );
 }

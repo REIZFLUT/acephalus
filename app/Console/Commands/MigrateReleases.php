@@ -6,15 +6,15 @@ namespace App\Console\Commands;
 
 use App\Models\Mongodb\Collection;
 use App\Models\Mongodb\ContentVersion;
-use App\Services\EditionService;
+use App\Services\ReleaseService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 
-class MigrateEditions extends Command
+class MigrateReleases extends Command
 {
-    protected $signature = 'editions:migrate {--dry-run : Show what would be updated without making changes}';
+    protected $signature = 'releases:migrate {--dry-run : Show what would be updated without making changes}';
 
-    protected $description = 'Migrate existing collections and content versions to use the editions system';
+    protected $description = 'Migrate existing collections and content versions to use the releases system';
 
     public function handle(): int
     {
@@ -24,11 +24,11 @@ class MigrateEditions extends Command
             $this->info('Running in dry-run mode. No changes will be made.');
         }
 
-        $this->info('Migrating collections to editions system...');
+        $this->info('Migrating collections to releases system...');
 
-        // Update all collections without current_edition
-        $collections = Collection::whereNull('current_edition')
-            ->orWhere('current_edition', '')
+        // Update all collections without current_release
+        $collections = Collection::whereNull('current_release')
+            ->orWhere('current_release', '')
             ->get();
 
         $this->info("Found {$collections->count()} collections to migrate.");
@@ -38,10 +38,10 @@ class MigrateEditions extends Command
 
             if (! $isDryRun) {
                 $collection->update([
-                    'current_edition' => EditionService::DEFAULT_EDITION,
-                    'editions' => [
+                    'current_release' => ReleaseService::DEFAULT_RELEASE,
+                    'releases' => [
                         [
-                            'name' => EditionService::DEFAULT_EDITION,
+                            'name' => ReleaseService::DEFAULT_RELEASE,
                             'created_at' => Carbon::now()->toISOString(),
                             'created_by' => null,
                         ],
@@ -51,21 +51,21 @@ class MigrateEditions extends Command
         }
 
         $this->newLine();
-        $this->info('Migrating content versions to editions system...');
+        $this->info('Migrating content versions to releases system...');
 
-        // Update all content versions without edition
-        $versionsCount = ContentVersion::whereNull('edition')
-            ->orWhere('edition', '')
+        // Update all content versions without release
+        $versionsCount = ContentVersion::whereNull('release')
+            ->orWhere('release', '')
             ->count();
 
         $this->info("Found {$versionsCount} content versions to migrate.");
 
         if (! $isDryRun && $versionsCount > 0) {
-            ContentVersion::whereNull('edition')
-                ->orWhere('edition', '')
+            ContentVersion::whereNull('release')
+                ->orWhere('release', '')
                 ->update([
-                    'edition' => EditionService::DEFAULT_EDITION,
-                    'is_edition_end' => false,
+                    'release' => ReleaseService::DEFAULT_RELEASE,
+                    'is_release_end' => false,
                 ]);
         }
 

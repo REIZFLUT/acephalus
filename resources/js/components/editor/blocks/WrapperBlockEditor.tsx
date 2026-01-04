@@ -7,47 +7,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { 
-    Info, 
-    ChevronDown, 
-    Images, 
-    Quote, 
-    AlertTriangle, 
-    CheckCircle2, 
-    Lightbulb,
-    BookOpen,
-    Code2,
-    Columns3,
-    Grid3X3,
-    MessageSquare,
-    Box,
-    type LucideIcon,
-} from 'lucide-react';
 import { BlockEditorProps } from '../BlockItem';
 import { useSchema } from '../BlockEditor';
 import { MetaFieldInput } from '../MetaFieldInput';
-
-// Icon mapping for wrapper purposes
-const iconMap: Record<string, LucideIcon> = {
-    'box': Box,
-    'info': Info,
-    'chevron-down': ChevronDown,
-    'images': Images,
-    'quote': Quote,
-    'alert-triangle': AlertTriangle,
-    'check-circle': CheckCircle2,
-    'lightbulb': Lightbulb,
-    'file-text': BookOpen,
-    'code': Code2,
-    'columns': Columns3,
-    'grid': Grid3X3,
-    'megaphone': MessageSquare,
-};
-
-function getIcon(iconName: string | null | undefined): LucideIcon {
-    if (!iconName) return Box;
-    return iconMap[iconName] || Box;
-}
+import { WrapperPurposeIcon, getWrapperPurposeIcon } from '@/components/WrapperPurposeIcon';
 
 export default function WrapperBlockEditor({ block, onUpdate }: BlockEditorProps) {
     const { wrapperPurposes: contextPurposes, schema } = useSchema();
@@ -66,7 +29,7 @@ export default function WrapperBlockEditor({ block, onUpdate }: BlockEditorProps
     };
 
     const selectedPurpose = purposes.find(p => p.slug === wrapperData.purpose) || purposes[0];
-    const SelectedIcon = getIcon(selectedPurpose?.icon);
+    const SelectedIcon = getWrapperPurposeIcon(selectedPurpose?.icon);
     
     return (
         <div className="space-y-3">
@@ -86,24 +49,21 @@ export default function WrapperBlockEditor({ block, onUpdate }: BlockEditorProps
                         </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                        {purposes.map((purpose) => {
-                            const Icon = getIcon(purpose.icon);
-                            return (
-                                <SelectItem key={purpose.slug} value={purpose.slug}>
-                                    <div className="flex items-center gap-2">
-                                        <Icon className="size-4" />
-                                        <div>
-                                            <span className="font-medium">{purpose.name}</span>
-                                            {purpose.description && (
-                                                <span className="text-muted-foreground text-xs ml-2">
-                                                    — {purpose.description}
-                                                </span>
-                                            )}
-                                        </div>
+                        {purposes.map((purpose) => (
+                            <SelectItem key={purpose.slug} value={purpose.slug}>
+                                <div className="flex items-center gap-2">
+                                    <WrapperPurposeIcon iconName={purpose.icon} className="size-4" />
+                                    <div>
+                                        <span className="font-medium">{purpose.name}</span>
+                                        {purpose.description && (
+                                            <span className="text-muted-foreground text-xs ml-2">
+                                                — {purpose.description}
+                                            </span>
+                                        )}
                                     </div>
-                                </SelectItem>
-                            );
-                        })}
+                                </div>
+                            </SelectItem>
+                        ))}
                     </SelectContent>
                 </Select>
             </div>

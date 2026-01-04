@@ -1,16 +1,23 @@
-import { useState, useCallback, createContext, useContext, useMemo } from 'react';
-import type { BlockElement, ElementType, CollectionSchema, TextElementConfig, MediaElementConfig, WrapperPurpose } from '@/types';
+import { useState, useCallback, createContext, useContext, useMemo, useEffect } from 'react';
+import type { BlockElement, ElementType, CollectionSchema, TextElementConfig, MediaElementConfig, WrapperPurpose, Edition } from '@/types';
 import { BlockList } from './BlockList';
 import { AddBlockMenu } from './AddBlockMenu';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Layers, ChevronsUpDown, ChevronsDownUp } from 'lucide-react';
+import { useCustomElements } from '@/hooks/use-custom-elements';
+
+// Default built-in element types
+const DEFAULT_ELEMENT_TYPES: ElementType[] = ['text', 'media', 'html', 'json', 'xml', 'svg', 'katex', 'wrapper', 'reference'];
 
 // Schema context for nested components
 interface SchemaContextType {
     schema: CollectionSchema | null;
-    allowedTypes: ElementType[];
+    allowedTypes: (ElementType | string)[];
     wrapperPurposes: WrapperPurpose[];
+    editions: Edition[];
+    previewEdition: string | null;
+    contentEditions: string[];
     getTextFormats: () => ('plain' | 'markdown' | 'html')[];
     getMediaTypes: () => ('image' | 'video' | 'audio' | 'document' | 'canvas')[];
     collapsedBlocks: Set<string>;
@@ -21,8 +28,11 @@ interface SchemaContextType {
 
 const SchemaContext = createContext<SchemaContextType>({
     schema: null,
-    allowedTypes: ['text', 'media', 'html', 'json', 'xml', 'svg', 'katex', 'wrapper'],
+    allowedTypes: DEFAULT_ELEMENT_TYPES,
     wrapperPurposes: [],
+    editions: [],
+    previewEdition: null,
+    contentEditions: [],
     getTextFormats: () => ['plain', 'markdown', 'html'],
     getMediaTypes: () => ['image', 'video', 'audio', 'document'],
     collapsedBlocks: new Set(),
@@ -39,6 +49,9 @@ interface BlockEditorProps {
     schema?: CollectionSchema | null;
     allowedTypes?: ElementType[];
     wrapperPurposes?: WrapperPurpose[];
+    editions?: Edition[];
+    previewEdition?: string | null;
+    contentEditions?: string[];
     collapsedBlocks?: Set<string>;
     onToggleCollapse?: (id: string) => void;
 }
@@ -49,6 +62,9 @@ export function BlockEditor({
     schema, 
     allowedTypes: propAllowedTypes, 
     wrapperPurposes = [],
+    editions = [],
+    previewEdition = null,
+    contentEditions = [],
     collapsedBlocks: externalCollapsedBlocks,
     onToggleCollapse: externalToggleCollapse,
 }: BlockEditorProps) {
@@ -58,9 +74,17 @@ export function BlockEditor({
     // Use external or internal collapsed state
     const collapsedBlocks = externalCollapsedBlocks !== undefined ? externalCollapsedBlocks : internalCollapsedBlocks;
 
-    // Determine allowed types from schema or props
-    const allowedTypes = propAllowedTypes || schema?.allowed_elements || 
-        ['text', 'media', 'html', 'json', 'xml', 'svg', 'katex', 'wrapper'] as ElementType[];
+    // Get custom element types
+    const { types: customElementTypes } = useCustomElements();
+
+    // Determine allowed types from schema or props, and include custom elements
+    const allowedTypes = useMemo(() => {
+        const baseTypes = propAllowedTypes || schema?.allowed_elements || DEFAULT_ELEMENT_TYPES;
+        // Add custom element types to the allowed types
+        const allTypes = [...baseTypes, ...customElementTypes] as (ElementType | string)[];
+        // Remove duplicates
+        return [...new Set(allTypes)] as ElementType[];
+    }, [propAllowedTypes, schema?.allowed_elements, customElementTypes]);
 
     // Toggle collapse state for a block
     const toggleCollapse = useCallback((id: string) => {
@@ -83,11 +107,50 @@ export function BlockEditor({
     const allBlockIds = useMemo(() => getAllBlockIds(elements), [elements]);
     const allCollapsed = allBlockIds.length > 0 && allBlockIds.every(id => collapsedBlocks.has(id));
 
+    // Setter for internal collapsed blocks
+    const setCollapsedBlocks = useCallback((blocks: Set<string>) => {
+        if (!externalCollapsedBlocks) {
+            setInternalCollapsedBlocks(blocks);
+        }
+    }, [externalCollapsedBlocks]);
+
+    // Scroll to element if URL contains a hash like #element-{id}
+    useEffect(() => {
+        const hash = window.location.hash;
+        if (hash && hash.startsWith('#element-')) {
+            const elementId = hash.replace('#element-', '');
+
+            // Delay to ensure the DOM has rendered
+            setTimeout(() => {
+                // Try to find the block item element
+                const blockElement = document.querySelector(`[data-block-id="${elementId}"]`);
+                if (blockElement) {
+                    // Expand the element if it's collapsed
+                    if (collapsedBlocks.has(elementId)) {
+                        toggleCollapse(elementId);
+                    }
+
+                    // Scroll to the element
+                    blockElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    // Add a temporary highlight
+                    blockElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+                    setTimeout(() => {
+                        blockElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+                    }, 3000);
+                }
+            }, 500);
+        }
+    }, [elements, collapsedBlocks, toggleCollapse]);
+
     // Schema context value
     const schemaContextValue: SchemaContextType = {
         schema: schema || null,
         allowedTypes,
         wrapperPurposes,
+        editions,
+        previewEdition,
+        contentEditions,
         getTextFormats: () => {
             const config = schema?.element_configs?.text as TextElementConfig | undefined;
             return config?.formats || ['plain', 'markdown', 'html'];

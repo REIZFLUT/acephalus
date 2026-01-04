@@ -1,0 +1,85 @@
+{
+    "type": "custom_call_to_action",
+    "label": "Call to Action",
+    "description": "Auffälliger Button mit Überschrift und optionalem Text",
+    "icon": "megaphone",
+    "category": "interactive",
+    "fields": [
+        {
+            "name": "headline",
+            "label": "Überschrift",
+            "inputType": "text",
+            "placeholder": "Jetzt starten!",
+            "required": true,
+            "validation": {
+                "maxLength": 100
+            }
+        },
+        {
+            "name": "subtext",
+            "label": "Beschreibungstext",
+            "inputType": "textarea",
+            "placeholder": "Optional: Kurze Beschreibung unter der Überschrift",
+            "helpText": "Wird unter der Überschrift angezeigt"
+        },
+        {
+            "name": "buttonText",
+            "label": "Button-Text",
+            "inputType": "text",
+            "placeholder": "Mehr erfahren",
+            "required": true,
+            "defaultValue": "Mehr erfahren",
+            "grid": "half"
+        },
+        {
+            "name": "buttonUrl",
+            "label": "Button-Link",
+            "inputType": "url",
+            "placeholder": "https://...",
+            "required": true,
+            "grid": "half"
+        },
+        {
+            "name": "buttonStyle",
+            "label": "Button-Stil",
+            "inputType": "toggle",
+            "options": [
+                { "value": "primary", "label": "Primär" },
+                { "value": "secondary", "label": "Sekundär" },
+                { "value": "outline", "label": "Outline" }
+            ],
+            "defaultValue": "primary",
+            "grid": "half"
+        },
+        {
+            "name": "openInNewTab",
+            "label": "In neuem Tab öffnen",
+            "inputType": "switch",
+            "defaultValue": false,
+            "grid": "half"
+        },
+        {
+            "name": "alignment",
+            "label": "Ausrichtung",
+            "inputType": "radio",
+            "options": [
+                { "value": "left", "label": "Links", "icon": "align-left" },
+                { "value": "center", "label": "Mitte", "icon": "align-center" },
+                { "value": "right", "label": "Rechts", "icon": "align-right" }
+            ],
+            "defaultValue": "center"
+        }
+    ],
+    "defaultData": {
+        "headline": "",
+        "subtext": "",
+        "buttonText": "Mehr erfahren",
+        "buttonUrl": "",
+        "buttonStyle": "primary",
+        "openInNewTab": false,
+        "alignment": "center"
+    },
+    "previewTemplate": "call_to_action",
+    "cssClass": "cta-element"
+}
+

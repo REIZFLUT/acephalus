@@ -1,0 +1,105 @@
+{
+    "type": "custom_embed",
+    "label": "Embed",
+    "description": "Einbettung von YouTube, Vimeo, Twitter und anderen Diensten",
+    "icon": "external-link",
+    "category": "media",
+    "fields": [
+        {
+            "name": "provider",
+            "label": "Anbieter",
+            "inputType": "select",
+            "options": [
+                { "value": "youtube", "label": "YouTube" },
+                { "value": "vimeo", "label": "Vimeo" },
+                { "value": "twitter", "label": "Twitter/X" },
+                { "value": "instagram", "label": "Instagram" },
+                { "value": "spotify", "label": "Spotify" },
+                { "value": "soundcloud", "label": "SoundCloud" },
+                { "value": "codepen", "label": "CodePen" },
+                { "value": "custom", "label": "Eigener Embed-Code" }
+            ],
+            "defaultValue": "youtube",
+            "required": true
+        },
+        {
+            "name": "url",
+            "label": "URL",
+            "inputType": "url",
+            "placeholder": "https://www.youtube.com/watch?v=...",
+            "required": true,
+            "conditional": {
+                "field": "provider",
+                "operator": "notEquals",
+                "value": "custom"
+            }
+        },
+        {
+            "name": "embedCode",
+            "label": "Embed-Code",
+            "inputType": "code",
+            "editorConfig": {
+                "language": "html",
+                "minHeight": "150px"
+            },
+            "helpText": "Füge den Embed-Code des Anbieters ein",
+            "conditional": {
+                "field": "provider",
+                "operator": "equals",
+                "value": "custom"
+            }
+        },
+        {
+            "name": "aspectRatio",
+            "label": "Seitenverhältnis",
+            "inputType": "select",
+            "options": [
+                { "value": "16:9", "label": "16:9 (Widescreen)" },
+                { "value": "4:3", "label": "4:3 (Standard)" },
+                { "value": "1:1", "label": "1:1 (Quadrat)" },
+                { "value": "9:16", "label": "9:16 (Portrait)" },
+                { "value": "auto", "label": "Automatisch" }
+            ],
+            "defaultValue": "16:9",
+            "grid": "half"
+        },
+        {
+            "name": "maxWidth",
+            "label": "Maximale Breite",
+            "inputType": "slider",
+            "sliderConfig": {
+                "min": 200,
+                "max": 1200,
+                "step": 50,
+                "unit": "px",
+                "showValue": true
+            },
+            "defaultValue": 800,
+            "grid": "half"
+        },
+        {
+            "name": "caption",
+            "label": "Bildunterschrift",
+            "inputType": "text",
+            "placeholder": "Optionale Beschreibung"
+        },
+        {
+            "name": "lazyLoad",
+            "label": "Lazy Loading",
+            "inputType": "switch",
+            "defaultValue": true,
+            "helpText": "Lädt das Embed erst, wenn es sichtbar wird"
+        }
+    ],
+    "defaultData": {
+        "provider": "youtube",
+        "url": "",
+        "embedCode": "",
+        "aspectRatio": "16:9",
+        "maxWidth": 800,
+        "caption": "",
+        "lazyLoad": true
+    },
+    "cssClass": "embed-element"
+}
+

@@ -1,0 +1,68 @@
+{
+    "type": "custom_quote",
+    "label": "Zitat",
+    "description": "Formatiertes Zitat mit Quellenangabe",
+    "icon": "quote",
+    "category": "content",
+    "fields": [
+        {
+            "name": "quote",
+            "label": "Zitat",
+            "inputType": "textarea",
+            "placeholder": "Das Zitat eingeben...",
+            "required": true,
+            "validation": {
+                "minLength": 10
+            }
+        },
+        {
+            "name": "author",
+            "label": "Autor",
+            "inputType": "text",
+            "placeholder": "Name des Autors",
+            "grid": "half"
+        },
+        {
+            "name": "source",
+            "label": "Quelle",
+            "inputType": "text",
+            "placeholder": "Buchtitel, Artikel, etc.",
+            "grid": "half"
+        },
+        {
+            "name": "sourceUrl",
+            "label": "Quellen-URL",
+            "inputType": "url",
+            "placeholder": "https://...",
+            "helpText": "Optionaler Link zur Quelle"
+        },
+        {
+            "name": "style",
+            "label": "Stil",
+            "inputType": "toggle",
+            "options": [
+                { "value": "simple", "label": "Schlicht" },
+                { "value": "bordered", "label": "Mit Rahmen" },
+                { "value": "highlighted", "label": "Hervorgehoben" }
+            ],
+            "defaultValue": "simple"
+        },
+        {
+            "name": "showQuoteMarks",
+            "label": "Anführungszeichen anzeigen",
+            "inputType": "checkbox",
+            "defaultValue": true
+        }
+    ],
+    "defaultData": {
+        "quote": "",
+        "author": "",
+        "source": "",
+        "sourceUrl": "",
+        "style": "simple",
+        "showQuoteMarks": true
+    },
+    "previewTemplate": "quote",
+    "cssClass": "quote-element"
+}
+

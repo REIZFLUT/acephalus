@@ -18,7 +18,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // Reset cached roles and permissions
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Create permissions
+        // Define permissions
         $permissions = [
             // Collection permissions
             'collections.view',
@@ -45,42 +45,59 @@ class RolesAndPermissionsSeeder extends Seeder
             'users.delete',
         ];
 
-        foreach ($permissions as $permission) {
-            Permission::firstOrCreate(['name' => $permission]);
+        // Define role permissions
+        $rolePermissions = [
+            'admin' => $permissions, // All permissions
+            'editor' => [
+                'collections.view',
+                'contents.view',
+                'contents.create',
+                'contents.update',
+                'contents.publish',
+                'media.view',
+                'media.create',
+            ],
+            'author' => [
+                'collections.view',
+                'contents.view',
+                'contents.create',
+                'contents.update',
+                'media.view',
+                'media.create',
+            ],
+            'viewer' => [
+                'collections.view',
+                'contents.view',
+                'media.view',
+            ],
+        ];
+
+        // Create permissions and roles for both web and api guards
+        $guards = ['web', 'api'];
+
+        foreach ($guards as $guard) {
+            // Create permissions for this guard
+            foreach ($permissions as $permission) {
+                Permission::firstOrCreate([
+                    'name' => $permission,
+                    'guard_name' => $guard,
+                ]);
+            }
+
+            // Create roles and assign permissions for this guard
+            foreach ($rolePermissions as $roleName => $perms) {
+                $role = Role::firstOrCreate([
+                    'name' => $roleName,
+                    'guard_name' => $guard,
+                ]);
+
+                // Get permission models for this guard
+                $guardPermissions = Permission::where('guard_name', $guard)
+                    ->whereIn('name', $perms)
+                    ->get();
+
+                $role->syncPermissions($guardPermissions);
+            }
         }
-
-        // Create roles and assign permissions
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $adminRole->givePermissionTo(Permission::all());
-
-        $editorRole = Role::firstOrCreate(['name' => 'editor']);
-        $editorRole->givePermissionTo([
-            'collections.view',
-            'contents.view',
-            'contents.create',
-            'contents.update',
-            'contents.publish',
-            'media.view',
-            'media.create',
-        ]);
-
-        $authorRole = Role::firstOrCreate(['name' => 'author']);
-        $authorRole->givePermissionTo([
-            'collections.view',
-            'contents.view',
-            'contents.create',
-            'contents.update',
-            'media.view',
-            'media.create',
-        ]);
-
-        $viewerRole = Role::firstOrCreate(['name' => 'viewer']);
-        $viewerRole->givePermissionTo([
-            'collections.view',
-            'contents.view',
-            'media.view',
-        ]);
     }
 }
-
-

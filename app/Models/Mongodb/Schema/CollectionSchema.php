@@ -47,6 +47,30 @@ class CollectionSchema
             'enabled' => true,
             // Wrapper always has 'purpose' - this is not configurable
         ],
+        'reference' => [
+            'enabled' => true,
+            // Reference type selector and picker
+        ],
+    ];
+
+    /**
+     * Default list view settings.
+     */
+    public const DEFAULT_LIST_VIEW_SETTINGS = [
+        'columns' => [
+            ['id' => 'title', 'label' => 'Title', 'type' => 'base', 'visible' => true, 'toggleable' => false, 'sortable' => true],
+            ['id' => 'status', 'label' => 'Status', 'type' => 'base', 'visible' => true, 'toggleable' => true, 'sortable' => true],
+            ['id' => 'current_version', 'label' => 'Version', 'type' => 'base', 'visible' => true, 'toggleable' => true, 'sortable' => true],
+            ['id' => 'updated_at', 'label' => 'Updated', 'type' => 'base', 'visible' => true, 'toggleable' => true, 'sortable' => true],
+            ['id' => 'slug', 'label' => 'Slug', 'type' => 'base', 'visible' => false, 'toggleable' => true, 'sortable' => true],
+            ['id' => 'created_at', 'label' => 'Created', 'type' => 'base', 'visible' => false, 'toggleable' => true, 'sortable' => true],
+            ['id' => 'current_release', 'label' => 'Release', 'type' => 'base', 'visible' => false, 'toggleable' => true, 'sortable' => true],
+            ['id' => 'editions', 'label' => 'Editions', 'type' => 'base', 'visible' => false, 'toggleable' => true, 'sortable' => false],
+        ],
+        'default_per_page' => 20,
+        'per_page_options' => [10, 20, 50, 100],
+        'default_sort_column' => 'updated_at',
+        'default_sort_direction' => 'desc',
     ];
 
     /**
@@ -62,6 +86,9 @@ class CollectionSchema
             contentMetaFields: $data['content_meta_fields'] ?? [],
             elementMetaFields: $data['element_meta_fields'] ?? [],
             collectionMetaFields: $data['collection_meta_fields'] ?? [],
+            allowedEditions: $data['allowed_editions'] ?? null,
+            metaOnlyContent: $data['meta_only_content'] ?? false,
+            listViewSettings: $data['list_view_settings'] ?? null,
         );
     }
 
@@ -76,6 +103,9 @@ class CollectionSchema
             contentMetaFields: [],
             elementMetaFields: [],
             collectionMetaFields: [],
+            allowedEditions: null,
+            metaOnlyContent: false,
+            listViewSettings: self::DEFAULT_LIST_VIEW_SETTINGS,
         );
     }
 
@@ -90,6 +120,12 @@ class CollectionSchema
         public array $elementMetaFields = [],
         /** @var array<array{name: string, type: string, required: bool, options?: array}> Collection-level metadata field definitions */
         public array $collectionMetaFields = [],
+        /** @var array<string>|null List of allowed edition slugs (null = all editions) */
+        public ?array $allowedEditions = null,
+        /** @var bool When true, contents only display metadata fields without the block editor */
+        public bool $metaOnlyContent = false,
+        /** @var array<string, mixed>|null List view settings for content data table */
+        public ?array $listViewSettings = null,
     ) {}
 
     /**
@@ -180,6 +216,52 @@ class CollectionSchema
             'content_meta_fields' => $this->contentMetaFields,
             'element_meta_fields' => $this->elementMetaFields,
             'collection_meta_fields' => $this->collectionMetaFields,
+            'allowed_editions' => $this->allowedEditions,
+            'meta_only_content' => $this->metaOnlyContent,
+            'list_view_settings' => $this->listViewSettings ?? self::DEFAULT_LIST_VIEW_SETTINGS,
         ];
+    }
+
+    /**
+     * Get list view settings.
+     *
+     * @return array<string, mixed>
+     */
+    public function getListViewSettings(): array
+    {
+        return $this->listViewSettings ?? self::DEFAULT_LIST_VIEW_SETTINGS;
+    }
+
+    /**
+     * Get allowed editions.
+     *
+     * @return array<string>|null
+     */
+    public function getAllowedEditions(): ?array
+    {
+        return $this->allowedEditions;
+    }
+
+    /**
+     * Check if an edition is allowed.
+     */
+    public function isEditionAllowed(string $slug): bool
+    {
+        // If no editions are specified, all are allowed
+        if ($this->allowedEditions === null) {
+            return true;
+        }
+
+        return in_array($slug, $this->allowedEditions, true);
+    }
+
+    /**
+     * Check if this collection uses meta-only content mode.
+     *
+     * When enabled, contents only display metadata fields without the block editor.
+     */
+    public function isMetaOnlyContent(): bool
+    {
+        return $this->metaOnlyContent;
     }
 }

@@ -6,13 +6,12 @@ use App\Models\Mongodb\Collection;
 use App\Models\Mongodb\Content;
 use App\Models\Mongodb\Element;
 use App\Models\User;
+use Laravel\Passport\Client;
 use Laravel\Passport\Passport;
 
 beforeEach(function () {
-    $this->artisan('passport:client', [
-        '--personal' => true,
-        '--name' => 'Test Personal Access Client',
-        '--no-interaction' => true,
+    Client::factory()->asPersonalAccessTokenClient()->create([
+        'name' => 'Test Personal Access Client',
     ]);
 
     $this->user = User::factory()->create();
@@ -51,6 +50,7 @@ it('can add a wrapper element', function () {
     $response = $this->postJson("/api/v1/contents/{$this->content->_id}/elements", [
         'type' => 'wrapper',
         'data' => [
+            'purpose' => 'generic',
             'layout' => 'two-column',
             'style' => ['gap' => '20px'],
         ],
@@ -193,5 +193,3 @@ it('can add JSON data element', function () {
         ->assertJsonPath('data.type', 'json')
         ->assertJsonPath('data.data.data.key', 'value');
 });
-
-

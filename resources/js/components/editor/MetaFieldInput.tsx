@@ -200,25 +200,24 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                 );
 
             case 'json':
+                const jsonValue = typeof currentValue === 'string'
+                    ? currentValue
+                    : JSON.stringify(currentValue || {}, null, 2);
+                
                 return (
-                    <Textarea
-                        id={name}
-                        value={
-                            typeof currentValue === 'string'
-                                ? currentValue
-                                : JSON.stringify(currentValue || {}, null, 2)
-                        }
-                        onChange={(e) => {
+                    <CodeEditor
+                        value={jsonValue}
+                        onChange={(content) => {
                             try {
-                                onChange(JSON.parse(e.target.value));
+                                onChange(JSON.parse(content));
                             } catch {
                                 // Keep as string if invalid JSON
-                                onChange(e.target.value);
+                                onChange(content);
                             }
                         }}
+                        language="json"
                         placeholder="{}"
-                        rows={compact ? 3 : 4}
-                        className="font-mono text-sm"
+                        minHeight={compact ? '120px' : '180px'}
                     />
                 );
 

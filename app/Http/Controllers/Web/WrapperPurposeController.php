@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\Mongodb\Edition;
 use App\Models\Mongodb\WrapperPurpose;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,8 +21,14 @@ class WrapperPurposeController extends Controller
             ->orderBy('name')
             ->get();
 
-        return Inertia::render('Settings/WrapperPurposes/Index', [
+        $editions = Edition::orderBy('is_system', 'desc')
+            ->orderBy('name')
+            ->get();
+
+        return Inertia::render('Settings/Index', [
             'purposes' => $purposes,
+            'editions' => $editions,
+            'activeTab' => 'wrapper-purposes',
         ]);
     }
 
@@ -121,4 +128,3 @@ class WrapperPurposeController extends Controller
         return response()->json($purposes);
     }
 }
-

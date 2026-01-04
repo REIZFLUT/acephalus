@@ -2,13 +2,12 @@
 
 use App\Models\Mongodb\Collection;
 use App\Models\User;
+use Laravel\Passport\Client;
 use Laravel\Passport\Passport;
 
 beforeEach(function () {
-    $this->artisan('passport:client', [
-        '--personal' => true,
-        '--name' => 'Test Personal Access Client',
-        '--no-interaction' => true,
+    Client::factory()->asPersonalAccessTokenClient()->create([
+        'name' => 'Test Personal Access Client',
     ]);
 
     $this->user = User::factory()->create();
@@ -129,5 +128,3 @@ it('can create collection with schema', function () {
         ->assertJsonPath('data.schema.allowed_element_types', ['text', 'media'])
         ->assertJsonPath('data.schema.min_elements', 1);
 });
-
-

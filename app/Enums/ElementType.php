@@ -14,6 +14,7 @@ enum ElementType: string
     case JSON = 'json';
     case XML = 'xml';
     case WRAPPER = 'wrapper';
+    case REFERENCE = 'reference';
 
     /**
      * Get the required data fields for this element type.
@@ -31,6 +32,7 @@ enum ElementType: string
             self::JSON => ['data' => 'array'],
             self::XML => ['content' => 'string'],
             self::WRAPPER => ['children' => 'array'],
+            self::REFERENCE => ['reference_type' => 'string'], // collection, content, element
         };
     }
 
@@ -50,6 +52,12 @@ enum ElementType: string
             self::JSON => [],
             self::XML => ['schema' => 'string'],
             self::WRAPPER => ['layout' => 'string', 'style' => 'array'],
+            self::REFERENCE => [
+                'collection_id' => 'string',
+                'content_id' => 'string',
+                'element_id' => 'string',
+                'display_title' => 'string',
+            ],
         };
     }
 
@@ -75,8 +83,7 @@ enum ElementType: string
             self::JSON => 'Custom JSON Data',
             self::XML => 'Custom XML Data',
             self::WRAPPER => 'Wrapper Container',
+            self::REFERENCE => 'Internal Reference',
         };
     }
 }
-
-

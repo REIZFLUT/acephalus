@@ -1,0 +1,1568 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Continy CMS API",
+    "description": "RESTful API for Continy - A headless CMS with MongoDB backend",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Continy Support"
+    }
+  },
+  "servers": [],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "User authentication endpoints"
+    },
+    {
+      "name": "Users",
+      "description": "User management endpoints"
+    },
+    {
+      "name": "Collections",
+      "description": "Collection management endpoints"
+    },
+    {
+      "name": "Contents",
+      "description": "Content management endpoints"
+    },
+    {
+      "name": "Elements",
+      "description": "Content element management endpoints"
+    },
+    {
+      "name": "Versions",
+      "description": "Content versioning endpoints"
+    },
+    {
+      "name": "Media",
+      "description": "Media file management endpoints"
+    }
+  ],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Login user",
+        "description": "Authenticate a user and receive an access token",
+        "operationId": "login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful login",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register user",
+        "description": "Register a new user account",
+        "operationId": "register",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Logout user",
+        "description": "Revoke the current access token",
+        "operationId": "logout",
+        "security": [{"bearerAuth": []}],
+        "responses": {
+          "200": {
+            "description": "Successfully logged out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/user": {
+      "get": {
+        "tags": ["Authentication"],
+        "summary": "Get authenticated user",
+        "description": "Get the currently authenticated user's information",
+        "operationId": "getAuthUser",
+        "security": [{"bearerAuth": []}],
+        "responses": {
+          "200": {
+            "description": "User information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "List users",
+        "description": "Get a paginated list of users",
+        "operationId": "listUsers",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/PerPage"},
+          {"$ref": "#/components/parameters/Page"},
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search by name or email",
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "description": "Filter by role",
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Users"],
+        "summary": "Create user",
+        "description": "Create a new user",
+        "operationId": "createUser",
+        "security": [{"bearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{user}": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get user",
+        "description": "Get a specific user's details",
+        "operationId": "getUser",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/UserId"}
+        ],
+        "responses": {
+          "200": {
+            "description": "User details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDataResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Users"],
+        "summary": "Update user",
+        "description": "Update a user's information",
+        "operationId": "updateUser",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/UserId"}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Users"],
+        "summary": "Delete user",
+        "description": "Delete a user",
+        "operationId": "deleteUser",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/UserId"}
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Cannot delete own account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collections": {
+      "get": {
+        "tags": ["Collections"],
+        "summary": "List collections",
+        "description": "Get a paginated list of collections",
+        "operationId": "listCollections",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/PerPage"},
+          {"$ref": "#/components/parameters/Page"},
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search by name",
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of collections",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Collections"],
+        "summary": "Create collection",
+        "description": "Create a new collection",
+        "operationId": "createCollection",
+        "security": [{"bearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCollectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Collection created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collections/{collection}": {
+      "get": {
+        "tags": ["Collections"],
+        "summary": "Get collection",
+        "description": "Get a specific collection's details with contents",
+        "operationId": "getCollection",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/CollectionId"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Collection details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionDataResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Collections"],
+        "summary": "Update collection",
+        "description": "Update a collection's information",
+        "operationId": "updateCollection",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/CollectionId"}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCollectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Collection updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Collections"],
+        "summary": "Delete collection",
+        "description": "Delete a collection (must have no contents)",
+        "operationId": "deleteCollection",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/CollectionId"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Collection deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Collection has contents",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collections/{collection}/contents": {
+      "get": {
+        "tags": ["Contents"],
+        "summary": "List contents",
+        "description": "Get a paginated list of contents in a collection",
+        "operationId": "listContents",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/CollectionId"},
+          {"$ref": "#/components/parameters/PerPage"},
+          {"$ref": "#/components/parameters/Page"},
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by status (draft, published, archived)",
+            "schema": {"type": "string", "enum": ["draft", "published", "archived"]}
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search by title",
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of contents",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Contents"],
+        "summary": "Create content",
+        "description": "Create a new content in a collection",
+        "operationId": "createContent",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/CollectionId"}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateContentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Content created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contents/{content}": {
+      "get": {
+        "tags": ["Contents"],
+        "summary": "Get content",
+        "description": "Get a specific content's details with collection and recent versions",
+        "operationId": "getContent",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/ContentId"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Content details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentDataResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Contents"],
+        "summary": "Update content",
+        "description": "Update a content's information",
+        "operationId": "updateContent",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/ContentId"}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateContentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Content updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Contents"],
+        "summary": "Delete content",
+        "description": "Delete a content",
+        "operationId": "deleteContent",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/ContentId"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Content deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contents/{content}/publish": {
+      "post": {
+        "tags": ["Contents"],
+        "summary": "Publish content",
+        "description": "Publish the content (must pass schema validation)",
+        "operationId": "publishContent",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/ContentId"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Content published successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Schema validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contents/{content}/unpublish": {
+      "post": {
+        "tags": ["Contents"],
+        "summary": "Unpublish content",
+        "description": "Unpublish the content",
+        "operationId": "unpublishContent",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/ContentId"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Content unpublished successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contents/{content}/archive": {
+      "post": {
+        "tags": ["Contents"],
+        "summary": "Archive content",
+        "description": "Archive the content",
+        "operationId": "archiveContent",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/ContentId"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Content archived successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contents/{content}/elements": {
+      "post": {
+        "tags": ["Elements"],
+        "summary": "Create element",
+        "description": "Create a new element within a content",
+        "operationId": "createElement",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/ContentId"}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateElementRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Element created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ElementResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Element validation failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/elements/{element}": {
+      "put": {
+        "tags": ["Elements"],
+        "summary": "Update element",
+        "description": "Update an element's data",
+        "operationId": "updateElement",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/ElementId"}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateElementRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Element updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ElementResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Elements"],
+        "summary": "Delete element",
+        "description": "Delete an element",
+        "operationId": "deleteElement",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/ElementId"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Element deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/elements/{element}/move": {
+      "post": {
+        "tags": ["Elements"],
+        "summary": "Move element",
+        "description": "Move an element to a new position or parent",
+        "operationId": "moveElement",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/ElementId"}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveElementRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Element moved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ElementResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid move operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contents/{content}/versions": {
+      "get": {
+        "tags": ["Versions"],
+        "summary": "List versions",
+        "description": "Get the version history for a content",
+        "operationId": "listVersions",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/ContentId"}
+        ],
+        "responses": {
+          "200": {
+            "description": "List of versions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contents/{content}/versions/{version}": {
+      "get": {
+        "tags": ["Versions"],
+        "summary": "Get version",
+        "description": "Get a specific version's details",
+        "operationId": "getVersion",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/ContentId"},
+          {"$ref": "#/components/parameters/VersionNumber"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Version details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionDataResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Version not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contents/{content}/versions/{version}/restore": {
+      "post": {
+        "tags": ["Versions"],
+        "summary": "Restore version",
+        "description": "Restore a content to a specific version",
+        "operationId": "restoreVersion",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/ContentId"},
+          {"$ref": "#/components/parameters/VersionNumber"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Version restored successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {"type": "string"},
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "content": {"$ref": "#/components/schemas/Content"},
+                        "current_version": {"type": "integer"}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Version not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/contents/{content}/versions/{fromVersion}/compare/{toVersion}": {
+      "get": {
+        "tags": ["Versions"],
+        "summary": "Compare versions",
+        "description": "Compare two versions of a content",
+        "operationId": "compareVersions",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/ContentId"},
+          {
+            "name": "fromVersion",
+            "in": "path",
+            "required": true,
+            "description": "First version number to compare",
+            "schema": {"type": "integer"}
+          },
+          {
+            "name": "toVersion",
+            "in": "path",
+            "required": true,
+            "description": "Second version number to compare",
+            "schema": {"type": "integer"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Version comparison",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {"type": "object"}
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "One or both versions not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media": {
+      "get": {
+        "tags": ["Media"],
+        "summary": "List media",
+        "description": "Get a paginated list of media files",
+        "operationId": "listMedia",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/PerPage"},
+          {"$ref": "#/components/parameters/Page"},
+          {
+            "name": "type",
+            "in": "query",
+            "description": "Filter by media type",
+            "schema": {"type": "string", "enum": ["image", "video", "audio", "document", "other"]}
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search by filename",
+            "schema": {"type": "string"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of media files",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Media"],
+        "summary": "Upload media",
+        "description": "Upload a new media file",
+        "operationId": "uploadMedia",
+        "security": [{"bearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadMediaRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Media uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media/{media}": {
+      "get": {
+        "tags": ["Media"],
+        "summary": "Get/download media",
+        "description": "Get media metadata or download the file",
+        "operationId": "getMedia",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/MediaId"},
+          {
+            "name": "metadata_only",
+            "in": "query",
+            "description": "Return only metadata without file stream",
+            "schema": {"type": "boolean", "default": false}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Media file or metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaDataResponse"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "File not found in storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Media"],
+        "summary": "Delete media",
+        "description": "Delete a media file",
+        "operationId": "deleteMedia",
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+          {"$ref": "#/components/parameters/MediaId"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Media deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter your Bearer token obtained from the login endpoint"
+      }
+    },
+    "parameters": {
+      "PerPage": {
+        "name": "per_page",
+        "in": "query",
+        "description": "Number of items per page",
+        "schema": {"type": "integer", "default": 15, "minimum": 1, "maximum": 100}
+      },
+      "Page": {
+        "name": "page",
+        "in": "query",
+        "description": "Page number",
+        "schema": {"type": "integer", "default": 1, "minimum": 1}
+      },
+      "UserId": {
+        "name": "user",
+        "in": "path",
+        "required": true,
+        "description": "User ID",
+        "schema": {"type": "integer"}
+      },
+      "CollectionId": {
+        "name": "collection",
+        "in": "path",
+        "required": true,
+        "description": "Collection slug (URL-friendly identifier, e.g. 'blog-posts')",
+        "schema": {"type": "string"},
+        "example": "blog-posts"
+      },
+      "ContentId": {
+        "name": "content",
+        "in": "path",
+        "required": true,
+        "description": "Content ID (MongoDB ObjectId)",
+        "schema": {"type": "string"}
+      },
+      "ElementId": {
+        "name": "element",
+        "in": "path",
+        "required": true,
+        "description": "Element ID (MongoDB ObjectId)",
+        "schema": {"type": "string"}
+      },
+      "MediaId": {
+        "name": "media",
+        "in": "path",
+        "required": true,
+        "description": "Media ID (MongoDB ObjectId)",
+        "schema": {"type": "string"}
+      },
+      "VersionNumber": {
+        "name": "version",
+        "in": "path",
+        "required": true,
+        "description": "Version number",
+        "schema": {"type": "integer"}
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer"},
+          "name": {"type": "string"},
+          "email": {"type": "string", "format": "email"},
+          "email_verified_at": {"type": "string", "format": "date-time", "nullable": true},
+          "roles": {"type": "array", "items": {"type": "string"}},
+          "permissions": {"type": "array", "items": {"type": "string"}},
+          "created_at": {"type": "string", "format": "date-time"},
+          "updated_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "Collection": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "description": "MongoDB ObjectId (internal identifier)"},
+          "name": {"type": "string", "description": "Display name of the collection"},
+          "slug": {"type": "string", "description": "URL-friendly identifier used in API routes (e.g. 'blog-posts')"},
+          "description": {"type": "string", "nullable": true},
+          "schema": {"type": "object", "description": "Collection schema definition"},
+          "settings": {"type": "object", "description": "Collection settings"},
+          "collection_meta": {"type": "object", "nullable": true},
+          "contents_count": {"type": "integer"},
+          "contents": {"type": "array", "items": {"$ref": "#/components/schemas/Content"}},
+          "created_at": {"type": "string", "format": "date-time"},
+          "updated_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "Content": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "description": "MongoDB ObjectId (used in API routes)"},
+          "collection_id": {"type": "string", "description": "MongoDB ObjectId of the parent collection"},
+          "title": {"type": "string"},
+          "slug": {"type": "string"},
+          "status": {"type": "string", "enum": ["draft", "published", "archived"]},
+          "status_label": {"type": "string"},
+          "is_published": {"type": "boolean"},
+          "current_version": {"type": "integer"},
+          "published_version_id": {"type": "string", "nullable": true},
+          "elements": {"type": "array", "items": {"$ref": "#/components/schemas/Element"}},
+          "metadata": {"type": "object"},
+          "collection": {"$ref": "#/components/schemas/Collection"},
+          "versions": {"type": "array", "items": {"$ref": "#/components/schemas/ContentVersion"}},
+          "created_at": {"type": "string", "format": "date-time"},
+          "updated_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "Element": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "type": {"type": "string", "enum": ["text", "heading", "image", "video", "quote", "code", "list", "table", "embed", "wrapper"]},
+          "data": {"type": "object"},
+          "order": {"type": "integer"},
+          "parent_id": {"type": "string", "nullable": true}
+        }
+      },
+      "ContentVersion": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "version": {"type": "integer"},
+          "title": {"type": "string"},
+          "elements": {"type": "array", "items": {"$ref": "#/components/schemas/Element"}},
+          "metadata": {"type": "object"},
+          "change_note": {"type": "string", "nullable": true},
+          "created_by": {"type": "integer"},
+          "created_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "Media": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "filename": {"type": "string"},
+          "original_filename": {"type": "string"},
+          "mime_type": {"type": "string"},
+          "media_type": {"type": "string", "enum": ["image", "video", "audio", "document", "other"]},
+          "media_type_label": {"type": "string"},
+          "size": {"type": "integer"},
+          "size_human": {"type": "string"},
+          "alt": {"type": "string", "nullable": true},
+          "caption": {"type": "string", "nullable": true},
+          "metadata": {"type": "object"},
+          "url": {"type": "string", "format": "uri"},
+          "uploaded_by": {"type": "integer"},
+          "uploader": {"$ref": "#/components/schemas/User"},
+          "created_at": {"type": "string", "format": "date-time"},
+          "updated_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {"type": "string", "format": "email", "example": "user@example.com"},
+          "password": {"type": "string", "format": "password", "example": "password123"}
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["name", "email", "password", "password_confirmation"],
+        "properties": {
+          "name": {"type": "string", "example": "John Doe"},
+          "email": {"type": "string", "format": "email", "example": "user@example.com"},
+          "password": {"type": "string", "format": "password", "minLength": 8},
+          "password_confirmation": {"type": "string", "format": "password"}
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "user": {"$ref": "#/components/schemas/User"},
+          "token": {"type": "string"},
+          "token_type": {"type": "string", "example": "Bearer"}
+        }
+      },
+      "CreateUserRequest": {
+        "type": "object",
+        "required": ["name", "email", "password"],
+        "properties": {
+          "name": {"type": "string"},
+          "email": {"type": "string", "format": "email"},
+          "password": {"type": "string", "format": "password", "minLength": 8},
+          "roles": {"type": "array", "items": {"type": "string"}}
+        }
+      },
+      "UpdateUserRequest": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "email": {"type": "string", "format": "email"},
+          "password": {"type": "string", "format": "password", "minLength": 8},
+          "roles": {"type": "array", "items": {"type": "string"}}
+        }
+      },
+      "CreateCollectionRequest": {
+        "type": "object",
+        "required": ["name", "slug"],
+        "properties": {
+          "name": {"type": "string"},
+          "slug": {"type": "string"},
+          "description": {"type": "string"},
+          "schema": {"type": "object"},
+          "settings": {"type": "object"}
+        }
+      },
+      "UpdateCollectionRequest": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "slug": {"type": "string"},
+          "description": {"type": "string"},
+          "schema": {"type": "object"},
+          "settings": {"type": "object"}
+        }
+      },
+      "CreateContentRequest": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": {"type": "string"},
+          "slug": {"type": "string"},
+          "elements": {"type": "array", "items": {"$ref": "#/components/schemas/Element"}},
+          "metadata": {"type": "object"}
+        }
+      },
+      "UpdateContentRequest": {
+        "type": "object",
+        "properties": {
+          "title": {"type": "string"},
+          "slug": {"type": "string"},
+          "elements": {"type": "array", "items": {"$ref": "#/components/schemas/Element"}},
+          "metadata": {"type": "object"},
+          "change_note": {"type": "string"}
+        }
+      },
+      "CreateElementRequest": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": {"type": "string", "enum": ["text", "heading", "image", "video", "quote", "code", "list", "table", "embed", "wrapper"]},
+          "data": {"type": "object"},
+          "order": {"type": "integer"},
+          "parent_id": {"type": "string"}
+        }
+      },
+      "UpdateElementRequest": {
+        "type": "object",
+        "properties": {
+          "type": {"type": "string", "enum": ["text", "heading", "image", "video", "quote", "code", "list", "table", "embed", "wrapper"]},
+          "data": {"type": "object"},
+          "order": {"type": "integer"}
+        }
+      },
+      "MoveElementRequest": {
+        "type": "object",
+        "required": ["order"],
+        "properties": {
+          "parent_id": {"type": "string", "nullable": true},
+          "order": {"type": "integer"}
+        }
+      },
+      "UploadMediaRequest": {
+        "type": "object",
+        "required": ["file"],
+        "properties": {
+          "file": {"type": "string", "format": "binary"},
+          "alt": {"type": "string"},
+          "caption": {"type": "string"}
+        }
+      },
+      "MessageResponse": {
+        "type": "object",
+        "properties": {
+          "message": {"type": "string"}
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "message": {"type": "string"}
+        }
+      },
+      "ValidationErrorResponse": {
+        "type": "object",
+        "properties": {
+          "message": {"type": "string"},
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          }
+        }
+      },
+      "UserListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {"type": "array", "items": {"$ref": "#/components/schemas/User"}},
+          "links": {"$ref": "#/components/schemas/PaginationLinks"},
+          "meta": {"$ref": "#/components/schemas/PaginationMeta"}
+        }
+      },
+      "UserResponse": {
+        "type": "object",
+        "properties": {
+          "message": {"type": "string"},
+          "data": {"$ref": "#/components/schemas/User"}
+        }
+      },
+      "UserDataResponse": {
+        "type": "object",
+        "properties": {
+          "data": {"$ref": "#/components/schemas/User"}
+        }
+      },
+      "CollectionListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {"type": "array", "items": {"$ref": "#/components/schemas/Collection"}},
+          "links": {"$ref": "#/components/schemas/PaginationLinks"},
+          "meta": {"$ref": "#/components/schemas/PaginationMeta"}
+        }
+      },
+      "CollectionResponse": {
+        "type": "object",
+        "properties": {
+          "message": {"type": "string"},
+          "data": {"$ref": "#/components/schemas/Collection"}
+        }
+      },
+      "CollectionDataResponse": {
+        "type": "object",
+        "properties": {
+          "data": {"$ref": "#/components/schemas/Collection"}
+        }
+      },
+      "ContentListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {"type": "array", "items": {"$ref": "#/components/schemas/Content"}},
+          "links": {"$ref": "#/components/schemas/PaginationLinks"},
+          "meta": {"$ref": "#/components/schemas/PaginationMeta"}
+        }
+      },
+      "ContentResponse": {
+        "type": "object",
+        "properties": {
+          "message": {"type": "string"},
+          "data": {"$ref": "#/components/schemas/Content"}
+        }
+      },
+      "ContentDataResponse": {
+        "type": "object",
+        "properties": {
+          "data": {"$ref": "#/components/schemas/Content"}
+        }
+      },
+      "ElementResponse": {
+        "type": "object",
+        "properties": {
+          "message": {"type": "string"},
+          "data": {"$ref": "#/components/schemas/Element"}
+        }
+      },
+      "VersionListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {"type": "array", "items": {"$ref": "#/components/schemas/ContentVersion"}}
+        }
+      },
+      "VersionDataResponse": {
+        "type": "object",
+        "properties": {
+          "data": {"$ref": "#/components/schemas/ContentVersion"}
+        }
+      },
+      "MediaListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {"type": "array", "items": {"$ref": "#/components/schemas/Media"}},
+          "links": {"$ref": "#/components/schemas/PaginationLinks"},
+          "meta": {"$ref": "#/components/schemas/PaginationMeta"}
+        }
+      },
+      "MediaResponse": {
+        "type": "object",
+        "properties": {
+          "message": {"type": "string"},
+          "data": {"$ref": "#/components/schemas/Media"}
+        }
+      },
+      "MediaDataResponse": {
+        "type": "object",
+        "properties": {
+          "data": {"$ref": "#/components/schemas/Media"}
+        }
+      },
+      "PaginationLinks": {
+        "type": "object",
+        "properties": {
+          "first": {"type": "string", "format": "uri"},
+          "last": {"type": "string", "format": "uri"},
+          "prev": {"type": "string", "format": "uri", "nullable": true},
+          "next": {"type": "string", "format": "uri", "nullable": true}
+        }
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "current_page": {"type": "integer"},
+          "from": {"type": "integer"},
+          "last_page": {"type": "integer"},
+          "per_page": {"type": "integer"},
+          "to": {"type": "integer"},
+          "total": {"type": "integer"}
+        }
+      }
+    }
+  }
+}
+

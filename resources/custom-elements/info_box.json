@@ -1,0 +1,64 @@
+{
+    "type": "custom_info_box",
+    "label": "Infobox",
+    "description": "Farbige Box für Hinweise, Warnungen oder Tipps",
+    "icon": "info",
+    "category": "content",
+    "fields": [
+        {
+            "name": "type",
+            "label": "Typ",
+            "inputType": "select",
+            "options": [
+                { "value": "info", "label": "Information", "icon": "info" },
+                { "value": "success", "label": "Erfolg", "icon": "check-circle" },
+                { "value": "warning", "label": "Warnung", "icon": "alert-triangle" },
+                { "value": "error", "label": "Fehler", "icon": "x-circle" },
+                { "value": "tip", "label": "Tipp", "icon": "lightbulb" }
+            ],
+            "defaultValue": "info",
+            "required": true
+        },
+        {
+            "name": "title",
+            "label": "Titel",
+            "inputType": "text",
+            "placeholder": "Optionaler Titel",
+            "helpText": "Leer lassen für Box ohne Titel"
+        },
+        {
+            "name": "content",
+            "label": "Inhalt",
+            "inputType": "editor",
+            "required": true,
+            "editorConfig": {
+                "language": "html",
+                "minHeight": "150px",
+                "enablePreview": true
+            }
+        },
+        {
+            "name": "dismissible",
+            "label": "Schließbar",
+            "inputType": "switch",
+            "defaultValue": false,
+            "helpText": "Benutzer kann die Box ausblenden"
+        },
+        {
+            "name": "icon",
+            "label": "Icon anzeigen",
+            "inputType": "switch",
+            "defaultValue": true
+        }
+    ],
+    "defaultData": {
+        "type": "info",
+        "title": "",
+        "content": "",
+        "dismissible": false,
+        "icon": true
+    },
+    "previewTemplate": "info_box",
+    "cssClass": "info-box-element"
+}
+

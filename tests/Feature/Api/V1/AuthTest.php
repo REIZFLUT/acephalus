@@ -1,14 +1,13 @@
 <?php
 
 use App\Models\User;
+use Laravel\Passport\Client;
 use Laravel\Passport\Passport;
 
 beforeEach(function () {
     // Create Passport client for testing
-    $this->artisan('passport:client', [
-        '--personal' => true,
-        '--name' => 'Test Personal Access Client',
-        '--no-interaction' => true,
+    Client::factory()->asPersonalAccessTokenClient()->create([
+        'name' => 'Test Personal Access Client',
     ]);
 });
 
@@ -103,5 +102,3 @@ it('validates registration input', function () {
     $response->assertStatus(422)
         ->assertJsonValidationErrors(['name', 'email', 'password']);
 });
-
-

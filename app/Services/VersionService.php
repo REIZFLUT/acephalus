@@ -6,21 +6,28 @@ namespace App\Services;
 
 use App\Models\Mongodb\Content;
 use App\Models\Mongodb\ContentVersion;
-use App\Models\Mongodb\Element;
 use App\Models\User;
 
 class VersionService
 {
     /**
      * Create a new version for a content.
+     *
+     * @param  bool  $incrementVersion  Whether to increment the version number (false for initial version)
      */
-    public function createVersion(Content $content, ?User $user = null, ?string $changeNote = null): ContentVersion
+    public function createVersion(Content $content, ?User $user = null, ?string $changeNote = null, bool $incrementVersion = true): ContentVersion
     {
+        // Increment the version number first (unless this is the initial version)
+        if ($incrementVersion) {
+            $content->increment('current_version');
+            $content->refresh();
+        }
+
         $elements = $this->getElementsSnapshot($content);
 
-        // Get the edition from the parent collection
+        // Get the release from the parent collection
         $collection = $content->collection;
-        $edition = $collection?->current_edition ?? EditionService::DEFAULT_EDITION;
+        $release = $collection?->current_release ?? ReleaseService::DEFAULT_RELEASE;
 
         return ContentVersion::create([
             'content_id' => $content->_id,
@@ -28,8 +35,8 @@ class VersionService
             'elements' => $elements,
             'created_by' => $user?->id,
             'change_note' => $changeNote,
-            'edition' => $edition,
-            'is_edition_end' => false,
+            'release' => $release,
+            'is_release_end' => false,
             'snapshot' => [
                 'title' => $content->title,
                 'slug' => $content->slug,
@@ -58,9 +65,7 @@ class VersionService
             ]);
         }
 
-        // Increment version and create new version record
-        $content->increment('current_version');
-
+        // Create new version record (this automatically increments current_version)
         $this->createVersion(
             $content,
             $user,
@@ -79,7 +84,6 @@ class VersionService
     {
         return $content->versions()
             ->latestVersion()
-            ->with('creator')
             ->get();
     }
 
@@ -124,45 +128,24 @@ class VersionService
 
     /**
      * Get a snapshot of all elements for a content.
+     * Elements are stored directly in the content document as an array.
      *
      * @return array<mixed>
      */
     protected function getElementsSnapshot(Content $content): array
     {
-        return Element::where('content_id', $content->_id)
-            ->orderBy('order')
-            ->get()
-            ->map(fn (Element $element) => [
-                '_id' => (string) $element->_id,
-                'parent_id' => $element->parent_id,
-                'type' => $element->type->value,
-                'data' => $element->data,
-                'order' => $element->order,
-            ])
-            ->toArray();
+        // Elements are stored directly in the content document
+        return $content->elements ?? [];
     }
 
     /**
      * Restore elements from a version.
+     * Elements are stored directly in the content document.
      */
     protected function restoreElementsFromVersion(Content $content, ContentVersion $version): void
     {
-        // Delete current elements
-        Element::where('content_id', $content->_id)->delete();
-
-        // Recreate elements from version
-        foreach ($version->elements as $elementData) {
-            Element::create([
-                'content_id' => $content->_id,
-                'parent_id' => $elementData['parent_id'] ?? null,
-                'type' => $elementData['type'],
-                'data' => $elementData['data'],
-                'order' => $elementData['order'],
-            ]);
-        }
-
-        // Sync content elements array
-        $content->update(['elements' => $content->fresh()->elements]);
+        // Update content elements directly from the version snapshot
+        $content->update(['elements' => $version->elements ?? []]);
     }
 
     /**

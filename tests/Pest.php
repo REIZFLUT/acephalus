@@ -1,5 +1,14 @@
 <?php
 
+use App\Models\Mongodb\Collection;
+use App\Models\Mongodb\Content;
+use App\Models\Mongodb\ContentVersion;
+use App\Models\Mongodb\Element;
+use App\Models\Mongodb\Media;
+use App\Models\Mongodb\WrapperPurpose;
+use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Support\Facades\DB;
+
 /*
 |--------------------------------------------------------------------------
 | Test Case
@@ -13,6 +22,46 @@
 
 pest()->extend(Tests\TestCase::class)
     ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
+    ->beforeEach(function () {
+        // Verify we are using the test database (safety check)
+        $currentDatabase = config('database.connections.mongodb.database');
+        if (! str_contains($currentDatabase, 'feature-test')) {
+            throw new \RuntimeException(
+                "Safety check failed: Expected test database with 'feature-test' suffix, got '{$currentDatabase}'. ".
+                'Make sure MONGO_DATABASE is set correctly in phpunit.xml.'
+            );
+        }
+
+        // Seed roles and permissions for each test
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        // Clean MongoDB collections before each test
+        Collection::truncate();
+        Content::truncate();
+        ContentVersion::truncate();
+        Element::truncate();
+        Media::truncate();
+        WrapperPurpose::truncate();
+
+        // Seed default wrapper purposes for tests
+        WrapperPurpose::create([
+            'name' => 'Generic',
+            'slug' => 'generic',
+            'description' => 'A generic wrapper for layout purposes',
+            'is_system' => true,
+        ]);
+    })
+    ->afterAll(function () {
+        // Drop the test database after all tests complete
+        $currentDatabase = config('database.connections.mongodb.database');
+        if (str_contains($currentDatabase, 'feature-test')) {
+            try {
+                DB::connection('mongodb')->getMongoDB()->drop();
+            } catch (\Exception $exception) {
+                // Silently ignore if database doesn't exist or can't be dropped
+            }
+        }
+    })
     ->in('Feature');
 
 /*

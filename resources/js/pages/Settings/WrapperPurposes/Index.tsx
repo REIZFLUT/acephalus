@@ -23,6 +23,7 @@ import {
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Plus, Pencil, Trash2, Lock, Box } from 'lucide-react';
+import { WrapperPurposeIcon } from '@/components/WrapperPurposeIcon';
 import type { PageProps, WrapperPurpose } from '@/types';
 
 interface WrapperPurposesIndexProps extends PageProps {
@@ -77,6 +78,7 @@ export default function WrapperPurposesIndex({ purposes }: WrapperPurposesIndexP
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead className="w-12">Icon</TableHead>
                                     <TableHead>Name</TableHead>
                                     <TableHead>Slug</TableHead>
                                     <TableHead>Description</TableHead>
@@ -87,6 +89,14 @@ export default function WrapperPurposesIndex({ purposes }: WrapperPurposesIndexP
                             <TableBody>
                                 {purposes.map((purpose) => (
                                     <TableRow key={purpose._id}>
+                                        <TableCell>
+                                            <div className="flex items-center justify-center">
+                                                <WrapperPurposeIcon 
+                                                    iconName={purpose.icon} 
+                                                    className="size-5 text-muted-foreground" 
+                                                />
+                                            </div>
+                                        </TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-2">
                                                 <span className="font-medium">{purpose.name}</span>

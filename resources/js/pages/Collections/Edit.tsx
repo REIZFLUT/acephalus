@@ -18,18 +18,19 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Loader2, ArrowLeft, Trash2, Settings, Layers, FolderCog, FileStack, Blocks } from 'lucide-react';
-import { SchemaEditorMeta, SchemaEditorContents, SchemaEditorElements, SchemaEditorWrappers } from '@/components/schema/SchemaEditor';
+import { Loader2, ArrowLeft, Trash2, Settings, Layers, FolderCog, FileStack, Blocks, BookCopy, TableProperties } from 'lucide-react';
+import { SchemaEditorMeta, SchemaEditorContents, SchemaEditorElements, SchemaEditorWrappers, SchemaEditorEditions, SchemaEditorListView } from '@/components/schema/SchemaEditor';
 import { MetaFieldInput } from '@/components/editor/MetaFieldInput';
-import { EditionManager } from '@/components/editions/EditionManager';
-import type { PageProps, Collection, CollectionSchema, WrapperPurpose, MetaFieldDefinition } from '@/types';
+import { ReleaseManager } from '@/components/releases/ReleaseManager';
+import type { PageProps, Collection, CollectionSchema, WrapperPurpose, Edition, MetaFieldDefinition } from '@/types';
 
 interface CollectionsEditProps extends PageProps {
     collection: Collection;
     wrapperPurposes: WrapperPurpose[];
+    editions: Edition[];
 }
 
-export default function CollectionsEdit({ collection, wrapperPurposes }: CollectionsEditProps) {
+export default function CollectionsEdit({ collection, wrapperPurposes, editions }: CollectionsEditProps) {
     const [activeTab, setActiveTab] = useState('general');
     
     const { data, setData, put, processing, errors, isDirty } = useForm({
@@ -98,7 +99,7 @@ export default function CollectionsEdit({ collection, wrapperPurposes }: Collect
 
             <form onSubmit={handleSubmit}>
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                    <TabsList className="grid w-full grid-cols-5">
+                    <TabsList className="grid w-full grid-cols-7">
                         <TabsTrigger value="general" className="gap-2">
                             <Settings className="size-4" />
                             General
@@ -118,6 +119,14 @@ export default function CollectionsEdit({ collection, wrapperPurposes }: Collect
                         <TabsTrigger value="wrappers" className="gap-2">
                             <Layers className="size-4" />
                             Wrappers
+                        </TabsTrigger>
+                        <TabsTrigger value="editions" className="gap-2">
+                            <BookCopy className="size-4" />
+                            Editions
+                        </TabsTrigger>
+                        <TabsTrigger value="list-view" className="gap-2">
+                            <TableProperties className="size-4" />
+                            List View
                         </TabsTrigger>
                     </TabsList>
 
@@ -174,8 +183,8 @@ export default function CollectionsEdit({ collection, wrapperPurposes }: Collect
                             </CardContent>
                         </Card>
 
-                        {/* Edition Manager */}
-                        <EditionManager collection={collection} />
+                        {/* Release Manager */}
+                        <ReleaseManager collection={collection} />
 
                         {/* Danger Zone */}
                         <Card className="border-destructive/50">
@@ -271,6 +280,23 @@ export default function CollectionsEdit({ collection, wrapperPurposes }: Collect
                             schema={data.schema}
                             onChange={handleSchemaChange}
                             wrapperPurposes={wrapperPurposes}
+                        />
+                    </TabsContent>
+
+                    {/* Editions Tab - Allowed Editions */}
+                    <TabsContent value="editions">
+                        <SchemaEditorEditions
+                            schema={data.schema}
+                            onChange={handleSchemaChange}
+                            editions={editions}
+                        />
+                    </TabsContent>
+
+                    {/* List View Tab - Data Table Configuration */}
+                    <TabsContent value="list-view">
+                        <SchemaEditorListView
+                            schema={data.schema}
+                            onChange={handleSchemaChange}
                         />
                     </TabsContent>
                 </Tabs>

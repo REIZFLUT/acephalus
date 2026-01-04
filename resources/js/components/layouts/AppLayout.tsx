@@ -67,7 +67,7 @@ const navigationItems = [
         label: 'Administration',
         items: [
             { name: 'Users', href: '/users', icon: Users },
-            { name: 'Settings', href: '/settings/wrapper-purposes', icon: Settings },
+            { name: 'Settings', href: '/settings', icon: Settings },
         ],
     },
 ];

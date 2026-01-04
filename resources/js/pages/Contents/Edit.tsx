@@ -32,9 +32,13 @@ import {
     ChevronsDownUp,
     Shield,
 } from 'lucide-react';
-import type { PageProps, Content, ContentVersion, BlockElement, ElementType, CollectionSchema, WrapperPurpose } from '@/types';
+import type { PageProps, Content, ContentVersion, BlockElement, ElementType, CollectionSchema, WrapperPurpose, Edition } from '@/types';
 import { BlockEditor } from '@/components/editor/BlockEditor';
 import { MetadataEditor } from '@/components/editor/MetadataEditor';
+import { MetaFieldInput } from '@/components/editor/MetaFieldInput';
+import { EditionSelector } from '@/components/editor/EditionSelector';
+import { EditionPreviewFilter, getHiddenElementIds, isContentVisibleForEdition } from '@/components/editor/EditionPreviewFilter';
+import { VersionPreviewModal } from '@/components/versions/VersionPreviewModal';
 import { formatDate, formatDateTime } from '@/utils/date';
 
 interface ContentsEditProps extends PageProps {
@@ -43,12 +47,13 @@ interface ContentsEditProps extends PageProps {
             name: string; 
             slug: string;
             schema?: CollectionSchema | null;
-            current_edition?: string;
+            current_release?: string;
         }; 
         versions: ContentVersion[] 
     };
     elementTypes: Array<{ value: string; label: string }>;
     wrapperPurposes: WrapperPurpose[];
+    editions: Edition[];
 }
 
 // Helper to ensure elements have client IDs
@@ -60,7 +65,7 @@ function ensureElementIds(elements: BlockElement[]): BlockElement[] {
     }));
 }
 
-export default function ContentsEdit({ content, elementTypes, wrapperPurposes }: ContentsEditProps) {
+export default function ContentsEdit({ content, elementTypes, wrapperPurposes, editions }: ContentsEditProps) {
     // Initialize elements with IDs
     const initialElements = useMemo(() => 
         ensureElementIds(content.elements || []),
@@ -72,10 +77,23 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes }:
         slug: content.slug,
         elements: initialElements,
         metadata: content.metadata || {},
+        editions: content.editions || [],
     });
 
     // Collapse state for block editor
     const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(new Set());
+    
+    // Edition preview filter state
+    const [previewEdition, setPreviewEdition] = useState<string | null>(null);
+    
+    // Version preview modal state
+    const [previewVersion, setPreviewVersion] = useState<ContentVersion | null>(null);
+    const [isVersionModalOpen, setIsVersionModalOpen] = useState(false);
+
+    const handleVersionClick = (version: ContentVersion) => {
+        setPreviewVersion(version);
+        setIsVersionModalOpen(true);
+    };
     
     // Get all block IDs recursively
     const getAllBlockIds = (elements: BlockElement[]): string[] => {
@@ -142,6 +160,9 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes }:
     
     // Get content metadata fields from schema
     const contentMetaFields = schema?.content_meta_fields || [];
+    
+    // Check if this collection uses meta only content mode
+    const isMetaOnlyContent = schema?.meta_only_content ?? false;
 
     const handleMetadataChange = useCallback((metadata: Record<string, unknown>) => {
         setData('metadata', metadata);
@@ -175,6 +196,14 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes }:
             actions={
                 <div className="flex items-center gap-2">
                     {getStatusBadge()}
+                    {editions.length > 0 && (
+                        <EditionSelector
+                            editions={editions}
+                            selectedEditions={data.editions}
+                            onChange={(editions) => setData('editions', editions)}
+                            compact
+                        />
+                    )}
                     <div className="flex gap-2">
                         {content.status === 'draft' ? (
                             <Button onClick={handlePublish} variant="outline" size="sm">
@@ -222,7 +251,7 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes }:
                             </TabsList>
                             
                             <div className="flex items-center gap-2">
-                                {data.elements.length > 0 && (
+                                {!isMetaOnlyContent && data.elements.length > 0 && (
                                     <Button
                                         variant="outline"
                                         size="sm"
@@ -255,28 +284,100 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes }:
                         </div>
 
                         <TabsContent value="content" className="space-y-4">
-                            {/* Content Metadata - Mobile only */}
-                            {contentMetaFields.length > 0 && (
-                                <div className="lg:hidden">
-                                    <MetadataEditor
-                                        fields={contentMetaFields}
-                                        values={data.metadata}
-                                        onChange={handleMetadataChange}
-                                        title="Content Metadata"
-                                        description="Additional information for this content"
+                            {isMetaOnlyContent ? (
+                                /* Meta Only Content Mode - Full width metadata editor */
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Content Data</CardTitle>
+                                        <CardDescription>
+                                            Define the content using the metadata fields configured for this collection.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {contentMetaFields.length > 0 ? (
+                                            <div className="grid gap-6 md:grid-cols-2">
+                                                {contentMetaFields.map((field) => (
+                                                    <div 
+                                                        key={field.name}
+                                                        className={
+                                                            field.type === 'textarea' || field.type === 'json'
+                                                                ? 'md:col-span-2'
+                                                                : ''
+                                                        }
+                                                    >
+                                                        <MetaFieldInput
+                                                            field={field}
+                                                            value={data.metadata[field.name]}
+                                                            onChange={(value) => handleMetadataChange({
+                                                                ...data.metadata,
+                                                                [field.name]: value,
+                                                            })}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-8 text-muted-foreground">
+                                                <p>No metadata fields configured.</p>
+                                                <p className="text-sm mt-1">
+                                                    Add content metadata fields in the collection settings.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            ) : (
+                                /* Standard Block Editor Mode */
+                                <>
+                                    {/* Content Metadata - Mobile only */}
+                                    {contentMetaFields.length > 0 && (
+                                        <div className="lg:hidden">
+                                            <MetadataEditor
+                                                fields={contentMetaFields}
+                                                values={data.metadata}
+                                                onChange={handleMetadataChange}
+                                                title="Content Metadata"
+                                                description="Additional information for this content"
+                                            />
+                                        </div>
+                                    )}
+                                    
+                                    {/* Edition Preview Filter */}
+                                    {editions.length > 0 && (
+                                        <EditionPreviewFilter
+                                            editions={editions}
+                                            contentEditions={data.editions}
+                                            previewEdition={previewEdition}
+                                            onPreviewEditionChange={setPreviewEdition}
+                                        />
+                                    )}
+
+                                    {/* Content visibility warning when filtering */}
+                                    {previewEdition && !isContentVisibleForEdition(data.editions, previewEdition) && (
+                                        <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-800 dark:text-amber-200">
+                                            <p className="text-sm font-medium">
+                                                This content is not visible in the "{editions.find(e => e.slug === previewEdition)?.name || previewEdition}" edition.
+                                            </p>
+                                            <p className="text-xs mt-1 opacity-80">
+                                                The content is restricted to: {data.editions.length > 0 ? data.editions.join(', ') : 'All Editions'}
+                                            </p>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Block Editor */}
+                                    <BlockEditor
+                                        elements={data.elements}
+                                        onChange={handleElementsChange}
+                                        schema={schema}
+                                        wrapperPurposes={wrapperPurposes}
+                                        editions={editions}
+                                        previewEdition={previewEdition}
+                                        contentEditions={data.editions}
+                                        collapsedBlocks={collapsedBlocks}
+                                        onToggleCollapse={toggleCollapseBlock}
                                     />
-                                </div>
+                                </>
                             )}
-                            
-                            {/* Block Editor */}
-                            <BlockEditor
-                                elements={data.elements}
-                                onChange={handleElementsChange}
-                                schema={schema}
-                                wrapperPurposes={wrapperPurposes}
-                                collapsedBlocks={collapsedBlocks}
-                                onToggleCollapse={toggleCollapseBlock}
-                            />
                         </TabsContent>
 
                         <TabsContent value="settings" className="space-y-4">
@@ -365,31 +466,32 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes }:
                                             {content.versions.map((version) => (
                                                 <div
                                                     key={version._id}
-                                                    className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                                                    className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer group"
+                                                    onClick={() => handleVersionClick(version)}
                                                 >
                                                     <div className="flex items-start gap-3">
-                                                        <div className="p-2 bg-muted rounded-md">
-                                                            <Clock className="size-4 text-muted-foreground" />
+                                                        <div className="p-2 bg-muted rounded-md group-hover:bg-primary/10 transition-colors">
+                                                            <Clock className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
                                                         </div>
                                                         <div>
                                                             <div className="flex items-center gap-2">
-                                                                <span className="font-medium">
+                                                                <span className="font-medium group-hover:text-primary transition-colors">
                                                                     Version {version.version_number}
                                                                 </span>
-                                                                {version.version_number === content.current_version && (
+                                                                {Number(version.version_number) === Number(content.current_version) && (
                                                                     <Badge variant="secondary" className="text-xs">
                                                                         Current
                                                                     </Badge>
                                                                 )}
-                                                                {version.is_edition_end && (
+                                                                {version.is_release_end && (
                                                                     <Badge variant="outline" className="text-xs gap-1">
                                                                         <Shield className="size-3" />
                                                                         Protected
                                                                     </Badge>
                                                                 )}
-                                                                {version.edition && (
+                                                                {version.release && (
                                                                     <Badge variant="secondary" className="text-xs">
-                                                                        {version.edition}
+                                                                        {version.release}
                                                                     </Badge>
                                                                 )}
                                                             </div>
@@ -401,37 +503,50 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes }:
                                                                     "{version.change_note}"
                                                                 </p>
                                                             )}
+                                                            <p className="text-xs text-muted-foreground/60 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                Click to preview
+                                                            </p>
                                                         </div>
                                                     </div>
-                                                    {version.version_number !== content.current_version && (
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild>
-                                                                <Button variant="outline" size="sm">
-                                                                    <RotateCcw className="size-4 mr-2" />
-                                                                    Restore
-                                                                </Button>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>
-                                                                        Restore Version {version.version_number}
-                                                                    </AlertDialogTitle>
-                                                                    <AlertDialogDescription>
-                                                                        This will restore the content to version {version.version_number}.
-                                                                        A new version will be created with the restored content.
-                                                                    </AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                    <AlertDialogAction
-                                                                        onClick={() => handleRestoreVersion(version.version_number)}
-                                                                    >
+                                                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleVersionClick(version)}
+                                                        >
+                                                            <Eye className="size-4 mr-2" />
+                                                            Preview
+                                                        </Button>
+                                                        {Number(version.version_number) !== Number(content.current_version) && (
+                                                            <AlertDialog>
+                                                                <AlertDialogTrigger asChild>
+                                                                    <Button variant="outline" size="sm">
+                                                                        <RotateCcw className="size-4 mr-2" />
                                                                         Restore
-                                                                    </AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                    )}
+                                                                    </Button>
+                                                                </AlertDialogTrigger>
+                                                                <AlertDialogContent>
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle>
+                                                                            Restore Version {version.version_number}
+                                                                        </AlertDialogTitle>
+                                                                        <AlertDialogDescription>
+                                                                            This will restore the content to version {version.version_number}.
+                                                                            A new version will be created with the restored content.
+                                                                        </AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                        <AlertDialogAction
+                                                                            onClick={() => handleRestoreVersion(version.version_number)}
+                                                                        >
+                                                                            Restore
+                                                                        </AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            </AlertDialog>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -466,15 +581,17 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes }:
                                 <span className="font-mono">v{content.versions?.length || content.current_version || 1}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Edition</span>
+                                <span className="text-muted-foreground">Release</span>
                                 <Badge variant="outline" className="text-xs">
-                                    {content.versions?.[0]?.edition || content.collection?.current_edition || 'Basis'}
+                                    {content.versions?.[0]?.release || content.collection?.current_release || 'Basis'}
                                 </Badge>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Elements</span>
-                                <span>{countElements(data.elements)}</span>
-                            </div>
+                            {!isMetaOnlyContent && (
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Elements</span>
+                                    <span>{countElements(data.elements)}</span>
+                                </div>
+                            )}
                             <hr className="my-2" />
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">Created</span>
@@ -487,8 +604,8 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes }:
                         </CardContent>
                     </Card>
 
-                    {/* Content Metadata - Desktop only */}
-                    {contentMetaFields.length > 0 && (
+                    {/* Content Metadata - Desktop only (hidden in meta-only mode since it's shown in main area) */}
+                    {!isMetaOnlyContent && contentMetaFields.length > 0 && (
                         <div className="hidden lg:block">
                             <MetadataEditor
                                 fields={contentMetaFields}
@@ -511,6 +628,17 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes }:
                     )}
                 </div>
             </div>
+
+            {/* Version Preview Modal */}
+            <VersionPreviewModal
+                isOpen={isVersionModalOpen}
+                onClose={() => setIsVersionModalOpen(false)}
+                version={previewVersion}
+                allVersions={content.versions || []}
+                contentId={content._id}
+                currentVersionNumber={content.current_version}
+                onRestore={handleRestoreVersion}
+            />
         </AppLayout>
     );
 }

@@ -4,13 +4,12 @@ use App\Enums\ContentStatus;
 use App\Models\Mongodb\Collection;
 use App\Models\Mongodb\Content;
 use App\Models\User;
+use Laravel\Passport\Client;
 use Laravel\Passport\Passport;
 
 beforeEach(function () {
-    $this->artisan('passport:client', [
-        '--personal' => true,
-        '--name' => 'Test Personal Access Client',
-        '--no-interaction' => true,
+    Client::factory()->asPersonalAccessTokenClient()->create([
+        'name' => 'Test Personal Access Client',
     ]);
 
     $this->user = User::factory()->create();
@@ -183,5 +182,3 @@ it('validates content creation', function () {
     $response->assertStatus(422)
         ->assertJsonValidationErrors(['title']);
 });
-
-

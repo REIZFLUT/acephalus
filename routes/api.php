@@ -27,7 +27,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('register', [AuthController::class, 'register'])->name('register');
     });
 
-    // Protected routes
+    // Protected routes (API token auth)
     Route::middleware('auth:api')->group(function () {
         // Auth routes
         Route::prefix('auth')->name('auth.')->group(function () {
@@ -81,7 +81,6 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('media/{media}', [MediaController::class, 'show'])->name('media.show');
         Route::delete('media/{media}', [MediaController::class, 'destroy'])->name('media.destroy');
         Route::get('media', [MediaController::class, 'index'])->name('media.index');
+
     });
 });
-
-

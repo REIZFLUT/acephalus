@@ -36,8 +36,8 @@ class ContentService
 
         $content->save();
 
-        // Create initial version
-        $this->versionService->createVersion($content, $user, 'Initial version');
+        // Create initial version (don't increment since this is the first version)
+        $this->versionService->createVersion($content, $user, 'Initial version', false);
 
         return $content->fresh();
     }
@@ -69,9 +69,8 @@ class ContentService
 
         if (! empty($updateData)) {
             $content->update($updateData);
-            $content->increment('current_version');
 
-            // Create new version
+            // Create new version (this automatically increments current_version)
             $this->versionService->createVersion(
                 $content,
                 $user,
@@ -110,7 +109,6 @@ class ContentService
             'published_version_id' => $latestVersion?->_id,
         ]);
 
-        $content->increment('current_version');
         $this->versionService->createVersion($content, $user, 'Published');
 
         return $content->fresh();
@@ -126,7 +124,6 @@ class ContentService
             'published_version_id' => null,
         ]);
 
-        $content->increment('current_version');
         $this->versionService->createVersion($content, $user, 'Unpublished');
 
         return $content->fresh();
@@ -141,7 +138,6 @@ class ContentService
             'status' => ContentStatus::ARCHIVED,
         ]);
 
-        $content->increment('current_version');
         $this->versionService->createVersion($content, $user, 'Archived');
 
         return $content->fresh();
@@ -172,7 +168,6 @@ class ContentService
         $this->syncContentElements($content);
 
         // Create version
-        $content->increment('current_version');
         $this->versionService->createVersion($content, $user, 'Element added');
 
         return $element;
@@ -194,7 +189,6 @@ class ContentService
         $content = $element->content;
         $this->syncContentElements($content);
 
-        $content->increment('current_version');
         $this->versionService->createVersion($content, $user, 'Element updated');
 
         return $element->fresh();
@@ -216,7 +210,6 @@ class ContentService
 
         $this->syncContentElements($content);
 
-        $content->increment('current_version');
         $this->versionService->createVersion($content, $user, 'Element deleted');
 
         return true;
@@ -246,7 +239,6 @@ class ContentService
 
         $this->syncContentElements($content);
 
-        $content->increment('current_version');
         $this->versionService->createVersion($content, $user, 'Element moved');
 
         return $element->fresh();
@@ -325,5 +317,3 @@ class ContentService
         }
     }
 }
-
-

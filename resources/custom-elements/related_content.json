@@ -1,0 +1,61 @@
+{
+    "type": "custom_related_content",
+    "label": "Verwandter Inhalt",
+    "description": "Verknüpfung zu anderem Content mit optionaler Beschreibung",
+    "icon": "link-2",
+    "category": "data",
+    "fields": [
+        {
+            "name": "reference",
+            "label": "Verknüpfter Inhalt",
+            "inputType": "reference",
+            "required": true,
+            "referenceConfig": {
+                "minDepth": "content",
+                "maxDepth": "content"
+            },
+            "helpText": "Wähle einen Content-Eintrag aus"
+        },
+        {
+            "name": "displayStyle",
+            "label": "Anzeigestil",
+            "inputType": "toggle",
+            "options": [
+                { "value": "card", "label": "Karte" },
+                { "value": "inline", "label": "Inline" },
+                { "value": "minimal", "label": "Minimal" }
+            ],
+            "defaultValue": "card",
+            "grid": "half"
+        },
+        {
+            "name": "showPreview",
+            "label": "Vorschau anzeigen",
+            "inputType": "switch",
+            "defaultValue": true,
+            "grid": "half"
+        },
+        {
+            "name": "customTitle",
+            "label": "Benutzerdefinierter Titel",
+            "inputType": "text",
+            "placeholder": "Leer lassen für Original-Titel",
+            "helpText": "Überschreibt den Titel des verknüpften Inhalts"
+        },
+        {
+            "name": "description",
+            "label": "Kurzbeschreibung",
+            "inputType": "textarea",
+            "placeholder": "Optionale Beschreibung der Verknüpfung"
+        }
+    ],
+    "defaultData": {
+        "reference": null,
+        "displayStyle": "card",
+        "showPreview": true,
+        "customTitle": "",
+        "description": ""
+    },
+    "cssClass": "related-content-element"
+}
+

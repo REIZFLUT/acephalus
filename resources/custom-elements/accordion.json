@@ -1,0 +1,52 @@
+{
+    "type": "custom_accordion",
+    "label": "Akkordeon",
+    "description": "Auf- und zuklappbare Inhaltsabschnitte",
+    "icon": "chevrons-down-up",
+    "category": "layout",
+    "canHaveChildren": true,
+    "fields": [
+        {
+            "name": "title",
+            "label": "Titel",
+            "inputType": "text",
+            "placeholder": "Akkordeon-Titel",
+            "required": true
+        },
+        {
+            "name": "defaultOpen",
+            "label": "Standardmäßig geöffnet",
+            "inputType": "switch",
+            "defaultValue": false,
+            "grid": "half"
+        },
+        {
+            "name": "allowMultiple",
+            "label": "Mehrfachauswahl erlauben",
+            "inputType": "switch",
+            "defaultValue": false,
+            "helpText": "Wenn aktiviert, können mehrere Abschnitte gleichzeitig geöffnet sein",
+            "grid": "half"
+        },
+        {
+            "name": "icon",
+            "label": "Icon",
+            "inputType": "select",
+            "options": [
+                { "value": "chevron", "label": "Chevron (Standard)" },
+                { "value": "plus", "label": "Plus/Minus" },
+                { "value": "arrow", "label": "Pfeil" },
+                { "value": "none", "label": "Kein Icon" }
+            ],
+            "defaultValue": "chevron"
+        }
+    ],
+    "defaultData": {
+        "title": "",
+        "defaultOpen": false,
+        "allowMultiple": false,
+        "icon": "chevron"
+    },
+    "cssClass": "accordion-element"
+}
+

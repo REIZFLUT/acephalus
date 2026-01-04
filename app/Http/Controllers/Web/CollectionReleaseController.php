@@ -6,42 +6,51 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Mongodb\Collection;
-use App\Services\EditionService;
+use App\Services\ReleaseService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
-class CollectionEditionController extends Controller
+class CollectionReleaseController extends Controller
 {
     public function __construct(
-        protected EditionService $editionService
+        protected ReleaseService $releaseService
     ) {}
 
     /**
-     * Create a new edition for the collection.
+     * Create a new release for the collection.
      */
     public function store(Request $request, Collection $collection): RedirectResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
+            'copy_contents' => ['boolean'],
         ]);
 
-        // Check if edition name already exists
-        $existingEditions = collect($collection->editions ?? []);
-        if ($existingEditions->contains('name', $validated['name'])) {
+        // Check if release name already exists
+        $existingReleases = collect($collection->releases ?? []);
+        if ($existingReleases->contains('name', $validated['name'])) {
             return redirect()
                 ->back()
-                ->withErrors(['name' => 'An edition with this name already exists.']);
+                ->withErrors(['name' => 'A release with this name already exists.']);
         }
 
-        $this->editionService->createEdition(
+        $copyContents = $validated['copy_contents'] ?? false;
+
+        $this->releaseService->createRelease(
             $collection,
             $validated['name'],
-            $request->user()
+            $request->user(),
+            $copyContents
         );
+
+        $message = "Release '{$validated['name']}' created successfully.";
+        if ($copyContents) {
+            $message .= ' All contents have been copied to the new release.';
+        }
 
         return redirect()
             ->back()
-            ->with('success', "Edition '{$validated['name']}' created successfully.");
+            ->with('success', $message);
     }
 
     /**
@@ -49,7 +58,7 @@ class CollectionEditionController extends Controller
      */
     public function purge(Collection $collection): RedirectResponse
     {
-        $deletedCount = $this->editionService->purgeCollectionVersions($collection);
+        $deletedCount = $this->releaseService->purgeCollectionVersions($collection);
 
         return redirect()
             ->back()
@@ -61,7 +70,7 @@ class CollectionEditionController extends Controller
      */
     public function purgePreview(Collection $collection): \Illuminate\Http\JsonResponse
     {
-        $count = $this->editionService->getPurgePreviewCount($collection);
+        $count = $this->releaseService->getPurgePreviewCount($collection);
 
         return response()->json([
             'count' => $count,

@@ -6,13 +6,12 @@ use App\Models\Mongodb\Content;
 use App\Models\Mongodb\ContentVersion;
 use App\Models\User;
 use App\Services\ContentService;
+use Laravel\Passport\Client;
 use Laravel\Passport\Passport;
 
 beforeEach(function () {
-    $this->artisan('passport:client', [
-        '--personal' => true,
-        '--name' => 'Test Personal Access Client',
-        '--no-interaction' => true,
+    Client::factory()->asPersonalAccessTokenClient()->create([
+        'name' => 'Test Personal Access Client',
     ]);
 
     $this->user = User::factory()->create();
@@ -140,5 +139,3 @@ it('creates version when adding elements', function () {
     $this->content->refresh();
     expect($this->content->current_version)->toBe($originalVersion + 1);
 });
-
-

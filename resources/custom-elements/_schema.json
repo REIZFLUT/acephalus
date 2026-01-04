@@ -1,0 +1,322 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "custom-element-definition",
+    "title": "Custom Element Definition",
+    "description": "Schema for defining custom content elements in Continy",
+    "type": "object",
+    "required": ["type", "label", "category", "fields"],
+    "properties": {
+        "type": {
+            "type": "string",
+            "pattern": "^custom_[a-z][a-z0-9_]*$",
+            "description": "Unique type identifier (must start with 'custom_')"
+        },
+        "label": {
+            "type": "string",
+            "description": "Human-readable label for the element"
+        },
+        "description": {
+            "type": "string",
+            "description": "Brief description of what this element does"
+        },
+        "icon": {
+            "type": "string",
+            "description": "Lucide icon name (e.g., 'box', 'star', 'layout')"
+        },
+        "category": {
+            "type": "string",
+            "enum": ["content", "data", "layout", "interactive", "media"],
+            "description": "Category for grouping in the add block menu"
+        },
+        "canHaveChildren": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether this element can contain child elements"
+        },
+        "fields": {
+            "type": "array",
+            "description": "Array of field definitions for this element",
+            "items": {
+                "$ref": "#/definitions/field"
+            }
+        },
+        "defaultData": {
+            "type": "object",
+            "description": "Default values for fields when creating a new element"
+        },
+        "previewTemplate": {
+            "type": "string",
+            "description": "Blade template name for preview rendering (optional)"
+        },
+        "cssClass": {
+            "type": "string",
+            "description": "CSS class to apply to the element wrapper"
+        }
+    },
+    "definitions": {
+        "field": {
+            "type": "object",
+            "required": ["name", "label", "inputType"],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-zA-Z0-9_]*$",
+                    "description": "Field name (used as key in data object)"
+                },
+                "label": {
+                    "type": "string",
+                    "description": "Human-readable field label"
+                },
+                "inputType": {
+                    "type": "string",
+                    "enum": [
+                        "text",
+                        "textarea",
+                        "number",
+                        "email",
+                        "url",
+                        "tel",
+                        "password",
+                        "color",
+                        "date",
+                        "datetime",
+                        "time",
+                        "checkbox",
+                        "switch",
+                        "toggle",
+                        "radio",
+                        "select",
+                        "combobox",
+                        "multi_select",
+                        "tags",
+                        "slider",
+                        "range",
+                        "editor",
+                        "code",
+                        "markdown",
+                        "json",
+                        "media",
+                        "reference",
+                        "hidden"
+                    ],
+                    "description": "Input type for the field"
+                },
+                "placeholder": {
+                    "type": "string",
+                    "description": "Placeholder text"
+                },
+                "helpText": {
+                    "type": "string",
+                    "description": "Help text displayed below the field"
+                },
+                "required": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Whether the field is required"
+                },
+                "defaultValue": {
+                    "description": "Default value for the field"
+                },
+                "validation": {
+                    "$ref": "#/definitions/validation"
+                },
+                "options": {
+                    "type": "array",
+                    "description": "Options for select, radio, checkbox group, etc.",
+                    "items": {
+                        "$ref": "#/definitions/option"
+                    }
+                },
+                "editorConfig": {
+                    "$ref": "#/definitions/editorConfig"
+                },
+                "sliderConfig": {
+                    "$ref": "#/definitions/sliderConfig"
+                },
+                "mediaConfig": {
+                    "$ref": "#/definitions/mediaConfig"
+                },
+                "referenceConfig": {
+                    "$ref": "#/definitions/referenceConfig"
+                },
+                "conditional": {
+                    "$ref": "#/definitions/conditional"
+                },
+                "grid": {
+                    "type": "string",
+                    "enum": ["full", "half", "third", "quarter"],
+                    "default": "full",
+                    "description": "Grid width for the field"
+                }
+            }
+        },
+        "option": {
+            "type": "object",
+            "required": ["value", "label"],
+            "properties": {
+                "value": {
+                    "type": ["string", "number", "boolean"],
+                    "description": "Option value"
+                },
+                "label": {
+                    "type": "string",
+                    "description": "Option label"
+                },
+                "icon": {
+                    "type": "string",
+                    "description": "Lucide icon name for the option"
+                },
+                "disabled": {
+                    "type": "boolean",
+                    "default": false
+                }
+            }
+        },
+        "validation": {
+            "type": "object",
+            "properties": {
+                "min": {
+                    "type": "number",
+                    "description": "Minimum value (for numbers) or length (for strings)"
+                },
+                "max": {
+                    "type": "number",
+                    "description": "Maximum value (for numbers) or length (for strings)"
+                },
+                "pattern": {
+                    "type": "string",
+                    "description": "Regular expression pattern"
+                },
+                "patternMessage": {
+                    "type": "string",
+                    "description": "Custom message when pattern fails"
+                },
+                "step": {
+                    "type": "number",
+                    "description": "Step value for number inputs"
+                },
+                "minLength": {
+                    "type": "integer",
+                    "description": "Minimum string length"
+                },
+                "maxLength": {
+                    "type": "integer",
+                    "description": "Maximum string length"
+                },
+                "minItems": {
+                    "type": "integer",
+                    "description": "Minimum items for multi-select/tags"
+                },
+                "maxItems": {
+                    "type": "integer",
+                    "description": "Maximum items for multi-select/tags"
+                }
+            }
+        },
+        "editorConfig": {
+            "type": "object",
+            "description": "Configuration for editor/code fields",
+            "properties": {
+                "language": {
+                    "type": "string",
+                    "enum": ["html", "css", "javascript", "json", "xml", "markdown", "php", "plain"],
+                    "default": "plain"
+                },
+                "minHeight": {
+                    "type": "string",
+                    "default": "200px"
+                },
+                "maxHeight": {
+                    "type": "string"
+                },
+                "enablePreview": {
+                    "type": "boolean",
+                    "default": false
+                }
+            }
+        },
+        "sliderConfig": {
+            "type": "object",
+            "description": "Configuration for slider/range fields",
+            "properties": {
+                "min": {
+                    "type": "number",
+                    "default": 0
+                },
+                "max": {
+                    "type": "number",
+                    "default": 100
+                },
+                "step": {
+                    "type": "number",
+                    "default": 1
+                },
+                "showValue": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "unit": {
+                    "type": "string",
+                    "description": "Unit label (e.g., 'px', '%', 'em')"
+                }
+            }
+        },
+        "mediaConfig": {
+            "type": "object",
+            "description": "Configuration for media fields",
+            "properties": {
+                "allowedTypes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["image", "video", "audio", "document"]
+                    }
+                },
+                "multiple": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "maxFiles": {
+                    "type": "integer"
+                }
+            }
+        },
+        "referenceConfig": {
+            "type": "object",
+            "description": "Configuration for reference fields",
+            "properties": {
+                "minDepth": {
+                    "type": "string",
+                    "enum": ["collection", "content", "element"],
+                    "default": "collection",
+                    "description": "Minimum selection depth required"
+                },
+                "maxDepth": {
+                    "type": "string",
+                    "enum": ["collection", "content", "element"],
+                    "default": "element",
+                    "description": "Maximum selection depth allowed"
+                }
+            }
+        },
+        "conditional": {
+            "type": "object",
+            "description": "Conditional visibility based on other fields",
+            "properties": {
+                "field": {
+                    "type": "string",
+                    "description": "Name of the field to check"
+                },
+                "operator": {
+                    "type": "string",
+                    "enum": ["equals", "notEquals", "contains", "notContains", "isEmpty", "isNotEmpty", "greaterThan", "lessThan"]
+                },
+                "value": {
+                    "description": "Value to compare against"
+                }
+            },
+            "required": ["field", "operator"]
+        }
+    }
+}
+

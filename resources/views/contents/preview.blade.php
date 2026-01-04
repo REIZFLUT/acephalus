@@ -12,6 +12,12 @@
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     
+    <!-- CodeMirror for JSON display -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/material-darker.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/javascript/javascript.min.js"></script>
+    
     <style>
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -163,6 +169,63 @@
         .katex-display {
             margin: 2rem 0;
         }
+        
+        /* Meta Table for Meta Only Content */
+        .meta-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        .meta-table th,
+        .meta-table td {
+            padding: 1rem 1.25rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .meta-table th {
+            background: #f9fafb;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6b7280;
+        }
+        .meta-table tr:last-child td {
+            border-bottom: none;
+        }
+        .meta-table tr:hover td {
+            background: #f9fafb;
+        }
+        .meta-table td strong {
+            font-weight: 600;
+            color: #374151;
+        }
+        .meta-table td code {
+            background: #f3f4f6;
+            padding: 0.15em 0.4em;
+            border-radius: 0.25rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875em;
+        }
+        
+        /* CodeMirror JSON container */
+        .json-codemirror-container {
+            border-radius: 0.5rem;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+        }
+        .json-codemirror-container .CodeMirror {
+            height: auto;
+            max-height: 400px;
+            font-size: 0.875rem;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+        }
+        .json-codemirror-container .CodeMirror-scroll {
+            max-height: 400px;
+        }
     </style>
 </head>
 <body>
@@ -177,12 +240,78 @@
         </div>
 
         <div class="preview-content">
-            @foreach($content->elements ?? [] as $element)
-                @include('contents.partials.element', ['element' => $element])
-            @endforeach
+            @php
+                $schema = $content->collection?->getSchemaObject();
+                $isMetaOnlyContent = $schema?->isMetaOnlyContent() ?? false;
+                $contentMetaFields = $schema?->getContentMetaFields() ?? [];
+            @endphp
 
-            @if(empty($content->elements))
-                <p style="color: #9ca3af; text-align: center;">Keine Inhalte vorhanden.</p>
+            @if($isMetaOnlyContent)
+                {{-- Meta Only Content Mode: Display metadata in a table --}}
+                @if(count($contentMetaFields) > 0 && !empty($content->metadata))
+                    <table class="meta-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 30%;">Feld</th>
+                                <th>Wert</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($contentMetaFields as $field)
+                                @php
+                                    $fieldName = $field['name'] ?? '';
+                                    $fieldLabel = $field['label'] ?? $fieldName;
+                                    $fieldType = $field['type'] ?? 'text';
+                                    $value = $content->metadata[$fieldName] ?? null;
+                                @endphp
+                                <tr>
+                                    <td><strong>{{ $fieldLabel }}</strong></td>
+                                    <td>
+                                        @if($value === null || $value === '')
+                                            <span style="color: #9ca3af; font-style: italic;">—</span>
+                                        @elseif($fieldType === 'boolean')
+                                            <span>{{ $value ? 'Ja' : 'Nein' }}</span>
+                                        @elseif($fieldType === 'date')
+                                            <span>{{ \Carbon\Carbon::parse($value)->format('d.m.Y') }}</span>
+                                        @elseif($fieldType === 'datetime')
+                                            <span>{{ \Carbon\Carbon::parse($value)->format('d.m.Y H:i') }}</span>
+                                        @elseif($fieldType === 'url')
+                                            <a href="{{ $value }}" target="_blank" rel="noopener">{{ $value }}</a>
+                                        @elseif($fieldType === 'email')
+                                            <a href="mailto:{{ $value }}">{{ $value }}</a>
+                                        @elseif($fieldType === 'color')
+                                            <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                                                <span style="width: 1rem; height: 1rem; border-radius: 0.25rem; background: {{ $value }}; border: 1px solid #e5e7eb;"></span>
+                                                <code>{{ $value }}</code>
+                                            </span>
+                                        @elseif($fieldType === 'multi_select' && is_array($value))
+                                            <span>{{ implode(', ', $value) }}</span>
+                                        @elseif($fieldType === 'json')
+                                            <div class="json-codemirror-container">
+                                                <textarea class="json-codemirror-source" style="display: none;">{{ json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</textarea>
+                                            </div>
+                                        @elseif($fieldType === 'textarea')
+                                            <div style="white-space: pre-wrap;">{{ $value }}</div>
+                                        @else
+                                            <span>{{ $value }}</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @else
+                    <p style="color: #9ca3af; text-align: center;">Keine Metadaten vorhanden.</p>
+                @endif
+            @else
+                {{-- Standard Mode: Display elements --}}
+                @foreach($content->elements ?? [] as $element)
+                    @include('contents.partials.element', ['element' => $element])
+                @endforeach
+
+                @if(empty($content->elements))
+                    <p style="color: #9ca3af; text-align: center;">Keine Inhalte vorhanden.</p>
+                @endif
             @endif
         </div>
     </div>
@@ -222,6 +351,33 @@
                 });
             } catch (e) {
                 console.error('KaTeX rendering error:', e);
+            }
+        });
+
+        // Initialize CodeMirror for JSON fields (readonly)
+        document.querySelectorAll('.json-codemirror-container').forEach(container => {
+            const sourceTextarea = container.querySelector('.json-codemirror-source');
+            if (sourceTextarea) {
+                const jsonContent = sourceTextarea.value;
+                
+                // Create a new textarea for CodeMirror
+                const cmTextarea = document.createElement('textarea');
+                container.appendChild(cmTextarea);
+                
+                // Initialize CodeMirror
+                const editor = CodeMirror.fromTextArea(cmTextarea, {
+                    value: jsonContent,
+                    mode: { name: 'javascript', json: true },
+                    theme: 'material-darker',
+                    readOnly: true,
+                    lineNumbers: true,
+                    lineWrapping: true,
+                    viewportMargin: Infinity,
+                    tabSize: 2,
+                });
+                
+                // Set the content
+                editor.setValue(jsonContent);
             }
         });
     </script>

@@ -30,7 +30,7 @@ class Content extends Model
      *
      * @var array<string>
      */
-    protected array $mongoArrayAttributes = ['elements', 'metadata'];
+    protected array $mongoArrayAttributes = ['elements', 'metadata', 'editions'];
 
     protected $fillable = [
         'collection_id',
@@ -41,6 +41,7 @@ class Content extends Model
         'published_version_id',
         'elements',
         'metadata',
+        'editions',
     ];
 
     /**
@@ -133,6 +134,46 @@ class Content extends Model
     public function scopeDraft($query): mixed
     {
         return $query->where('status', ContentStatus::DRAFT->value);
+    }
+
+    /**
+     * Check if this content is visible for a given edition.
+     * Empty editions array means "all editions" (always visible).
+     */
+    public function isVisibleForEdition(?string $edition): bool
+    {
+        // No edition filter = always visible
+        if ($edition === null) {
+            return true;
+        }
+
+        // No editions set on content = all editions (visible)
+        $contentEditions = $this->editions ?? [];
+        if (empty($contentEditions)) {
+            return true;
+        }
+
+        // Check if the edition is in the content's editions
+        return in_array($edition, $contentEditions, true);
+    }
+
+    /**
+     * Scope a query to filter by edition.
+     *
+     * @param  \MongoDB\Laravel\Eloquent\Builder  $query
+     */
+    public function scopeForEdition($query, ?string $edition): mixed
+    {
+        if ($edition === null) {
+            return $query;
+        }
+
+        // Include content where editions is empty/null (all editions) or contains the specified edition
+        return $query->where(function ($q) use ($edition) {
+            $q->whereNull('editions')
+                ->orWhere('editions', [])
+                ->orWhere('editions', $edition);
+        });
     }
 
     /**

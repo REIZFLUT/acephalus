@@ -21,7 +21,7 @@ export interface Permission {
     guard_name: string;
 }
 
-export interface CollectionEdition {
+export interface CollectionRelease {
     name: string;
     created_at: string;
     created_by?: number;
@@ -35,8 +35,8 @@ export interface Collection {
     schema: Schema | null;
     settings: Record<string, unknown> | null;
     collection_meta: Record<string, unknown> | null;
-    current_edition?: string;
-    editions?: CollectionEdition[];
+    current_release?: string;
+    releases?: CollectionRelease[];
     created_at: string;
     updated_at: string;
     contents_count?: number;
@@ -50,7 +50,55 @@ export interface CollectionSchema {
     element_meta_fields: Record<ElementType, MetaFieldDefinition[]>;
     collection_meta_fields: MetaFieldDefinition[];
     allowed_wrapper_purposes?: string[]; // Array of WrapperPurpose slugs
+    allowed_editions?: string[]; // Array of Edition slugs (null/undefined = all editions)
+    meta_only_content?: boolean; // When true, contents only show meta fields without block editor
+    list_view_settings?: ListViewSettings; // Configuration for content list view
 }
+
+// List View Settings - configuration for the content data table
+export interface ListViewSettings {
+    // Column configurations
+    columns: ListViewColumn[];
+    // Default number of results per page
+    default_per_page: number;
+    // Available options for results per page dropdown (empty = no dropdown)
+    per_page_options: number[];
+    // Default sort column (column id)
+    default_sort_column?: string;
+    // Default sort direction
+    default_sort_direction?: 'asc' | 'desc';
+}
+
+// Individual column configuration
+export interface ListViewColumn {
+    // Unique identifier for the column
+    id: string;
+    // Display label for the column header
+    label: string;
+    // Field type: 'base' for model fields, 'meta' for custom metadata fields
+    type: 'base' | 'meta';
+    // For 'meta' type: the name of the metadata field
+    meta_field?: string;
+    // Whether the column is visible by default
+    visible: boolean;
+    // Whether the column can be toggled by the user
+    toggleable: boolean;
+    // Whether the column is sortable
+    sortable: boolean;
+    // Column width class (optional)
+    width?: 'auto' | 'narrow' | 'medium' | 'wide';
+}
+
+// Available base columns for content list view
+export type ListViewBaseColumn = 
+    | 'title'
+    | 'slug'
+    | 'status'
+    | 'current_version'
+    | 'updated_at'
+    | 'created_at'
+    | 'current_release'
+    | 'editions';
 
 // Element-specific configurations
 export interface ElementConfigs {
@@ -141,6 +189,7 @@ export interface Content {
     published_version_id: string | null;
     elements: BlockElement[];
     metadata: Record<string, unknown> | null;
+    editions?: string[]; // Array of Edition slugs (empty/undefined = all editions)
     created_at: string;
     updated_at: string;
     collection?: Collection;
@@ -156,6 +205,7 @@ export interface BlockElement {
     type: ElementType;
     order: number;
     data: ElementData;
+    editions?: string[]; // Array of Edition slugs (empty/undefined = all editions)
     children?: BlockElement[]; // For wrapper elements
 }
 
@@ -167,7 +217,8 @@ export type ElementType =
     | 'html'
     | 'json'
     | 'xml'
-    | 'wrapper';
+    | 'wrapper'
+    | 'reference';
 
 // Element data types
 export interface TextElementData {
@@ -212,6 +263,14 @@ export interface WrapperElementData {
     custom_css_class?: string;
 }
 
+export interface ReferenceElementData {
+    reference_type: 'collection' | 'content' | 'element';
+    collection_id?: string;
+    content_id?: string;
+    element_id?: string;
+    display_title?: string;
+}
+
 export interface WrapperPurpose {
     _id: string;
     slug: string;
@@ -219,6 +278,17 @@ export interface WrapperPurpose {
     description: string | null;
     icon: string | null;
     css_class: string | null;
+    is_system: boolean;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface Edition {
+    _id: string;
+    slug: string;
+    name: string;
+    description: string | null;
+    icon: string | null;
     is_system: boolean;
     created_at?: string;
     updated_at?: string;
@@ -233,7 +303,125 @@ export type ElementData =
     | JsonElementData
     | XmlElementData
     | WrapperElementData
+    | ReferenceElementData
+    | CustomElementData
     | Record<string, unknown>;
+
+// Custom Element Data (dynamic based on JSON definition)
+export type CustomElementData = Record<string, unknown>;
+
+// Custom Element Definition (loaded from JSON files)
+export interface CustomElementDefinition {
+    type: string;
+    label: string;
+    description?: string;
+    icon?: string;
+    category: 'content' | 'data' | 'layout' | 'interactive' | 'media';
+    canHaveChildren?: boolean;
+    fields: CustomElementField[];
+    defaultData?: Record<string, unknown>;
+    previewTemplate?: string;
+    cssClass?: string;
+}
+
+export interface CustomElementField {
+    name: string;
+    label: string;
+    inputType: CustomElementInputType;
+    placeholder?: string;
+    helpText?: string;
+    required?: boolean;
+    defaultValue?: unknown;
+    validation?: CustomElementValidation;
+    options?: CustomElementOption[];
+    editorConfig?: CustomElementEditorConfig;
+    sliderConfig?: CustomElementSliderConfig;
+    mediaConfig?: CustomElementMediaConfig;
+    referenceConfig?: CustomElementReferenceConfig;
+    conditional?: CustomElementConditional;
+    grid?: 'full' | 'half' | 'third' | 'quarter';
+}
+
+export type CustomElementInputType =
+    | 'text'
+    | 'textarea'
+    | 'number'
+    | 'email'
+    | 'url'
+    | 'tel'
+    | 'password'
+    | 'color'
+    | 'date'
+    | 'datetime'
+    | 'time'
+    | 'checkbox'
+    | 'switch'
+    | 'toggle'
+    | 'radio'
+    | 'select'
+    | 'combobox'
+    | 'multi_select'
+    | 'tags'
+    | 'slider'
+    | 'range'
+    | 'editor'
+    | 'code'
+    | 'markdown'
+    | 'json'
+    | 'media'
+    | 'reference'
+    | 'hidden';
+
+export interface CustomElementOption {
+    value: string | number | boolean;
+    label: string;
+    icon?: string;
+    disabled?: boolean;
+}
+
+export interface CustomElementValidation {
+    min?: number;
+    max?: number;
+    pattern?: string;
+    patternMessage?: string;
+    step?: number;
+    minLength?: number;
+    maxLength?: number;
+    minItems?: number;
+    maxItems?: number;
+}
+
+export interface CustomElementEditorConfig {
+    language?: 'html' | 'css' | 'javascript' | 'json' | 'xml' | 'markdown' | 'php' | 'plain';
+    minHeight?: string;
+    maxHeight?: string;
+    enablePreview?: boolean;
+}
+
+export interface CustomElementSliderConfig {
+    min?: number;
+    max?: number;
+    step?: number;
+    showValue?: boolean;
+    unit?: string;
+}
+
+export interface CustomElementMediaConfig {
+    allowedTypes?: ('image' | 'video' | 'audio' | 'document')[];
+    multiple?: boolean;
+    maxFiles?: number;
+}
+
+export interface CustomElementReferenceConfig {
+    minDepth?: 'collection' | 'content' | 'element';
+    maxDepth?: 'collection' | 'content' | 'element';
+}
+
+export interface CustomElementConditional {
+    field: string;
+    operator: 'equals' | 'notEquals' | 'contains' | 'notContains' | 'isEmpty' | 'isNotEmpty' | 'greaterThan' | 'lessThan';
+    value?: unknown;
+}
 
 // Legacy Element interface for API compatibility
 export interface Element {
@@ -272,8 +460,8 @@ export interface ContentVersion {
     metadata: Record<string, unknown> | null;
     created_by: number | null;
     change_note: string | null;
-    edition?: string;
-    is_edition_end?: boolean;
+    release?: string;
+    is_release_end?: boolean;
     created_at: string;
 }
 

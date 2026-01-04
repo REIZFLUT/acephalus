@@ -1,11 +1,16 @@
 <?php
 
+use App\Http\Controllers\Api\V1\CustomElementController;
+use App\Http\Controllers\Api\V1\ReferenceController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\CollectionController;
-use App\Http\Controllers\Web\CollectionEditionController;
+use App\Http\Controllers\Web\CollectionReleaseController;
 use App\Http\Controllers\Web\ContentController;
 use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\EditionController;
 use App\Http\Controllers\Web\MediaController;
+use App\Http\Controllers\Web\ProfileController;
+use App\Http\Controllers\Web\SettingsController;
 use App\Http\Controllers\Web\UserController;
 use App\Http\Controllers\Web\WrapperPurposeController;
 use Illuminate\Support\Facades\Route;
@@ -38,18 +43,23 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthController::class, 'logout'])->name('logout');
 
+    // Profile
+    Route::get('profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+
     // Dashboard
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Collections
     Route::resource('collections', CollectionController::class);
 
-    // Collection Editions
-    Route::post('collections/{collection}/editions', [CollectionEditionController::class, 'store'])
-        ->name('collections.editions.store');
-    Route::delete('collections/{collection}/versions/purge', [CollectionEditionController::class, 'purge'])
+    // Collection Releases
+    Route::post('collections/{collection}/releases', [CollectionReleaseController::class, 'store'])
+        ->name('collections.releases.store');
+    Route::delete('collections/{collection}/versions/purge', [CollectionReleaseController::class, 'purge'])
         ->name('collections.versions.purge');
-    Route::get('collections/{collection}/versions/purge-preview', [CollectionEditionController::class, 'purgePreview'])
+    Route::get('collections/{collection}/versions/purge-preview', [CollectionReleaseController::class, 'purgePreview'])
         ->name('collections.versions.purge-preview');
 
     // Contents
@@ -76,10 +86,40 @@ Route::middleware('auth')->group(function () {
 
     // Settings
     Route::prefix('settings')->name('settings.')->group(function () {
+        // Main settings index (tabbed view)
+        Route::get('/', [SettingsController::class, 'index'])->name('index');
+
         // Wrapper Purposes
         Route::get('wrapper-purposes/list', [WrapperPurposeController::class, 'list'])
             ->name('wrapper-purposes.list');
         Route::resource('wrapper-purposes', WrapperPurposeController::class)
             ->parameters(['wrapper-purposes' => 'wrapperPurpose']);
+
+        // Editions
+        Route::get('editions/list', [EditionController::class, 'list'])
+            ->name('editions.list');
+        Route::resource('editions', EditionController::class);
+    });
+
+    // Internal API routes for the admin panel (JSON responses, but with web session auth)
+    Route::prefix('api/v1')->name('api.v1.')->group(function () {
+        // Custom Elements
+        Route::prefix('custom-elements')->name('custom-elements.')->group(function () {
+            Route::get('/', [CustomElementController::class, 'index'])->name('index');
+            Route::get('{type}', [CustomElementController::class, 'show'])->name('show');
+            Route::get('{type}/defaults', [CustomElementController::class, 'defaults'])->name('defaults');
+            Route::post('{type}/validate', [CustomElementController::class, 'validate'])->name('validate');
+            Route::post('refresh', [CustomElementController::class, 'refresh'])->name('refresh');
+        });
+
+        // Reference Picker (for internal references)
+        Route::prefix('references')->name('references.')->group(function () {
+            Route::get('collections', [ReferenceController::class, 'collections'])->name('collections');
+            Route::get('collections/{collectionId}/contents', [ReferenceController::class, 'contents'])->name('contents');
+            Route::get('contents/{contentId}/elements', [ReferenceController::class, 'elements'])->name('elements');
+            Route::post('resolve', [ReferenceController::class, 'resolve'])->name('resolve');
+            // Preview for content with elements
+            Route::get('preview/{contentId}', [ReferenceController::class, 'preview'])->name('preview');
+        });
     });
 });

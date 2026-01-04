@@ -24,7 +24,7 @@ class Collection extends Model
      *
      * @var array<string>
      */
-    protected array $mongoArrayAttributes = ['schema', 'settings', 'collection_meta', 'editions'];
+    protected array $mongoArrayAttributes = ['schema', 'settings', 'collection_meta', 'releases'];
 
     protected $fillable = [
         'name',
@@ -33,8 +33,8 @@ class Collection extends Model
         'schema',
         'settings',
         'collection_meta',
-        'current_edition',
-        'editions',
+        'current_release',
+        'releases',
     ];
 
     /**

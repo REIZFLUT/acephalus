@@ -82,6 +82,8 @@ export function WysiwygEditor({
                 heading: {
                     levels: [1, 2, 3],
                 },
+                // Disable the built-in link extension to avoid duplicate with our custom Link configuration
+                link: false,
             }),
             Placeholder.configure({
                 placeholder,

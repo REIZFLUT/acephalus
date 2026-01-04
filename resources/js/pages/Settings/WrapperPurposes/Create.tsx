@@ -7,6 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Loader2 } from 'lucide-react';
+import { WrapperPurposeIcon, availableIconNames } from '@/components/WrapperPurposeIcon';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import type { PageProps } from '@/types';
 
 export default function WrapperPurposesCreate({}: PageProps) {
@@ -35,7 +43,7 @@ export default function WrapperPurposesCreate({}: PageProps) {
         <AppLayout
             title="Create Wrapper Purpose"
             breadcrumbs={[
-                { label: 'Settings', href: '/settings/wrapper-purposes' },
+                { label: 'Settings', href: '/settings' },
                 { label: 'Wrapper Purposes', href: '/settings/wrapper-purposes' },
                 { label: 'Create' },
             ]}
@@ -45,7 +53,7 @@ export default function WrapperPurposesCreate({}: PageProps) {
                     <Button variant="ghost" asChild className="-ml-4">
                         <Link href="/settings/wrapper-purposes">
                             <ArrowLeft className="size-4 mr-2" />
-                            Back to Wrapper Purposes
+                            Back to Settings
                         </Link>
                     </Button>
                 </div>
@@ -106,15 +114,33 @@ export default function WrapperPurposesCreate({}: PageProps) {
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="icon">Icon</Label>
-                                    <Input
-                                        id="icon"
-                                        value={data.icon}
-                                        onChange={(e) => setData('icon', e.target.value)}
-                                        placeholder="info"
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        Lucide icon name (e.g., info, alert-triangle)
-                                    </p>
+                                    <Select
+                                        value={data.icon || ''}
+                                        onValueChange={(value) => setData('icon', value)}
+                                    >
+                                        <SelectTrigger id="icon">
+                                            <SelectValue placeholder="Select an icon">
+                                                {data.icon ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <WrapperPurposeIcon iconName={data.icon} className="size-4" />
+                                                        <span>{data.icon}</span>
+                                                    </div>
+                                                ) : (
+                                                    'Select an icon'
+                                                )}
+                                            </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableIconNames.map((iconName) => (
+                                                <SelectItem key={iconName} value={iconName}>
+                                                    <div className="flex items-center gap-2">
+                                                        <WrapperPurposeIcon iconName={iconName} className="size-4" />
+                                                        <span>{iconName}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                     {errors.icon && (
                                         <p className="text-sm text-destructive">{errors.icon}</p>
                                     )}

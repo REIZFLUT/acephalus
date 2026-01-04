@@ -18,6 +18,8 @@ interface SchemaContextType {
     editions: Edition[];
     previewEdition: string | null;
     contentEditions: string[];
+    collectionId: string | null;
+    contentId: string | null;
     getTextFormats: () => ('plain' | 'markdown' | 'html')[];
     getMediaTypes: () => ('image' | 'video' | 'audio' | 'document' | 'canvas')[];
     collapsedBlocks: Set<string>;
@@ -33,6 +35,8 @@ const SchemaContext = createContext<SchemaContextType>({
     editions: [],
     previewEdition: null,
     contentEditions: [],
+    collectionId: null,
+    contentId: null,
     getTextFormats: () => ['plain', 'markdown', 'html'],
     getMediaTypes: () => ['image', 'video', 'audio', 'document'],
     collapsedBlocks: new Set(),
@@ -52,6 +56,8 @@ interface BlockEditorProps {
     editions?: Edition[];
     previewEdition?: string | null;
     contentEditions?: string[];
+    collectionId?: string | null;
+    contentId?: string | null;
     collapsedBlocks?: Set<string>;
     onToggleCollapse?: (id: string) => void;
 }
@@ -65,6 +71,8 @@ export function BlockEditor({
     editions = [],
     previewEdition = null,
     contentEditions = [],
+    collectionId = null,
+    contentId = null,
     collapsedBlocks: externalCollapsedBlocks,
     onToggleCollapse: externalToggleCollapse,
 }: BlockEditorProps) {
@@ -151,6 +159,8 @@ export function BlockEditor({
         editions,
         previewEdition,
         contentEditions,
+        collectionId,
+        contentId,
         getTextFormats: () => {
             const config = schema?.element_configs?.text as TextElementConfig | undefined;
             return config?.formats || ['plain', 'markdown', 'html'];

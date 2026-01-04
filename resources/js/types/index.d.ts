@@ -444,10 +444,60 @@ export interface Media {
     size_human: string;
     alt: string | null;
     caption: string | null;
+    tags: string[] | null;
     metadata: Record<string, unknown> | null;
+    folder_id: string | null;
+    folder_path?: string;
+    folder_name?: string;
     created_at: string;
     updated_at: string;
     url: string;
+}
+
+export interface MediaFolder {
+    _id: string;
+    name: string;
+    slug: string;
+    parent_id: string | null;
+    path: string;
+    type: 'root_collections' | 'root_global' | 'collection' | 'content' | 'custom';
+    is_system: boolean;
+    collection_id: string | null;
+    content_id: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface MediaFolderTree {
+    id: string;
+    name: string;
+    slug: string;
+    path: string;
+    type: string;
+    is_system: boolean;
+    can_create_subfolders: boolean;
+    can_delete: boolean;
+    children: MediaFolderTree[];
+}
+
+export interface MediaMetaField {
+    _id: string;
+    slug: string;
+    name: string;
+    description: string | null;
+    field_type: string;
+    options: { value: string; label: string }[] | null;
+    is_system: boolean;
+    required: boolean;
+    placeholder: string | null;
+    order: number;
+}
+
+export interface FocusArea {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
 }
 
 export interface ContentVersion {

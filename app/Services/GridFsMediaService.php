@@ -47,8 +47,11 @@ class GridFsMediaService
 
     /**
      * Upload a file to GridFS.
+     *
+     * @param  array<string, mixed>  $metadata  Additional metadata (alt, caption, etc.)
+     * @param  string|null  $folderId  Optional folder ID to organize media
      */
-    public function upload(UploadedFile $file, ?User $user = null, array $metadata = []): Media
+    public function upload(UploadedFile $file, ?User $user = null, array $metadata = [], ?string $folderId = null): Media
     {
         $filename = $this->generateFilename($file);
         $mimeType = $file->getMimeType() ?? 'application/octet-stream';
@@ -64,6 +67,7 @@ class GridFsMediaService
                     'original_filename' => $file->getClientOriginalName(),
                     'mime_type' => $mimeType,
                     'uploaded_by' => $user?->id,
+                    'folder_id' => $folderId,
                     ...$metadata,
                 ],
             ]
@@ -71,6 +75,7 @@ class GridFsMediaService
         fclose($stream);
 
         // Create media record
+        // Note: tags and metadata must be arrays for proper MongoDB BSON storage
         return Media::create([
             'filename' => $filename,
             'original_filename' => $file->getClientOriginalName(),
@@ -80,8 +85,10 @@ class GridFsMediaService
             'gridfs_id' => (string) $gridFsId,
             'alt' => $metadata['alt'] ?? null,
             'caption' => $metadata['caption'] ?? null,
-            'metadata' => $metadata,
+            'tags' => [],
+            'metadata' => $metadata ?: [],
             'uploaded_by' => $user?->id,
+            'folder_id' => $folderId,
         ]);
     }
 
@@ -133,7 +140,8 @@ class GridFsMediaService
             }
         }
 
-        return $media->delete();
+        // MongoDB delete() can return null, so we ensure a boolean is returned
+        return (bool) $media->delete();
     }
 
     /**
@@ -197,5 +205,3 @@ class GridFsMediaService
         return route('api.v1.media.show', ['media' => $media->_id]);
     }
 }
-
-

@@ -27,8 +27,10 @@ class Media extends Model
         'gridfs_id',
         'alt',
         'caption',
+        'tags',
         'metadata',
         'uploaded_by',
+        'folder_id',
     ];
 
     /**
@@ -41,7 +43,8 @@ class Media extends Model
         return [
             'media_type' => MediaType::class,
             'size' => 'integer',
-            'metadata' => 'array',
+            // Note: Don't cast tags/metadata to 'array' for MongoDB
+            // MongoDB natively stores arrays and objects as BSON types
         ];
     }
 
@@ -65,6 +68,14 @@ class Media extends Model
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
+    }
+
+    /**
+     * Get the folder this media belongs to.
+     */
+    public function folder(): BelongsTo
+    {
+        return $this->belongsTo(MediaFolder::class, 'folder_id');
     }
 
     /**
@@ -98,6 +109,20 @@ class Media extends Model
     }
 
     /**
+     * Scope a query to filter by folder.
+     *
+     * @param  \MongoDB\Laravel\Eloquent\Builder  $query
+     */
+    public function scopeInFolder($query, ?string $folderId): mixed
+    {
+        if ($folderId === null) {
+            return $query->whereNull('folder_id');
+        }
+
+        return $query->where('folder_id', $folderId);
+    }
+
+    /**
      * Get the file size in a human-readable format.
      */
     public function getHumanReadableSizeAttribute(): string
@@ -111,6 +136,12 @@ class Media extends Model
 
         return round($bytes, 2).' '.$units[$i];
     }
+
+    /**
+     * Get the route key for the model.
+     */
+    public function getRouteKeyName(): string
+    {
+        return '_id';
+    }
 }
-
-

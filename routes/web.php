@@ -9,6 +9,8 @@ use App\Http\Controllers\Web\ContentController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\EditionController;
 use App\Http\Controllers\Web\MediaController;
+use App\Http\Controllers\Web\MediaFolderController;
+use App\Http\Controllers\Web\MediaMetaFieldController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\SettingsController;
 use App\Http\Controllers\Web\UserController;
@@ -79,7 +81,18 @@ Route::middleware('auth')->group(function () {
 
     // Media
     Route::get('media/{media}/file', [MediaController::class, 'file'])->name('media.file');
-    Route::resource('media', MediaController::class)->except(['edit', 'update']);
+    Route::resource('media', MediaController::class)->except(['edit'])->parameters(['media' => 'media']);
+    Route::patch('media/{media}', [MediaController::class, 'update'])->name('media.update.patch');
+
+    // Media Folders
+    Route::prefix('media-folders')->name('media-folders.')->group(function () {
+        Route::get('tree', [MediaFolderController::class, 'tree'])->name('tree');
+        Route::get('global-root', [MediaFolderController::class, 'globalRoot'])->name('global-root');
+        Route::get('{mediaFolder}', [MediaFolderController::class, 'show'])->name('show');
+        Route::post('/', [MediaFolderController::class, 'store'])->name('store');
+        Route::put('{mediaFolder}', [MediaFolderController::class, 'update'])->name('update');
+        Route::delete('{mediaFolder}', [MediaFolderController::class, 'destroy'])->name('destroy');
+    });
 
     // Users
     Route::resource('users', UserController::class);
@@ -99,6 +112,14 @@ Route::middleware('auth')->group(function () {
         Route::get('editions/list', [EditionController::class, 'list'])
             ->name('editions.list');
         Route::resource('editions', EditionController::class);
+
+        // Media Meta Fields
+        Route::get('media-meta-fields/list', [MediaMetaFieldController::class, 'list'])
+            ->name('media-meta-fields.list');
+        Route::post('media-meta-fields/reorder', [MediaMetaFieldController::class, 'reorder'])
+            ->name('media-meta-fields.reorder');
+        Route::resource('media-meta-fields', MediaMetaFieldController::class)
+            ->parameters(['media-meta-fields' => 'mediaMetaField']);
     });
 
     // Internal API routes for the admin panel (JSON responses, but with web session auth)

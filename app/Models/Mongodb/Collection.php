@@ -50,6 +50,54 @@ class Collection extends Model
     }
 
     /**
+     * Boot the model.
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        // Create a media folder for the collection when it's created
+        static::created(function (Collection $collection) {
+            $collectionsRoot = MediaFolder::where('type', MediaFolder::TYPE_ROOT_COLLECTIONS)->first();
+
+            if ($collectionsRoot) {
+                MediaFolder::create([
+                    'name' => $collection->name,
+                    'slug' => $collection->slug,
+                    'path' => 'collections/'.$collection->slug,
+                    'type' => MediaFolder::TYPE_COLLECTION,
+                    'is_system' => true,
+                    'parent_id' => (string) $collectionsRoot->_id,
+                    'collection_id' => (string) $collection->_id,
+                ]);
+            }
+        });
+
+        // Update the media folder when collection is updated
+        static::updated(function (Collection $collection) {
+            if ($collection->isDirty(['name', 'slug'])) {
+                $folder = MediaFolder::where('collection_id', (string) $collection->_id)->first();
+
+                if ($folder) {
+                    $folder->update([
+                        'name' => $collection->name,
+                        'slug' => $collection->slug,
+                        'path' => 'collections/'.$collection->slug,
+                    ]);
+                }
+            }
+        });
+    }
+
+    /**
+     * Get the media folder for this collection.
+     */
+    public function mediaFolder(): ?\Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(MediaFolder::class, 'collection_id');
+    }
+
+    /**
      * Get the collection schema as a CollectionSchema object.
      */
     public function getSchemaObject(): CollectionSchema

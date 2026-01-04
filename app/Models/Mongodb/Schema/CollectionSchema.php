@@ -87,6 +87,7 @@ class CollectionSchema
             elementMetaFields: $data['element_meta_fields'] ?? [],
             collectionMetaFields: $data['collection_meta_fields'] ?? [],
             allowedEditions: $data['allowed_editions'] ?? null,
+            allowedMediaMetaFields: $data['allowed_media_meta_fields'] ?? null,
             metaOnlyContent: $data['meta_only_content'] ?? false,
             listViewSettings: $data['list_view_settings'] ?? null,
         );
@@ -104,6 +105,7 @@ class CollectionSchema
             elementMetaFields: [],
             collectionMetaFields: [],
             allowedEditions: null,
+            allowedMediaMetaFields: null,
             metaOnlyContent: false,
             listViewSettings: self::DEFAULT_LIST_VIEW_SETTINGS,
         );
@@ -122,6 +124,8 @@ class CollectionSchema
         public array $collectionMetaFields = [],
         /** @var array<string>|null List of allowed edition slugs (null = all editions) */
         public ?array $allowedEditions = null,
+        /** @var array<string>|null List of allowed media meta field slugs (null = all fields) */
+        public ?array $allowedMediaMetaFields = null,
         /** @var bool When true, contents only display metadata fields without the block editor */
         public bool $metaOnlyContent = false,
         /** @var array<string, mixed>|null List view settings for content data table */
@@ -217,6 +221,7 @@ class CollectionSchema
             'element_meta_fields' => $this->elementMetaFields,
             'collection_meta_fields' => $this->collectionMetaFields,
             'allowed_editions' => $this->allowedEditions,
+            'allowed_media_meta_fields' => $this->allowedMediaMetaFields,
             'meta_only_content' => $this->metaOnlyContent,
             'list_view_settings' => $this->listViewSettings ?? self::DEFAULT_LIST_VIEW_SETTINGS,
         ];
@@ -263,5 +268,28 @@ class CollectionSchema
     public function isMetaOnlyContent(): bool
     {
         return $this->metaOnlyContent;
+    }
+
+    /**
+     * Get allowed media meta fields.
+     *
+     * @return array<string>|null
+     */
+    public function getAllowedMediaMetaFields(): ?array
+    {
+        return $this->allowedMediaMetaFields;
+    }
+
+    /**
+     * Check if a media meta field is allowed in this collection.
+     */
+    public function isMediaMetaFieldAllowed(string $slug): bool
+    {
+        // If no fields are specified, all are allowed
+        if ($this->allowedMediaMetaFields === null) {
+            return true;
+        }
+
+        return in_array($slug, $this->allowedMediaMetaFields, true);
     }
 }

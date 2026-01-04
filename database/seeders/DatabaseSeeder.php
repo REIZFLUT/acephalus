@@ -20,6 +20,12 @@ class DatabaseSeeder extends Seeder
         // Create wrapper purposes
         $this->call(WrapperPurposeSeeder::class);
 
+        // Create media meta fields
+        $this->call(MediaMetaFieldSeeder::class);
+
+        // Create media folders
+        $this->call(MediaFolderSeeder::class);
+
         // Create admin user
         $admin = User::factory()->create([
             'name' => 'Admin User',

@@ -1,0 +1,61 @@
+{
+    "type": "custom_contact_data",
+    "label": "Kontaktdaten",
+    "description": "Einzelne Kontaktinformation mit Typ und optionaler Zusatzinfo",
+    "icon": "contact",
+    "category": "data",
+    "fields": [
+        {
+            "name": "contactType",
+            "label": "Typ",
+            "inputType": "select",
+            "required": true,
+            "options": [
+                { "value": "phone", "label": "Telefon" },
+                { "value": "mobile", "label": "Mobil" },
+                { "value": "email", "label": "E-Mail" },
+                { "value": "website", "label": "Website" },
+                { "value": "address", "label": "Adresse" },
+                { "value": "fax", "label": "Fax" },
+                { "value": "linkedin", "label": "LinkedIn" },
+                { "value": "xing", "label": "XING" },
+                { "value": "twitter", "label": "Twitter / X" },
+                { "value": "instagram", "label": "Instagram" },
+                { "value": "facebook", "label": "Facebook" },
+                { "value": "youtube", "label": "YouTube" },
+                { "value": "tiktok", "label": "TikTok" },
+                { "value": "whatsapp", "label": "WhatsApp" },
+                { "value": "telegram", "label": "Telegram" },
+                { "value": "signal", "label": "Signal" },
+                { "value": "skype", "label": "Skype" },
+                { "value": "other", "label": "Sonstiges" }
+            ],
+            "defaultValue": "phone",
+            "grid": "third"
+        },
+        {
+            "name": "value",
+            "label": "Wert",
+            "inputType": "text",
+            "placeholder": "Telefonnummer, E-Mail, URL, etc.",
+            "required": true,
+            "grid": "third"
+        },
+        {
+            "name": "info",
+            "label": "Info",
+            "inputType": "text",
+            "placeholder": "z.B. Privat, Geschäftlich, Presseanfragen...",
+            "helpText": "Optionale Zusatzinfo zum Kontakt",
+            "grid": "third"
+        }
+    ],
+    "defaultData": {
+        "contactType": "phone",
+        "value": "",
+        "info": ""
+    },
+    "previewTemplate": "contact_data",
+    "cssClass": "contact-data-element"
+}
+

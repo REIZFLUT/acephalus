@@ -59,7 +59,7 @@ const mediaTypeIcons: Record<string, React.ComponentType<{ className?: string }>
 };
 
 export default function MediaBlockEditor({ block, onUpdate }: BlockEditorProps) {
-    const { getMediaTypes, schema } = useSchema();
+    const { getMediaTypes, schema, collectionId, contentId } = useSchema();
     const allowedMediaTypes = getMediaTypes();
     
     const mediaData = block.data as MediaElementData;
@@ -204,6 +204,8 @@ export default function MediaBlockEditor({ block, onUpdate }: BlockEditorProps) 
                     </DialogHeader>
                     <MediaPicker 
                         type={currentType}
+                        collectionId={collectionId}
+                        contentId={contentId}
                         onSelect={(media) => {
                             handleChange({
                                 file_id: media._id,
@@ -274,9 +276,13 @@ export default function MediaBlockEditor({ block, onUpdate }: BlockEditorProps) 
 // Media Picker with Library and Upload tabs
 function MediaPicker({ 
     type, 
+    collectionId,
+    contentId,
     onSelect 
 }: { 
     type?: string; 
+    collectionId?: string | null;
+    contentId?: string | null;
     onSelect: (media: Media) => void;
 }) {
     const [activeTab, setActiveTab] = useState<'library' | 'upload'>('library');
@@ -342,12 +348,28 @@ function MediaPicker({
         }
     };
 
+    const [uploadError, setUploadError] = useState<string | null>(null);
+
     const handleUpload = async (file: File) => {
         setUploading(true);
+        setUploadError(null);
         
         try {
             const formData = new FormData();
             formData.append('file', file);
+            
+            // Pass collection and content context for automatic folder organization
+            if (collectionId) {
+                formData.append('collection_id', collectionId);
+            }
+            if (contentId) {
+                formData.append('content_id', contentId);
+            }
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            if (!csrfToken) {
+                throw new Error('CSRF token not found');
+            }
 
             const response = await fetch('/media', {
                 method: 'POST',
@@ -355,18 +377,33 @@ function MediaPicker({
                 headers: {
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-CSRF-TOKEN': csrfToken,
                 },
             });
 
             if (response.ok) {
                 const result = await response.json();
-                onSelect(result.data);
+                if (result.data && result.data._id && result.data.url) {
+                    onSelect(result.data);
+                } else {
+                    console.error('Invalid response format:', result);
+                    setUploadError('Upload succeeded but received invalid response format');
+                }
             } else {
-                console.error('Upload failed:', response.status, response.statusText);
+                const errorText = await response.text();
+                console.error('Upload failed:', response.status, response.statusText, errorText);
+                
+                // Try to parse JSON error
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    setUploadError(errorJson.message || `Upload failed: ${response.statusText}`);
+                } catch {
+                    setUploadError(`Upload failed: ${response.statusText}`);
+                }
             }
         } catch (error) {
             console.error('Upload failed:', error);
+            setUploadError(error instanceof Error ? error.message : 'Upload failed');
         } finally {
             setUploading(false);
         }
@@ -515,7 +552,7 @@ function MediaPicker({
                 <div 
                     className={`
                         border-2 border-dashed rounded-lg p-12 text-center transition-colors
-                        ${dragOver ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'}
+                        ${dragOver ? 'border-primary bg-primary/5' : uploadError ? 'border-destructive/50' : 'border-muted-foreground/25'}
                         ${uploading ? 'opacity-50 pointer-events-none' : ''}
                     `}
                     onDrop={handleDrop}
@@ -547,6 +584,11 @@ function MediaPicker({
                         </span>
                     </label>
                 </div>
+                {uploadError && (
+                    <p className="text-sm text-destructive text-center mt-2">
+                        {uploadError}
+                    </p>
+                )}
                 <p className="text-xs text-muted-foreground text-center mt-4">
                     Supported formats: {type === 'image' ? 'JPG, PNG, GIF, WebP, SVG' : 
                                         type === 'video' ? 'MP4, WebM, MOV' :

@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\Mongodb\Collection;
+use App\Models\Mongodb\Content;
 use App\Models\Mongodb\Media;
+use App\Models\Mongodb\MediaFolder;
+use App\Models\Mongodb\MediaMetaField;
 use App\Services\GridFsMediaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,9 +23,23 @@ class MediaController extends Controller
     public function index(Request $request): Response|\Illuminate\Http\JsonResponse
     {
         $query = Media::query();
+        $search = $request->input('search');
+        $folderId = $request->input('folder');
 
-        if ($search = $request->input('search')) {
-            $query->where('original_filename', 'like', "%{$search}%");
+        // Global search - searches across ALL folders, ignoring folder filter
+        // Searches in: filename, alt, caption, and tags
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('original_filename', 'like', "%{$search}%")
+                    ->orWhere('alt', 'like', "%{$search}%")
+                    ->orWhere('caption', 'like', "%{$search}%")
+                    ->orWhere('tags', 'like', "%{$search}%");
+            });
+            // When searching globally, we don't filter by folder
+            $folderId = null;
+        } elseif ($folderId) {
+            // Only filter by folder when not doing a global search
+            $query->where('folder_id', $folderId);
         }
 
         if ($type = $request->input('type')) {
@@ -30,12 +48,21 @@ class MediaController extends Controller
 
         $media = $query
             ->orderBy('created_at', 'desc')
-            ->paginate(24);
+            ->paginate(100); // Higher limit for DataTable client-side pagination
 
-        // Add URLs to media items for the web interface
+        // Add URLs and folder info to media items for the web interface
         $media->getCollection()->transform(function ($item) {
             $item->url = route('media.file', ['media' => $item->_id]);
             $item->_id = (string) $item->_id;
+
+            // Add folder path information if media is in a folder
+            if ($item->folder_id) {
+                $folder = MediaFolder::find($item->folder_id);
+                if ($folder) {
+                    $item->folder_path = $this->buildFolderDisplayPath($folder);
+                    $item->folder_name = $folder->name;
+                }
+            }
 
             return $item;
         });
@@ -54,11 +81,47 @@ class MediaController extends Controller
             ]);
         }
 
+        // Get all meta fields for the edit form
+        $metaFields = MediaMetaField::ordered()->get();
+
+        // Get subfolders of the current folder for explorer-like display
+        // Only show when not in global search mode
+        $subfolders = [];
+        $originalFolderId = $request->input('folder');
+        $isGlobalSearch = (bool) $search;
+
+        if ($originalFolderId && ! $isGlobalSearch) {
+            $subfolders = MediaFolder::where('parent_id', $originalFolderId)
+                ->orderBy('name')
+                ->get()
+                ->map(fn ($folder) => [
+                    'id' => (string) $folder->_id,
+                    'name' => $folder->name,
+                    'type' => $folder->type,
+                    'is_system' => $folder->is_system,
+                    'children_count' => MediaFolder::where('parent_id', (string) $folder->_id)->count(),
+                    'media_count' => Media::where('folder_id', (string) $folder->_id)->count(),
+                ]);
+        }
+
+        // Get current folder info (even during search to maintain context)
+        $currentFolder = $originalFolderId ? MediaFolder::find($originalFolderId) : null;
+
         return Inertia::render('Media/Index', [
             'media' => $media,
+            'metaFields' => $metaFields,
+            'subfolders' => $subfolders,
+            'currentFolder' => $currentFolder ? [
+                'id' => (string) $currentFolder->_id,
+                'name' => $currentFolder->name,
+                'type' => $currentFolder->type,
+                'parent_id' => $currentFolder->parent_id,
+            ] : null,
+            'isGlobalSearch' => $isGlobalSearch,
             'filters' => [
                 'search' => $search,
                 'type' => $type,
+                'folder' => $originalFolderId,
             ],
         ]);
     }
@@ -77,7 +140,7 @@ class MediaController extends Controller
         }, 200, [
             'Content-Type' => $media->mime_type,
             'Content-Length' => $media->size,
-            'Content-Disposition' => 'inline; filename="' . $media->original_filename . '"',
+            'Content-Disposition' => 'inline; filename="'.$media->original_filename.'"',
             'Cache-Control' => 'public, max-age=3600',
         ]);
     }
@@ -91,33 +154,146 @@ class MediaController extends Controller
     {
         $request->validate([
             'file' => ['required', 'file', 'max:51200'], // 50MB max
+            'collection_id' => ['nullable', 'string'],
+            'content_id' => ['nullable', 'string'],
+            'folder_id' => ['nullable', 'string'],
         ]);
 
         $file = $request->file('file');
+        $folderId = $request->input('folder_id');
 
-        $media = $this->mediaService->upload($file, $request->user());
+        // If collection and content are provided, auto-create/find the content folder
+        if ($request->input('collection_id') && $request->input('content_id')) {
+            $folderId = $this->getOrCreateContentFolder(
+                $request->input('collection_id'),
+                $request->input('content_id')
+            );
+        }
+
+        $media = $this->mediaService->upload($file, $request->user(), [], $folderId);
 
         // Return JSON for AJAX requests (media picker), but not for Inertia requests
         if (($request->wantsJson() || $request->ajax()) && ! $request->header('X-Inertia')) {
-            $media->url = route('media.file', ['media' => $media->_id]);
-            $media->_id = (string) $media->_id;
+            // Build response data manually to ensure all fields are included
+            $mediaData = $media->toArray();
+            $mediaData['_id'] = (string) $media->_id;
+            $mediaData['url'] = route('media.file', ['media' => $media->_id]);
 
             return response()->json([
-                'data' => $media,
+                'data' => $mediaData,
                 'message' => "File '{$media->original_filename}' uploaded successfully.",
             ]);
         }
 
         return redirect()
-            ->route('media.index')
+            ->route('media.index', ['folder' => $folderId])
             ->with('success', "File '{$media->original_filename}' uploaded successfully.");
+    }
+
+    /**
+     * Get or create the content folder for uploaded media.
+     */
+    protected function getOrCreateContentFolder(string $collectionId, string $contentId): ?string
+    {
+        $collection = Collection::find($collectionId);
+        $content = Content::find($contentId);
+
+        if (! $collection || ! $content) {
+            return null;
+        }
+
+        // Find the collection folder
+        $collectionFolder = MediaFolder::where('collection_id', $collectionId)
+            ->where('type', MediaFolder::TYPE_COLLECTION)
+            ->first();
+
+        if (! $collectionFolder) {
+            return null;
+        }
+
+        // Check if content folder exists
+        $contentFolder = MediaFolder::where('content_id', $contentId)
+            ->where('type', MediaFolder::TYPE_CONTENT)
+            ->first();
+
+        if ($contentFolder) {
+            return (string) $contentFolder->_id;
+        }
+
+        // Create the content folder
+        $contentFolder = MediaFolder::create([
+            'name' => $content->title ?? $content->slug,
+            'slug' => $content->slug,
+            'path' => $collectionFolder->path.'/'.$content->slug,
+            'type' => MediaFolder::TYPE_CONTENT,
+            'is_system' => false,
+            'parent_id' => (string) $collectionFolder->_id,
+            'collection_id' => $collectionId,
+            'content_id' => $contentId,
+        ]);
+
+        return (string) $contentFolder->_id;
     }
 
     public function show(Media $media): Response
     {
+        $media->url = route('media.file', ['media' => $media->_id]);
+
         return Inertia::render('Media/Show', [
             'media' => $media,
         ]);
+    }
+
+    public function update(Request $request, Media $media): RedirectResponse|\Illuminate\Http\JsonResponse
+    {
+        $validated = $request->validate([
+            'alt' => ['nullable', 'string', 'max:500'],
+            'caption' => ['nullable', 'string', 'max:1000'],
+            'tags' => ['nullable', 'array'],
+            'tags.*' => ['string', 'max:100'],
+            'folder_id' => ['nullable', 'string'],
+            'metadata' => ['nullable', 'array'],
+            'metadata.focus_area' => ['nullable', 'array'],
+            'metadata.focus_area.x' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'metadata.focus_area.y' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'metadata.focus_area.width' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'metadata.focus_area.height' => ['nullable', 'numeric', 'min:0', 'max:100'],
+        ]);
+
+        // Merge metadata with existing metadata
+        $existingMetadata = $media->metadata ?? [];
+        $newMetadata = $validated['metadata'] ?? [];
+        $mergedMetadata = array_merge($existingMetadata, $newMetadata);
+
+        $updateData = [
+            'alt' => $validated['alt'] ?? $media->alt,
+            'caption' => $validated['caption'] ?? $media->caption,
+            'tags' => $validated['tags'] ?? $media->tags,
+            'metadata' => $mergedMetadata,
+        ];
+
+        // Only update folder_id if it was explicitly provided in the request
+        if ($request->has('folder_id')) {
+            $updateData['folder_id'] = $validated['folder_id'];
+        }
+
+        $media->update($updateData);
+
+        // Return JSON for AJAX requests
+        if (($request->wantsJson() || $request->ajax()) && ! $request->header('X-Inertia')) {
+            $mediaData = $media->fresh()->toArray();
+            $mediaData['_id'] = (string) $media->_id;
+            $mediaData['url'] = route('media.file', ['media' => $media->_id]);
+
+            return response()->json([
+                'data' => $mediaData,
+                'message' => 'Media updated successfully.',
+            ]);
+        }
+
+        return redirect()
+            ->route('media.index')
+            ->with('success', 'Media updated successfully.');
     }
 
     public function destroy(Media $media): RedirectResponse
@@ -129,5 +305,16 @@ class MediaController extends Controller
         return redirect()
             ->route('media.index')
             ->with('success', "File '{$filename}' deleted successfully.");
+    }
+
+    /**
+     * Build a human-readable display path for a folder.
+     */
+    protected function buildFolderDisplayPath(MediaFolder $folder): string
+    {
+        $breadcrumbs = $folder->getBreadcrumbs();
+        $names = array_map(fn ($crumb) => $crumb['name'], $breadcrumbs);
+
+        return implode(' / ', $names);
     }
 }

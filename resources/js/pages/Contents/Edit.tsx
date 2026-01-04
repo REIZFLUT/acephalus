@@ -373,6 +373,8 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
                                         editions={editions}
                                         previewEdition={previewEdition}
                                         contentEditions={data.editions}
+                                        collectionId={content.collection_id}
+                                        contentId={content._id}
                                         collapsedBlocks={collapsedBlocks}
                                         onToggleCollapse={toggleCollapseBlock}
                                     />

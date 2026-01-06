@@ -405,7 +405,7 @@ class ContentFilterService
     /**
      * Get available filter fields for a collection.
      *
-     * @return array<array{field: string, label: string, type: string}>
+     * @return array<array{field: string, label: string, type: string, options?: array}>
      */
     public function getAvailableFields(Collection $collection): array
     {
@@ -414,10 +414,20 @@ class ContentFilterService
         // Base content fields
         $fields[] = ['field' => 'title', 'label' => 'Title', 'type' => 'text'];
         $fields[] = ['field' => 'slug', 'label' => 'Slug', 'type' => 'text'];
-        $fields[] = ['field' => 'status', 'label' => 'Status', 'type' => 'select'];
+        $fields[] = [
+            'field' => 'status',
+            'label' => 'Status',
+            'type' => 'select',
+            'options' => $this->getStatusOptions(),
+        ];
         $fields[] = ['field' => 'created_at', 'label' => 'Created At', 'type' => 'datetime'];
         $fields[] = ['field' => 'updated_at', 'label' => 'Updated At', 'type' => 'datetime'];
-        $fields[] = ['field' => 'editions', 'label' => 'Editions', 'type' => 'multi_select'];
+        $fields[] = [
+            'field' => 'editions',
+            'label' => 'Editions',
+            'type' => 'multi_select',
+            'options' => $this->getEditionOptions($collection),
+        ];
 
         // Metadata fields from collection schema
         $schema = $collection->getSchemaObject();
@@ -433,6 +443,46 @@ class ContentFilterService
         }
 
         return $fields;
+    }
+
+    /**
+     * Get status options for the status field.
+     *
+     * @return array<array{value: string, label: string}>
+     */
+    protected function getStatusOptions(): array
+    {
+        return [
+            ['value' => 'draft', 'label' => 'Draft'],
+            ['value' => 'published', 'label' => 'Published'],
+            ['value' => 'archived', 'label' => 'Archived'],
+        ];
+    }
+
+    /**
+     * Get edition options for the editions field.
+     *
+     * @return array<array{value: string, label: string}>
+     */
+    protected function getEditionOptions(Collection $collection): array
+    {
+        // Get allowed editions from collection schema, or all editions if not specified
+        $schema = $collection->schema ?? [];
+        $allowedEditions = $schema['allowed_editions'] ?? null;
+
+        $query = \App\Models\Mongodb\Edition::orderBy('is_system', 'desc')
+            ->orderBy('name');
+
+        if (is_array($allowedEditions) && count($allowedEditions) > 0) {
+            $query->whereIn('slug', $allowedEditions);
+        }
+
+        return $query->get(['slug', 'name'])
+            ->map(fn ($edition) => [
+                'value' => $edition->slug,
+                'label' => $edition->name,
+            ])
+            ->toArray();
     }
 
     /**

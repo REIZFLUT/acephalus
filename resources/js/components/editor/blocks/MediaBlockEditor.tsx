@@ -42,6 +42,7 @@ import { BlockEditorProps } from '../BlockItem';
 import { useSchema } from '../SchemaContext';
 import { MetaFieldsEditor } from '../MetaFieldsEditor';
 import { ThumbnailImage } from '@/components/ui/thumbnail-image';
+import { DocumentPreview, isDocumentMimeType } from '@/components/media/DocumentPreview';
 
 const mediaTypeLabels: Record<string, string> = {
     image: 'Image',
@@ -151,6 +152,14 @@ export default function MediaBlockEditor({ block, onUpdate }: BlockEditorProps) 
                                 <Music className="size-12 text-muted-foreground/50" />
                                 <audio src={mediaData.url} controls className="w-full max-w-md" />
                             </div>
+                        ) : currentType === 'document' && mediaData.mime_type && isDocumentMimeType(mediaData.mime_type) ? (
+                            <div className="min-h-[200px] max-h-[300px] w-full">
+                                <DocumentPreview
+                                    url={mediaData.url}
+                                    mimeType={mediaData.mime_type}
+                                    className="w-full h-full"
+                                />
+                            </div>
                         ) : (
                             <div className="flex items-center justify-center py-8">
                                 <MediaIcon className="size-16 text-muted-foreground/50" />
@@ -211,6 +220,7 @@ export default function MediaBlockEditor({ block, onUpdate }: BlockEditorProps) 
                             handleChange({
                                 file_id: media._id,
                                 url: media.url,
+                                mime_type: media.mime_type,
                             });
                             setIsPickerOpen(false);
                         }}

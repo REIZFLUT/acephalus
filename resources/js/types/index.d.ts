@@ -294,6 +294,7 @@ export interface TextElementData {
 export interface MediaElementData {
     file_id: string | null;
     media_type: 'image' | 'video' | 'audio' | 'document';
+    mime_type?: string;
     alt: string;
     caption: string;
     url?: string;

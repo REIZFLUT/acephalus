@@ -39,6 +39,13 @@ export default defineConfig({
                     if (id.includes('node_modules/katex') || id.includes('node_modules/react-markdown') || id.includes('node_modules/rehype') || id.includes('node_modules/remark')) {
                         return 'vendor-markdown';
                     }
+                    // Group document viewer libraries
+                    if (id.includes('node_modules/react-pdf') || id.includes('node_modules/pdfjs-dist')) {
+                        return 'vendor-pdf';
+                    }
+                    if (id.includes('node_modules/mammoth') || id.includes('node_modules/xlsx') || id.includes('node_modules/pptxtojson')) {
+                        return 'vendor-office';
+                    }
                 }
             }
         }

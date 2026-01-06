@@ -48,9 +48,13 @@ class MediaController extends Controller
             $query->where('mime_type', 'like', "{$type}/%");
         }
 
+        // Allow configurable items per page (default 24 for Grid view)
+        $perPage = (int) $request->input('per_page', 24);
+        $perPage = in_array($perPage, [12, 24, 48, 96, 100]) ? $perPage : 24;
+
         $media = $query
             ->orderBy('created_at', 'desc')
-            ->paginate(100); // Higher limit for DataTable client-side pagination
+            ->paginate($perPage);
 
         // Add URLs and folder info to media items for the web interface
         $media->getCollection()->transform(function ($item) {
@@ -130,12 +134,14 @@ class MediaController extends Controller
                 'name' => $currentFolder->name,
                 'type' => $currentFolder->type,
                 'parent_id' => $currentFolder->parent_id,
+                'can_create_subfolders' => $currentFolder->canCreateSubfolders(),
             ] : null,
             'isGlobalSearch' => $isGlobalSearch,
             'filters' => [
                 'search' => $search,
                 'type' => $type,
                 'folder' => $originalFolderId,
+                'per_page' => $perPage,
             ],
         ]);
     }

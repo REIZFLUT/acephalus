@@ -13,7 +13,7 @@ import {
     type SortingState,
     type VisibilityState,
 } from "@tanstack/react-table"
-import { MoreHorizontal, Pencil, Trash2, Download, Image as ImageIcon, File, Video, Music, FileText } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, Download, Image as ImageIcon, File, Video, Music, FileText, Folder } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -51,11 +51,39 @@ import { DataTablePagination } from "./DataTablePagination"
 import { DataTableViewOptions } from "./DataTableViewOptions"
 import type { Media, MediaMetaField } from "@/types"
 
+// Combined type for folders and media items
+interface FolderItem {
+    _type: 'folder'
+    id: string
+    name: string
+    type: string
+    is_system: boolean
+    children_count: number
+    media_count: number
+}
+
+interface MediaItem extends Media {
+    _type: 'media'
+}
+
+type FileSystemItem = FolderItem | MediaItem
+
+interface Subfolder {
+    id: string
+    name: string
+    type: string
+    is_system: boolean
+    children_count: number
+    media_count: number
+}
+
 interface MediaDataTableProps {
     media: Media[]
     metaFields: MediaMetaField[]
+    subfolders?: Subfolder[]
     onEdit: (item: Media) => void
     onDelete: (item: Media) => void
+    onFolderNavigate?: (folderId: string) => void
 }
 
 // Get file icon based on mime type
@@ -65,6 +93,65 @@ const getFileIcon = (mimeType: string) => {
     if (mimeType.startsWith('audio/')) return Music
     if (mimeType.startsWith('text/') || mimeType.includes('pdf')) return FileText
     return File
+}
+
+// Get user-friendly file type from filename or mime type
+const getFileTypeLabel = (filename: string, mimeType: string): string => {
+    // First try to get extension from filename
+    const ext = filename.split('.').pop()?.toLowerCase()
+    if (ext && ext !== filename.toLowerCase()) {
+        return ext.toUpperCase()
+    }
+    
+    // Fallback: derive from mime type
+    const mimeMap: Record<string, string> = {
+        'image/jpeg': 'JPG',
+        'image/jpg': 'JPG',
+        'image/png': 'PNG',
+        'image/gif': 'GIF',
+        'image/webp': 'WEBP',
+        'image/svg+xml': 'SVG',
+        'image/bmp': 'BMP',
+        'image/tiff': 'TIFF',
+        'video/mp4': 'MP4',
+        'video/webm': 'WEBM',
+        'video/quicktime': 'MOV',
+        'video/x-msvideo': 'AVI',
+        'audio/mpeg': 'MP3',
+        'audio/wav': 'WAV',
+        'audio/ogg': 'OGG',
+        'audio/flac': 'FLAC',
+        'application/pdf': 'PDF',
+        'application/msword': 'DOC',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
+        'application/vnd.ms-excel': 'XLS',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'XLSX',
+        'application/vnd.ms-powerpoint': 'PPT',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PPTX',
+        'application/zip': 'ZIP',
+        'application/x-rar-compressed': 'RAR',
+        'application/json': 'JSON',
+        'text/plain': 'TXT',
+        'text/html': 'HTML',
+        'text/css': 'CSS',
+        'text/javascript': 'JS',
+        'application/javascript': 'JS',
+    }
+    
+    if (mimeMap[mimeType]) {
+        return mimeMap[mimeType]
+    }
+    
+    // Try to extract from mime type (e.g., "image/png" -> "PNG")
+    const parts = mimeType.split('/')
+    if (parts.length === 2) {
+        const subtype = parts[1].split('+')[0].split('.').pop()
+        if (subtype && subtype.length <= 5) {
+            return subtype.toUpperCase()
+        }
+    }
+    
+    return 'FILE'
 }
 
 // Format file size
@@ -79,9 +166,24 @@ const formatFileSize = (bytes: number) => {
 export function MediaDataTable({ 
     media,
     metaFields,
+    subfolders = [],
     onEdit,
     onDelete,
+    onFolderNavigate,
 }: MediaDataTableProps) {
+    // Combine folders and media into a single list (folders first)
+    const combinedData: FileSystemItem[] = React.useMemo(() => {
+        const folders: FolderItem[] = subfolders.map(f => ({
+            ...f,
+            _type: 'folder' as const,
+        }))
+        const mediaItems: MediaItem[] = media.map(m => ({
+            ...m,
+            _type: 'media' as const,
+        }))
+        return [...folders, ...mediaItems]
+    }, [subfolders, media])
+
     // Filter out focus_area from meta fields - it's not a displayable text field
     const displayableMetaFields = React.useMemo(() => {
         return metaFields.filter(f => f.slug !== 'focus_area')
@@ -125,16 +227,27 @@ export function MediaDataTable({
     }, [displayableMetaFields])
 
     // Build columns
-    const columns: ColumnDef<Media>[] = React.useMemo(() => {
-        const cols: ColumnDef<Media>[] = []
+    const columns: ColumnDef<FileSystemItem>[] = React.useMemo(() => {
+        const cols: ColumnDef<FileSystemItem>[] = []
 
-        // Thumbnail column - always visible, not toggleable
+        // Thumbnail/Icon column - always visible, not toggleable
         cols.push({
             id: 'thumbnail',
             accessorKey: 'url',
             header: () => <span className="sr-only">Thumbnail</span>,
             cell: ({ row }) => {
                 const item = row.original
+                
+                // Folder item
+                if (item._type === 'folder') {
+                    return (
+                        <div className="size-10 shrink-0 rounded bg-muted flex items-center justify-center overflow-hidden">
+                            <Folder className="size-5 text-amber-500" />
+                        </div>
+                    )
+                }
+                
+                // Media item
                 const isImage = item.mime_type.startsWith('image/')
                 const Icon = getFileIcon(item.mime_type)
                 
@@ -158,34 +271,51 @@ export function MediaDataTable({
             enableHiding: false,
         })
 
-        // Filename column - always visible, not toggleable
+        // Name column - always visible, not toggleable
         cols.push({
             id: 'original_filename',
-            accessorKey: 'original_filename',
+            accessorFn: (row) => row._type === 'folder' ? row.name : row.original_filename,
             header: ({ column }) => (
-                <DataTableColumnHeader column={column} title="Filename" />
+                <DataTableColumnHeader column={column} title="Name" />
             ),
-            cell: ({ row }) => (
-                <div className="font-medium max-w-[300px] truncate" title={row.original.original_filename}>
-                    {row.original.original_filename}
-                </div>
-            ),
+            cell: ({ row }) => {
+                const item = row.original
+                const name = item._type === 'folder' ? item.name : item.original_filename
+                
+                return (
+                    <div className="font-medium max-w-[300px] truncate" title={name}>
+                        {name}
+                    </div>
+                )
+            },
             enableSorting: true,
             enableHiding: false,
         })
 
-        // MIME type column - always visible, toggleable
+        // Type column - always visible, toggleable
         cols.push({
             id: 'mime_type',
-            accessorKey: 'mime_type',
+            accessorFn: (row) => row._type === 'folder' ? 'Folder' : getFileTypeLabel(row.original_filename, row.mime_type),
             header: ({ column }) => (
                 <DataTableColumnHeader column={column} title="Type" />
             ),
-            cell: ({ row }) => (
-                <span className="text-muted-foreground text-sm">
-                    {row.original.mime_type}
-                </span>
-            ),
+            cell: ({ row }) => {
+                const item = row.original
+                
+                if (item._type === 'folder') {
+                    return (
+                        <span className="text-muted-foreground text-sm">
+                            Folder
+                        </span>
+                    )
+                }
+                
+                return (
+                    <span className="text-muted-foreground text-sm">
+                        {getFileTypeLabel(item.original_filename, item.mime_type)}
+                    </span>
+                )
+            },
             enableSorting: true,
             enableHiding: false,
         })
@@ -193,28 +323,52 @@ export function MediaDataTable({
         // Size column - always visible, toggleable
         cols.push({
             id: 'size',
-            accessorKey: 'size',
+            accessorFn: (row) => row._type === 'folder' ? -1 : row.size,
             header: ({ column }) => (
                 <DataTableColumnHeader column={column} title="Size" />
             ),
-            cell: ({ row }) => (
-                <span className="text-muted-foreground text-sm">
-                    {formatFileSize(row.original.size)}
-                </span>
-            ),
+            cell: ({ row }) => {
+                const item = row.original
+                
+                if (item._type === 'folder') {
+                    const parts: string[] = []
+                    if (item.children_count > 0) {
+                        parts.push(`${item.children_count} folder${item.children_count !== 1 ? 's' : ''}`)
+                    }
+                    if (item.media_count > 0) {
+                        parts.push(`${item.media_count} file${item.media_count !== 1 ? 's' : ''}`)
+                    }
+                    return (
+                        <span className="text-muted-foreground text-sm">
+                            {parts.length > 0 ? parts.join(', ') : 'Empty'}
+                        </span>
+                    )
+                }
+                
+                return (
+                    <span className="text-muted-foreground text-sm">
+                        {formatFileSize(item.size)}
+                    </span>
+                )
+            },
             enableSorting: true,
             enableHiding: false,
         })
 
-        // Tags column - toggleable
+        // Tags column - toggleable (only for media items)
         cols.push({
             id: 'tags',
-            accessorKey: 'tags',
+            accessorFn: (row) => row._type === 'media' ? row.tags : undefined,
             header: ({ column }) => (
                 <DataTableColumnHeader column={column} title="Tags" />
             ),
             cell: ({ row }) => {
-                const itemTags = row.original.tags
+                const item = row.original
+                if (item._type === 'folder') {
+                    return <span className="text-muted-foreground">—</span>
+                }
+                
+                const itemTags = item.tags
                 if (!itemTags || itemTags.length === 0) {
                     return <span className="text-muted-foreground">—</span>
                 }
@@ -236,7 +390,9 @@ export function MediaDataTable({
             enableSorting: false,
             enableHiding: true,
             filterFn: (row, id, value) => {
-                const itemTags = row.original.tags
+                const item = row.original
+                if (item._type === 'folder') return false
+                const itemTags = item.tags
                 if (!itemTags) return false
                 return itemTags.some((tag: string) => 
                     tag.toLowerCase().includes(value.toLowerCase())
@@ -244,11 +400,12 @@ export function MediaDataTable({
             },
         })
 
-        // Dynamic meta field columns
+        // Dynamic meta field columns (only for media items)
         displayableMetaFields.forEach((field) => {
             cols.push({
                 id: `meta_${field.slug}`,
                 accessorFn: (row) => {
+                    if (row._type === 'folder') return undefined
                     // Check both top-level and metadata object
                     if (field.slug === 'alt') return row.alt || row.metadata?.alt
                     if (field.slug === 'caption') return row.caption || row.metadata?.caption
@@ -258,13 +415,18 @@ export function MediaDataTable({
                     <DataTableColumnHeader column={column} title={field.name} />
                 ),
                 cell: ({ row }) => {
+                    const item = row.original
+                    if (item._type === 'folder') {
+                        return <span className="text-muted-foreground">—</span>
+                    }
+                    
                     let value: unknown
                     if (field.slug === 'alt') {
-                        value = row.original.alt || row.original.metadata?.alt
+                        value = item.alt || item.metadata?.alt
                     } else if (field.slug === 'caption') {
-                        value = row.original.caption || row.original.metadata?.caption
+                        value = item.caption || item.metadata?.caption
                     } else {
-                        value = row.original.metadata?.[field.slug]
+                        value = item.metadata?.[field.slug]
                     }
                     
                     if (value === undefined || value === null || value === '') {
@@ -288,6 +450,12 @@ export function MediaDataTable({
             enableHiding: false,
             cell: ({ row }) => {
                 const item = row.original
+                
+                // No actions for folders (they have navigation via double-click)
+                if (item._type === 'folder') {
+                    return null
+                }
+                
                 return (
                     <AlertDialog>
                         <DropdownMenu>
@@ -345,7 +513,7 @@ export function MediaDataTable({
     }, [displayableMetaFields, onEdit, onDelete])
 
     const table = useReactTable({
-        data: media,
+        data: combinedData,
         columns,
         onSortingChange: setSorting,
         onColumnFiltersChange: setColumnFilters,
@@ -382,13 +550,14 @@ export function MediaDataTable({
                 <DataTableViewOptions table={table} columnLabels={columnLabels} />
             </div>
             <Card className="overflow-hidden">
+                <div className="overflow-auto max-h-[calc(100vh-26rem)]">
                 <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 bg-card z-10">
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
                                 {headerGroup.headers.map((header) => {
                                     return (
-                                        <TableHead key={header.id}>
+                                        <TableHead key={header.id} className="bg-card">
                                             {header.isPlaceholder
                                                 ? null
                                                 : flexRender(
@@ -403,35 +572,45 @@ export function MediaDataTable({
                     </TableHeader>
                     <TableBody>
                         {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
-                                <TableRow
-                                    key={row.id}
-                                    data-state={row.getIsSelected() && "selected"}
-                                    className="cursor-pointer hover:bg-muted/50"
-                                    onDoubleClick={() => onEdit(row.original)}
-                                >
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id}>
-                                            {flexRender(
-                                                cell.column.columnDef.cell,
-                                                cell.getContext()
-                                            )}
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            ))
+                            table.getRowModel().rows.map((row) => {
+                                const item = row.original
+                                return (
+                                    <TableRow
+                                        key={row.id}
+                                        data-state={row.getIsSelected() && "selected"}
+                                        className="cursor-pointer hover:bg-muted/50"
+                                        onDoubleClick={() => {
+                                            if (item._type === 'folder') {
+                                                onFolderNavigate?.(item.id)
+                                            } else {
+                                                onEdit(item)
+                                            }
+                                        }}
+                                    >
+                                        {row.getVisibleCells().map((cell) => (
+                                            <TableCell key={cell.id}>
+                                                {flexRender(
+                                                    cell.column.columnDef.cell,
+                                                    cell.getContext()
+                                                )}
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                )
+                            })
                         ) : (
                             <TableRow>
                                 <TableCell
                                     colSpan={columns.length}
                                     className="h-24 text-center"
                                 >
-                                    No files in this folder.
+                                    This folder is empty.
                                 </TableCell>
                             </TableRow>
                         )}
                     </TableBody>
                 </Table>
+                </div>
             </Card>
             <DataTablePagination 
                 table={table} 

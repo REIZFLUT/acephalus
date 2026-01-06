@@ -58,11 +58,15 @@ import {
     Pencil,
     ChevronLeft,
     ChevronRight,
+    ChevronsLeft,
+    ChevronsRight,
     LayoutGrid,
     List,
     Folder,
     FolderOpen,
+    FolderPlus,
     ArrowUp,
+    Plus,
 } from 'lucide-react';
 import {
     ToggleGroup,
@@ -71,6 +75,7 @@ import {
 import { FolderTree } from '@/components/media/FolderTree';
 import { FolderSelectDialog } from '@/components/media/FolderSelectDialog';
 import { FocusAreaSelector, type FocusArea } from '@/components/media/FocusAreaSelector';
+import { DocumentPreview, isDocumentMimeType } from '@/components/media/DocumentPreview';
 import { MediaDataTable } from '@/components/data-table';
 import { ThumbnailImage } from '@/components/ui/thumbnail-image';
 import type { PageProps, Media, PaginatedData, MediaMetaField } from '@/types';
@@ -90,6 +95,7 @@ interface CurrentFolder {
     name: string;
     type: string;
     parent_id: string | null;
+    can_create_subfolders: boolean;
 }
 
 interface MediaIndexProps extends PageProps {
@@ -98,6 +104,7 @@ interface MediaIndexProps extends PageProps {
         search: string | null;
         type: string | null;
         folder: string | null;
+        per_page: number;
     };
     metaFields?: MediaMetaField[];
     subfolders?: Subfolder[];
@@ -119,6 +126,65 @@ const formatFileSize = (bytes: number) => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+// Get user-friendly file type from filename or mime type
+const getFileTypeLabel = (filename: string, mimeType: string): string => {
+    // First try to get extension from filename
+    const ext = filename.split('.').pop()?.toLowerCase();
+    if (ext && ext !== filename.toLowerCase()) {
+        return ext.toUpperCase();
+    }
+    
+    // Fallback: derive from mime type
+    const mimeMap: Record<string, string> = {
+        'image/jpeg': 'JPG',
+        'image/jpg': 'JPG',
+        'image/png': 'PNG',
+        'image/gif': 'GIF',
+        'image/webp': 'WEBP',
+        'image/svg+xml': 'SVG',
+        'image/bmp': 'BMP',
+        'image/tiff': 'TIFF',
+        'video/mp4': 'MP4',
+        'video/webm': 'WEBM',
+        'video/quicktime': 'MOV',
+        'video/x-msvideo': 'AVI',
+        'audio/mpeg': 'MP3',
+        'audio/wav': 'WAV',
+        'audio/ogg': 'OGG',
+        'audio/flac': 'FLAC',
+        'application/pdf': 'PDF',
+        'application/msword': 'DOC',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
+        'application/vnd.ms-excel': 'XLS',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'XLSX',
+        'application/vnd.ms-powerpoint': 'PPT',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PPTX',
+        'application/zip': 'ZIP',
+        'application/x-rar-compressed': 'RAR',
+        'application/json': 'JSON',
+        'text/plain': 'TXT',
+        'text/html': 'HTML',
+        'text/css': 'CSS',
+        'text/javascript': 'JS',
+        'application/javascript': 'JS',
+    };
+    
+    if (mimeMap[mimeType]) {
+        return mimeMap[mimeType];
+    }
+    
+    // Try to extract from mime type (e.g., "image/png" -> "PNG")
+    const parts = mimeType.split('/');
+    if (parts.length === 2) {
+        const subtype = parts[1].split('+')[0].split('.').pop();
+        if (subtype && subtype.length <= 5) {
+            return subtype.toUpperCase();
+        }
+    }
+    
+    return 'FILE';
 };
 
 function MediaCard({ 
@@ -182,7 +248,7 @@ function MediaCard({
                     {item.original_filename}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                    {formatFileSize(item.size)}
+                    {getFileTypeLabel(item.original_filename, item.mime_type)} • {formatFileSize(item.size)}
                 </p>
             </CardContent>
         </Card>
@@ -300,45 +366,6 @@ function FolderCard({
     );
 }
 
-function FolderListItem({ 
-    folder, 
-    onNavigate,
-}: { 
-    folder: Subfolder; 
-    onNavigate: (folderId: string) => void;
-}) {
-    return (
-        <Card 
-            className="group cursor-pointer hover:border-primary/50 transition-colors"
-            onDoubleClick={() => onNavigate(folder.id)}
-        >
-            <div className="flex items-center gap-4 p-3">
-                {/* Folder Icon */}
-                <div className="size-14 shrink-0 rounded-md bg-muted flex items-center justify-center">
-                    <Folder className="size-8 text-amber-500" />
-                </div>
-
-                {/* Details */}
-                <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate" title={folder.name}>
-                        {folder.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                        {folder.children_count > 0 && `${folder.children_count} folders`}
-                        {folder.children_count > 0 && folder.media_count > 0 && ', '}
-                        {folder.media_count > 0 && `${folder.media_count} files`}
-                        {folder.children_count === 0 && folder.media_count === 0 && 'Empty'}
-                    </p>
-                </div>
-
-                {/* Navigate hint */}
-                <div className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                    Double-click to open
-                </div>
-            </div>
-        </Card>
-    );
-}
 
 interface FolderSelection {
     id: string;
@@ -389,6 +416,7 @@ function MediaEditSheet({
     if (!item) return null;
 
     const isImage = item.mime_type.startsWith('image/');
+    const isDocument = isDocumentMimeType(item.mime_type);
 
     const handleAddTag = () => {
         const newTag = tagInput.trim().toLowerCase();
@@ -474,12 +502,21 @@ function MediaEditSheet({
 
                 <div className="px-6 py-6 space-y-6">
                     {/* Preview */}
-                    <div className="aspect-video bg-muted rounded-lg overflow-hidden flex items-center justify-center">
+                    <div className={`bg-muted rounded-lg overflow-hidden flex items-center justify-center ${
+                        isDocument ? 'min-h-[300px] max-h-[400px]' : 'aspect-video'
+                    }`}>
                         {isImage && item.url ? (
                             <img
                                 src={item.url}
                                 alt={item.original_filename}
                                 className="w-full h-full object-contain"
+                            />
+                        ) : isDocument && item.url ? (
+                            <DocumentPreview
+                                url={item.url}
+                                mimeType={item.mime_type}
+                                filename={item.original_filename}
+                                className="w-full h-full"
                             />
                         ) : (
                             <div className="flex flex-col items-center gap-2">
@@ -704,6 +741,11 @@ export default function MediaIndex({ media, filters, metaFields = [], subfolders
     const [uploadFolderDialogOpen, setUploadFolderDialogOpen] = useState(false);
     const [uploadFolderSelection, setUploadFolderSelection] = useState<FolderSelection | null>(null);
     const [globalFolderId, setGlobalFolderId] = useState<string | null>(null);
+    
+    // Create folder state
+    const [createFolderDialogOpen, setCreateFolderDialogOpen] = useState(false);
+    const [newFolderName, setNewFolderName] = useState('');
+    const [creatingFolder, setCreatingFolder] = useState(false);
 
     const { data, setData, post, processing, reset, errors } = useForm<{ file: File | null; folder_id: string | null }>({
         file: null,
@@ -717,10 +759,11 @@ export default function MediaIndex({ media, filters, metaFields = [], subfolders
         })
             .then(res => res.json())
             .then(folder => {
-                if (folder && folder._id) {
-                    const folderId = folder._id;
+                // MongoDB models serialize id as 'id' (not '_id')
+                const folderId = folder?.id || folder?._id;
+                if (folder && folderId) {
                     setGlobalFolderId(folderId);
-                    setUploadFolderSelection({ id: folderId, path: 'Global' });
+                    setUploadFolderSelection({ id: folderId, path: folder.name || 'Global' });
                     setData('folder_id', folderId);
                 }
             })
@@ -787,6 +830,40 @@ export default function MediaIndex({ media, filters, metaFields = [], subfolders
 
     const handleEditSave = () => {
         router.reload({ only: ['media'] });
+    };
+
+    const handleCreateFolder = async () => {
+        if (!newFolderName.trim() || !selectedFolderId) return;
+
+        setCreatingFolder(true);
+        try {
+            const response = await fetch('/media-folders', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({
+                    name: newFolderName.trim(),
+                    parent_id: selectedFolderId,
+                }),
+            });
+
+            if (response.ok) {
+                setCreateFolderDialogOpen(false);
+                setNewFolderName('');
+                // Reload to show the new folder
+                router.reload();
+            } else {
+                const data = await response.json();
+                console.error('Failed to create folder:', data.message);
+            }
+        } catch (error) {
+            console.error('Failed to create folder:', error);
+        } finally {
+            setCreatingFolder(false);
+        }
     };
 
     return (
@@ -1033,6 +1110,17 @@ export default function MediaIndex({ media, filters, metaFields = [], subfolders
                                 <Folder className="size-4" />
                                 <span>{currentFolder.name}</span>
                             </div>
+                            {currentFolder.can_create_subfolders && (
+                                <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => setCreateFolderDialogOpen(true)}
+                                    className="ml-auto gap-1"
+                                >
+                                    <FolderPlus className="size-4" />
+                                    New Folder
+                                </Button>
+                            )}
                         </div>
                     )}
 
@@ -1052,83 +1140,165 @@ export default function MediaIndex({ media, filters, metaFields = [], subfolders
                                         }
                                     </p>
                                     {selectedFolderId && (
-                                        <Button onClick={() => setUploadDialogOpen(true)}>
-                                            <Upload className="size-4 mr-2" />
-                                            Upload file
-                                        </Button>
+                                        <div className="flex gap-3">
+                                            <Button onClick={() => {
+                                                // Set the current folder as upload destination
+                                                if (currentFolder) {
+                                                    setUploadFolderSelection({ 
+                                                        id: currentFolder.id, 
+                                                        path: currentFolder.name 
+                                                    });
+                                                }
+                                                setUploadDialogOpen(true);
+                                            }}>
+                                                <Upload className="size-4 mr-2" />
+                                                Upload file
+                                            </Button>
+                                            {currentFolder?.can_create_subfolders && (
+                                                <Button variant="outline" onClick={() => setCreateFolderDialogOpen(true)}>
+                                                    <FolderPlus className="size-4 mr-2" />
+                                                    Create folder
+                                                </Button>
+                                            )}
+                                        </div>
                                     )}
                                 </CardContent>
                             </Card>
                         ) : (
                             <>
                                 {viewMode === 'grid' ? (
-                                    <>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                            {/* Subfolders */}
-                                            {subfolders.map((folder) => (
-                                                <FolderCard 
-                                                    key={folder.id} 
-                                                    folder={folder} 
-                                                    onNavigate={handleFolderChange}
-                                                />
-                                            ))}
-                                            {/* Media Files */}
-                                            {media.data.map((item) => (
-                                                <MediaCard 
-                                                    key={item._id} 
-                                                    item={item} 
-                                                    onDelete={handleDelete}
-                                                    onEdit={setEditingItem}
-                                                />
-                                            ))}
-                                        </div>
-
-                                        {/* Pagination for Grid View */}
-                                        {media.last_page > 1 && (
-                                            <div className="flex justify-center gap-2 mt-6 pb-4">
-                                                {Array.from({ length: media.last_page }, (_, i) => i + 1).map((page) => (
-                                                    <Button
-                                                        key={page}
-                                                        variant={page === media.current_page ? 'default' : 'outline'}
-                                                        size="sm"
-                                                        onClick={() => router.get('/media', { 
-                                                            page, 
-                                                            search: search || undefined, 
-                                                            type: type !== 'all' ? type : undefined,
-                                                            folder: selectedFolderId || undefined,
-                                                        })}
-                                                    >
-                                                        {page}
-                                                    </Button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {/* Subfolders in List View */}
-                                        {subfolders.length > 0 && (
-                                            <div className="space-y-2">
+                                    <div className="flex flex-col">
+                                        <div className="overflow-auto max-h-[calc(100vh-22rem)]">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pb-4">
+                                                {/* Subfolders */}
                                                 {subfolders.map((folder) => (
-                                                    <FolderListItem 
+                                                    <FolderCard 
                                                         key={folder.id} 
                                                         folder={folder} 
                                                         onNavigate={handleFolderChange}
                                                     />
                                                 ))}
+                                                {/* Media Files */}
+                                                {media.data.map((item) => (
+                                                    <MediaCard 
+                                                        key={item._id} 
+                                                        item={item} 
+                                                        onDelete={handleDelete}
+                                                        onEdit={setEditingItem}
+                                                    />
+                                                ))}
                                             </div>
-                                        )}
-                                        
-                                        {/* Media Files DataTable */}
-                                        {media.data.length > 0 && (
-                                            <MediaDataTable
-                                                media={media.data}
-                                                metaFields={metaFields}
-                                                onEdit={setEditingItem}
-                                                onDelete={handleDelete}
-                                            />
-                                        )}
+                                        </div>
+
+                                        {/* Pagination for Grid View */}
+                                        <div className="flex items-center justify-between pt-4 border-t">
+                                            <div className="flex items-center gap-4">
+                                                <span className="text-sm text-muted-foreground">
+                                                    {media.total} {media.total === 1 ? 'item' : 'items'}
+                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-muted-foreground">Items per page</span>
+                                                    <Select 
+                                                        value={String(filters.per_page)} 
+                                                        onValueChange={(value) => router.get('/media', {
+                                                            search: search || undefined,
+                                                            type: type !== 'all' ? type : undefined,
+                                                            folder: selectedFolderId || undefined,
+                                                            per_page: value,
+                                                            page: 1,
+                                                        })}
+                                                    >
+                                                        <SelectTrigger className="w-20 h-8">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="12">12</SelectItem>
+                                                            <SelectItem value="24">24</SelectItem>
+                                                            <SelectItem value="48">48</SelectItem>
+                                                            <SelectItem value="96">96</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm text-muted-foreground">
+                                                    Page {media.current_page} of {media.last_page}
+                                                </span>
+                                                <div className="flex gap-1">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="size-8"
+                                                        disabled={media.current_page <= 1}
+                                                        onClick={() => router.get('/media', { 
+                                                            page: 1, 
+                                                            search: search || undefined, 
+                                                            type: type !== 'all' ? type : undefined,
+                                                            folder: selectedFolderId || undefined,
+                                                            per_page: filters.per_page,
+                                                        })}
+                                                    >
+                                                        <ChevronsLeft className="size-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="size-8"
+                                                        disabled={media.current_page <= 1}
+                                                        onClick={() => router.get('/media', { 
+                                                            page: media.current_page - 1, 
+                                                            search: search || undefined, 
+                                                            type: type !== 'all' ? type : undefined,
+                                                            folder: selectedFolderId || undefined,
+                                                            per_page: filters.per_page,
+                                                        })}
+                                                    >
+                                                        <ChevronLeft className="size-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="size-8"
+                                                        disabled={media.current_page >= media.last_page}
+                                                        onClick={() => router.get('/media', { 
+                                                            page: media.current_page + 1, 
+                                                            search: search || undefined, 
+                                                            type: type !== 'all' ? type : undefined,
+                                                            folder: selectedFolderId || undefined,
+                                                            per_page: filters.per_page,
+                                                        })}
+                                                    >
+                                                        <ChevronRight className="size-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="size-8"
+                                                        disabled={media.current_page >= media.last_page}
+                                                        onClick={() => router.get('/media', { 
+                                                            page: media.last_page, 
+                                                            search: search || undefined, 
+                                                            type: type !== 'all' ? type : undefined,
+                                                            folder: selectedFolderId || undefined,
+                                                            per_page: filters.per_page,
+                                                        })}
+                                                    >
+                                                        <ChevronsRight className="size-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
+                                ) : (
+                                    /* Unified List View with folders and files */
+                                    <MediaDataTable
+                                        media={media.data}
+                                        metaFields={metaFields}
+                                        subfolders={subfolders}
+                                        onEdit={setEditingItem}
+                                        onDelete={handleDelete}
+                                        onFolderNavigate={handleFolderChange}
+                                    />
                                 )}
                             </>
                         )}
@@ -1146,6 +1316,50 @@ export default function MediaIndex({ media, filters, metaFields = [], subfolders
                 onOpenChange={(open) => !open && setEditingItem(null)}
                 onSave={handleEditSave}
             />
+
+            {/* Create Folder Dialog */}
+            <Dialog open={createFolderDialogOpen} onOpenChange={setCreateFolderDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Create New Folder</DialogTitle>
+                        <DialogDescription>
+                            Create a new folder in "{currentFolder?.name || 'current location'}"
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="folder-name">Folder name</Label>
+                            <Input
+                                id="folder-name"
+                                value={newFolderName}
+                                onChange={(e) => setNewFolderName(e.target.value)}
+                                placeholder="Enter folder name..."
+                                autoFocus
+                                onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                setCreateFolderDialogOpen(false);
+                                setNewFolderName('');
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button 
+                            onClick={handleCreateFolder} 
+                            disabled={!newFolderName.trim() || creatingFolder}
+                        >
+                            {creatingFolder && <Loader2 className="size-4 mr-2 animate-spin" />}
+                            Create Folder
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

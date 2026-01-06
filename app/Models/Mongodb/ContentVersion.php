@@ -33,8 +33,6 @@ class ContentVersion extends Model
         'created_by',
         'change_note',
         'snapshot',
-        'release',
-        'is_release_end',
     ];
 
     /**
@@ -46,7 +44,6 @@ class ContentVersion extends Model
     {
         return [
             'version_number' => 'integer',
-            'is_release_end' => 'boolean',
             // Note: 'elements' and 'snapshot' are handled by HasMongoArrays trait
         ];
     }
@@ -88,22 +85,18 @@ class ContentVersion extends Model
     }
 
     /**
-     * Scope a query to find release end versions (protected from deletion).
-     *
-     * @param  \MongoDB\Laravel\Eloquent\Builder  $query
+     * Get the title from the snapshot.
      */
-    public function scopeReleaseEnds($query): mixed
+    public function getSnapshotTitleAttribute(): ?string
     {
-        return $query->where('is_release_end', true);
+        return $this->snapshot['title'] ?? null;
     }
 
     /**
-     * Scope a query to find versions by release.
-     *
-     * @param  \MongoDB\Laravel\Eloquent\Builder  $query
+     * Get the creator's name.
      */
-    public function scopeByRelease($query, string $release): mixed
+    public function getCreatorNameAttribute(): ?string
     {
-        return $query->where('release', $release);
+        return $this->creator?->name;
     }
 }

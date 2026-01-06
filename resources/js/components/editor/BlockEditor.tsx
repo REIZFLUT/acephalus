@@ -85,12 +85,17 @@ export function BlockEditor({
     // Get custom element types
     const { types: customElementTypes } = useCustomElements();
 
-    // Determine allowed types from schema or props, and include custom elements
+    // Determine allowed types from schema or props
     const allowedTypes = useMemo(() => {
-        const baseTypes = propAllowedTypes || schema?.allowed_elements || DEFAULT_ELEMENT_TYPES;
-        // Add custom element types to the allowed types
-        const allTypes = [...baseTypes, ...customElementTypes] as (ElementType | string)[];
-        // Remove duplicates
+        const baseTypes = propAllowedTypes || schema?.allowed_elements;
+        
+        // If explicit allowed types are defined (from props or schema), use only those
+        if (baseTypes) {
+            return baseTypes as ElementType[];
+        }
+        
+        // No restrictions: include all default types plus all custom element types
+        const allTypes = [...DEFAULT_ELEMENT_TYPES, ...customElementTypes] as (ElementType | string)[];
         return [...new Set(allTypes)] as ElementType[];
     }, [propAllowedTypes, schema?.allowed_elements, customElementTypes]);
 

@@ -10,20 +10,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Plus, FileText, Settings, Tag, X, BookOpen } from 'lucide-react';
-import type { PageProps, Collection, Content, PaginatedData, CollectionRelease, Edition, ListViewSettings, CollectionSchema } from '@/types';
+import { Plus, FileText, Settings, X, BookOpen } from 'lucide-react';
+import type { PageProps, Collection, Content, PaginatedData, Edition, ListViewSettings, CollectionSchema } from '@/types';
 import { ContentDataTable } from '@/components/data-table';
-
-interface ReleaseContent extends Content {
-    release?: string;
-    is_release_end?: boolean;
-}
 
 interface CollectionsShowProps extends PageProps {
     collection: Collection;
-    contents: PaginatedData<ReleaseContent>;
-    releases?: CollectionRelease[];
-    selectedRelease?: string | null;
+    contents: PaginatedData<Content>;
     editions?: Edition[];
     selectedEdition?: string | null;
 }
@@ -37,7 +30,6 @@ const defaultListViewSettings: ListViewSettings = {
         { id: 'updated_at', label: 'Updated', type: 'base', visible: true, toggleable: true, sortable: true },
         { id: 'slug', label: 'Slug', type: 'base', visible: false, toggleable: true, sortable: true },
         { id: 'created_at', label: 'Created', type: 'base', visible: false, toggleable: true, sortable: true },
-        { id: 'current_release', label: 'Release', type: 'base', visible: false, toggleable: true, sortable: true },
         { id: 'editions', label: 'Editions', type: 'base', visible: false, toggleable: true, sortable: false },
     ],
     default_per_page: 20,
@@ -46,44 +38,21 @@ const defaultListViewSettings: ListViewSettings = {
     default_sort_direction: 'desc',
 };
 
-export default function CollectionsShow({ collection, contents, releases = [], selectedRelease, editions = [], selectedEdition }: CollectionsShowProps) {
+export default function CollectionsShow({ collection, contents, editions = [], selectedEdition }: CollectionsShowProps) {
     // Get list view settings from collection schema or use defaults
     const schema = collection.schema as CollectionSchema | null;
     const listViewSettings: ListViewSettings = schema?.list_view_settings || defaultListViewSettings;
 
-    const buildFilterParams = (overrides: { release?: string | null; edition?: string | null } = {}) => {
-        const params: Record<string, string> = {};
-        const release = overrides.release !== undefined ? overrides.release : selectedRelease;
-        const edition = overrides.edition !== undefined ? overrides.edition : selectedEdition;
-        
-        if (release) params.release = release;
-        if (edition) params.edition = edition;
-        
-        return params;
-    };
-
-    const handleReleaseFilter = (release: string) => {
-        if (release === 'all') {
-            router.get(`/collections/${collection.slug}`, buildFilterParams({ release: null }), { preserveState: true });
-        } else {
-            router.get(`/collections/${collection.slug}`, buildFilterParams({ release }), { preserveState: true });
-        }
-    };
-
     const handleEditionFilter = (edition: string) => {
         if (edition === 'all') {
-            router.get(`/collections/${collection.slug}`, buildFilterParams({ edition: null }), { preserveState: true });
+            router.get(`/collections/${collection.slug}`, {}, { preserveState: true });
         } else {
-            router.get(`/collections/${collection.slug}`, buildFilterParams({ edition }), { preserveState: true });
+            router.get(`/collections/${collection.slug}`, { edition }, { preserveState: true });
         }
-    };
-
-    const clearReleaseFilter = () => {
-        router.get(`/collections/${collection.slug}`, buildFilterParams({ release: null }), { preserveState: true });
     };
 
     const clearEditionFilter = () => {
-        router.get(`/collections/${collection.slug}`, buildFilterParams({ edition: null }), { preserveState: true });
+        router.get(`/collections/${collection.slug}`, {}, { preserveState: true });
     };
 
     return (
@@ -126,98 +95,49 @@ export default function CollectionsShow({ collection, contents, releases = [], s
                 </div>
 
                 {/* Filters */}
-                {(releases.length > 0 || editions.length > 0) && (
+                {editions.length > 0 && (
                     <Card>
                         <CardContent className="py-4">
                             <div className="flex flex-wrap items-center gap-4">
-                                {/* Release Filter */}
-                                {releases.length > 0 && (
-                                    <>
-                                        <div className="flex items-center gap-2">
-                                            <Tag className="size-4 text-muted-foreground" />
-                                            <span className="text-sm font-medium">Release:</span>
-                                        </div>
-                                        <Select
-                                            value={selectedRelease || 'all'}
-                                            onValueChange={handleReleaseFilter}
-                                        >
-                                            <SelectTrigger className="w-[200px]">
-                                                <SelectValue placeholder="All (current state)" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">All (current state)</SelectItem>
-                                                {releases.slice().reverse().map((release) => (
-                                                    <SelectItem key={release.name} value={release.name}>
-                                                        {release.name}
-                                                        {release.name === collection.current_release && ' (current)'}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {selectedRelease && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={clearReleaseFilter}
-                                                className="text-muted-foreground"
-                                            >
-                                                <X className="size-4 mr-1" />
-                                                Clear
-                                            </Button>
-                                        )}
-                                    </>
-                                )}
-
                                 {/* Edition Filter */}
-                                {editions.length > 0 && (
-                                    <>
-                                        <div className="flex items-center gap-2 border-l pl-4 ml-2">
-                                            <BookOpen className="size-4 text-muted-foreground" />
-                                            <span className="text-sm font-medium">Edition:</span>
-                                        </div>
-                                        <Select
-                                            value={selectedEdition || 'all'}
-                                            onValueChange={handleEditionFilter}
-                                        >
-                                            <SelectTrigger className="w-[180px]">
-                                                <SelectValue placeholder="All Editions" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">All Editions</SelectItem>
-                                                {editions.map((edition) => (
-                                                    <SelectItem key={edition._id} value={edition.slug}>
-                                                        {edition.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {selectedEdition && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={clearEditionFilter}
-                                                className="text-muted-foreground"
-                                            >
-                                                <X className="size-4 mr-1" />
-                                                Clear
-                                            </Button>
-                                        )}
-                                    </>
+                                <div className="flex items-center gap-2">
+                                    <BookOpen className="size-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium">Edition:</span>
+                                </div>
+                                <Select
+                                    value={selectedEdition || 'all'}
+                                    onValueChange={handleEditionFilter}
+                                >
+                                    <SelectTrigger className="w-[180px]">
+                                        <SelectValue placeholder="All Editions" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Editions</SelectItem>
+                                        {editions.map((edition) => (
+                                            <SelectItem key={edition._id} value={edition.slug}>
+                                                {edition.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {selectedEdition && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={clearEditionFilter}
+                                        className="text-muted-foreground"
+                                    >
+                                        <X className="size-4 mr-1" />
+                                        Clear
+                                    </Button>
                                 )}
 
-                                {/* Active filter badges */}
-                                {(selectedRelease || selectedEdition) && (
+                                {/* Active filter badge */}
+                                {selectedEdition && (
                                     <div className="flex items-center gap-2 ml-auto">
-                                        {selectedRelease && (
-                                            <Badge variant="outline">
-                                                Release: {selectedRelease}
-                                            </Badge>
-                                        )}
-                                        {selectedEdition && (
-                                            <Badge variant="outline">
-                                                Edition: {editions.find(e => e.slug === selectedEdition)?.name || selectedEdition}
-                                            </Badge>
-                                        )}
+                                        <Badge variant="outline">
+                                            Edition: {editions.find(e => e.slug === selectedEdition)?.name || selectedEdition}
+                                        </Badge>
                                     </div>
                                 )}
                             </div>

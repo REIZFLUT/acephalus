@@ -30,9 +30,12 @@ import {
     Eye,
     ChevronsUpDown,
     ChevronsDownUp,
-    Shield,
+    Plus,
+    Minus,
+    Pencil,
+    User,
 } from 'lucide-react';
-import type { PageProps, Content, ContentVersion, BlockElement, ElementType, CollectionSchema, WrapperPurpose, Edition } from '@/types';
+import type { PageProps, Content, ContentVersion, BlockElement, ElementType, CollectionSchema, WrapperPurpose, Edition, VersionDiffSummary } from '@/types';
 import { BlockEditor } from '@/components/editor/BlockEditor';
 import { MetadataEditor } from '@/components/editor/MetadataEditor';
 import { MetaFieldInput } from '@/components/editor/MetaFieldInput';
@@ -47,7 +50,6 @@ interface ContentsEditProps extends PageProps {
             name: string; 
             slug: string;
             schema?: CollectionSchema | null;
-            current_release?: string;
         }; 
         versions: ContentVersion[] 
     };
@@ -63,6 +65,36 @@ function ensureElementIds(elements: BlockElement[]): BlockElement[] {
         id: el.id || el._id || `element-${index}-${Date.now()}`,
         children: el.children ? ensureElementIds(el.children) : undefined,
     }));
+}
+
+// Component to display diff summary badges
+function DiffSummaryBadges({ diff }: { diff: VersionDiffSummary }) {
+    if (diff.added === 0 && diff.removed === 0 && diff.modified === 0) {
+        return null;
+    }
+
+    return (
+        <div className="flex items-center gap-1.5">
+            {diff.added > 0 && (
+                <Badge variant="outline" className="text-xs gap-1 text-green-600 border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-800">
+                    <Plus className="size-3" />
+                    {diff.added}
+                </Badge>
+            )}
+            {diff.removed > 0 && (
+                <Badge variant="outline" className="text-xs gap-1 text-red-600 border-red-200 bg-red-50 dark:bg-red-950 dark:border-red-800">
+                    <Minus className="size-3" />
+                    {diff.removed}
+                </Badge>
+            )}
+            {diff.modified > 0 && (
+                <Badge variant="outline" className="text-xs gap-1 text-amber-600 border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
+                    <Pencil className="size-3" />
+                    {diff.modified}
+                </Badge>
+            )}
+        </div>
+    );
 }
 
 export default function ContentsEdit({ content, elementTypes, wrapperPurposes, editions }: ContentsEditProps) {
@@ -148,7 +180,7 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
     };
 
     const handleRestoreVersion = (versionNumber: number) => {
-        router.post(`/api/v1/contents/${content._id}/versions/${versionNumber}/restore`);
+        router.post(`/contents/${content._id}/versions/${versionNumber}/restore`);
     };
 
     const handleElementsChange = useCallback((elements: BlockElement[]) => {
@@ -475,8 +507,8 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
                                                         <div className="p-2 bg-muted rounded-md group-hover:bg-primary/10 transition-colors">
                                                             <Clock className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
                                                         </div>
-                                                        <div>
-                                                            <div className="flex items-center gap-2">
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center gap-2 flex-wrap">
                                                                 <span className="font-medium group-hover:text-primary transition-colors">
                                                                     Version {version.version_number}
                                                                 </span>
@@ -485,27 +517,32 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
                                                                         Current
                                                                     </Badge>
                                                                 )}
-                                                                {version.is_release_end && (
-                                                                    <Badge variant="outline" className="text-xs gap-1">
-                                                                        <Shield className="size-3" />
-                                                                        Protected
-                                                                    </Badge>
-                                                                )}
-                                                                {version.release && (
-                                                                    <Badge variant="secondary" className="text-xs">
-                                                                        {version.release}
-                                                                    </Badge>
+                                                                {/* Show title if it differs from current content title */}
+                                                                {version.snapshot?.title && version.snapshot.title !== content.title && (
+                                                                    <span className="text-xs text-muted-foreground">
+                                                                        "{version.snapshot.title}"
+                                                                    </span>
                                                                 )}
                                                             </div>
-                                                            <p className="text-sm text-muted-foreground">
-                                                                {formatDateTime(version.created_at)}
-                                                            </p>
+                                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                                <span>{formatDateTime(version.created_at)}</span>
+                                                                {version.creator_name && (
+                                                                    <span className="flex items-center gap-1">
+                                                                        <User className="size-3" />
+                                                                        {version.creator_name}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                             {version.change_note && (
-                                                                <p className="text-sm text-muted-foreground mt-1">
+                                                                <p className="text-sm text-muted-foreground">
                                                                     "{version.change_note}"
                                                                 </p>
                                                             )}
-                                                            <p className="text-xs text-muted-foreground/60 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            {/* Diff Summary */}
+                                                            {version.diff_summary && (
+                                                                <DiffSummaryBadges diff={version.diff_summary} />
+                                                            )}
+                                                            <p className="text-xs text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                 Click to preview
                                                             </p>
                                                         </div>
@@ -581,12 +618,6 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">Version</span>
                                 <span className="font-mono">v{content.versions?.length || content.current_version || 1}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Release</span>
-                                <Badge variant="outline" className="text-xs">
-                                    {content.versions?.[0]?.release || content.collection?.current_release || 'Basis'}
-                                </Badge>
                             </div>
                             {!isMetaOnlyContent && (
                                 <div className="flex justify-between">

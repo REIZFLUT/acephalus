@@ -116,7 +116,6 @@ const defaultListViewColumns: ListViewColumn[] = [
     { id: 'updated_at', label: 'Updated', type: 'base', visible: true, toggleable: true, sortable: true },
     { id: 'slug', label: 'Slug', type: 'base', visible: false, toggleable: true, sortable: true },
     { id: 'created_at', label: 'Created', type: 'base', visible: false, toggleable: true, sortable: true },
-    { id: 'current_release', label: 'Release', type: 'base', visible: false, toggleable: true, sortable: true },
     { id: 'editions', label: 'Editions', type: 'base', visible: false, toggleable: true, sortable: false },
 ];
 
@@ -136,7 +135,6 @@ const baseColumnDefinitions: { id: ListViewBaseColumn; label: string; descriptio
     { id: 'current_version', label: 'Version', description: 'Current version number' },
     { id: 'updated_at', label: 'Updated', description: 'Last modification date' },
     { id: 'created_at', label: 'Created', description: 'Creation date' },
-    { id: 'current_release', label: 'Release', description: 'Current release name' },
     { id: 'editions', label: 'Editions', description: 'Associated edition tags' },
 ];
 

@@ -21,12 +21,6 @@ export interface Permission {
     guard_name: string;
 }
 
-export interface CollectionRelease {
-    name: string;
-    created_at: string;
-    created_by?: number;
-}
-
 export interface Collection {
     _id: string;
     name: string;
@@ -35,8 +29,6 @@ export interface Collection {
     schema: Schema | null;
     settings: Record<string, unknown> | null;
     collection_meta: Record<string, unknown> | null;
-    current_release?: string;
-    releases?: CollectionRelease[];
     created_at: string;
     updated_at: string;
     contents_count?: number;
@@ -97,7 +89,6 @@ export type ListViewBaseColumn =
     | 'current_version'
     | 'updated_at'
     | 'created_at'
-    | 'current_release'
     | 'editions';
 
 // Element-specific configurations
@@ -500,19 +491,34 @@ export interface FocusArea {
     height: number;
 }
 
+// Diff summary for a version compared to its predecessor
+export interface VersionDiffSummary {
+    added: number;
+    removed: number;
+    modified: number;
+    title_changed: boolean;
+}
+
+// Version snapshot containing the content state at that point in time
+export interface VersionSnapshot {
+    title: string;
+    slug: string;
+    status: string;
+    metadata?: Record<string, unknown>;
+}
+
 export interface ContentVersion {
     _id: string;
     content_id: string;
     version_number: number;
-    title: string;
-    slug: string;
     elements: BlockElement[];
-    metadata: Record<string, unknown> | null;
     created_by: number | null;
     change_note: string | null;
-    release?: string;
-    is_release_end?: boolean;
+    snapshot?: VersionSnapshot;
     created_at: string;
+    // Enhanced fields provided by the backend
+    creator_name?: string | null;
+    diff_summary?: VersionDiffSummary;
 }
 
 export interface PaginatedData<T> {

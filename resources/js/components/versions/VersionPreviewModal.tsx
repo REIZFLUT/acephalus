@@ -25,17 +25,15 @@ import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
-    SelectGroup,
     SelectItem,
-    SelectLabel,
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Clock, Shield, GitCompare, Loader2, RotateCcw } from 'lucide-react';
+import { Clock, GitCompare, Loader2, RotateCcw, User, Plus, Minus, Pencil } from 'lucide-react';
 import { formatDateTime } from '@/utils/date';
 import { BlockEditorReadonly } from '@/components/editor/BlockEditorReadonly';
 import { JsonDiffView } from './JsonDiffView';
-import type { ContentVersion } from '@/types';
+import type { ContentVersion, VersionDiffSummary } from '@/types';
 
 interface VersionPreviewModalProps {
     isOpen: boolean;
@@ -45,6 +43,36 @@ interface VersionPreviewModalProps {
     contentId: string;
     currentVersionNumber: number;
     onRestore: (versionNumber: number) => void;
+}
+
+// Component to display diff summary badges
+function DiffSummaryBadges({ diff }: { diff: VersionDiffSummary }) {
+    if (diff.added === 0 && diff.removed === 0 && diff.modified === 0) {
+        return <span className="text-muted-foreground text-xs">No changes</span>;
+    }
+
+    return (
+        <div className="flex items-center gap-1.5">
+            {diff.added > 0 && (
+                <Badge variant="outline" className="text-xs gap-1 text-green-600 border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-800">
+                    <Plus className="size-3" />
+                    {diff.added}
+                </Badge>
+            )}
+            {diff.removed > 0 && (
+                <Badge variant="outline" className="text-xs gap-1 text-red-600 border-red-200 bg-red-50 dark:bg-red-950 dark:border-red-800">
+                    <Minus className="size-3" />
+                    {diff.removed}
+                </Badge>
+            )}
+            {diff.modified > 0 && (
+                <Badge variant="outline" className="text-xs gap-1 text-amber-600 border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
+                    <Pencil className="size-3" />
+                    {diff.modified}
+                </Badge>
+            )}
+        </div>
+    );
 }
 
 export function VersionPreviewModal({
@@ -80,19 +108,6 @@ export function VersionPreviewModal({
         }
     }, [compareVersionNumber, compareMode, allVersions]);
 
-    // Group versions by release
-    const versionsByRelease = useMemo(() => {
-        const groups: Record<string, ContentVersion[]> = {};
-        allVersions.forEach(v => {
-            const release = v.release || 'No Release';
-            if (!groups[release]) {
-                groups[release] = [];
-            }
-            groups[release].push(v);
-        });
-        return groups;
-    }, [allVersions]);
-
     if (!version) return null;
 
     const otherVersions = allVersions.filter(v => Number(v.version_number) !== Number(version.version_number));
@@ -108,7 +123,7 @@ export function VersionPreviewModal({
             <DialogContent className="max-w-[90vw] w-[1400px] h-[90vh] flex flex-col overflow-hidden">
                 <DialogHeader>
                     <div className="flex items-center justify-between pr-8">
-                        <div>
+                        <div className="space-y-1">
                             <DialogTitle className="flex items-center gap-2">
                                 <Clock className="size-5" />
                                 Version {version.version_number}
@@ -117,20 +132,24 @@ export function VersionPreviewModal({
                                         Current
                                     </Badge>
                                 )}
-                                {version.is_release_end && (
-                                    <Badge variant="outline" className="gap-1">
-                                        <Shield className="size-3" />
-                                        Protected
-                                    </Badge>
-                                )}
-                                {version.release && (
-                                    <Badge variant="secondary">{version.release}</Badge>
-                                )}
                             </DialogTitle>
-                            <DialogDescription>
-                                {formatDateTime(version.created_at)}
-                                {version.change_note && ` • "${version.change_note}"`}
+                            <DialogDescription className="flex items-center gap-3">
+                                <span>{formatDateTime(version.created_at)}</span>
+                                {version.creator_name && (
+                                    <span className="flex items-center gap-1">
+                                        <User className="size-3" />
+                                        {version.creator_name}
+                                    </span>
+                                )}
+                                {version.change_note && (
+                                    <span>• "{version.change_note}"</span>
+                                )}
                             </DialogDescription>
+                            {version.diff_summary && (
+                                <div className="pt-1">
+                                    <DiffSummaryBadges diff={version.diff_summary} />
+                                </div>
+                            )}
                         </div>
                     </div>
                 </DialogHeader>
@@ -154,42 +173,27 @@ export function VersionPreviewModal({
                             value={compareVersionNumber?.toString() || ''}
                             onValueChange={(value) => setCompareVersionNumber(parseInt(value))}
                         >
-                            <SelectTrigger className="w-[250px]">
-                                <SelectValue placeholder="Select version..." />
+                            <SelectTrigger className="w-[280px]">
+                                <SelectValue placeholder="Select version to compare..." />
                             </SelectTrigger>
                             <SelectContent>
-                                {Object.entries(versionsByRelease).map(([release, versions]) => {
-                                    const filteredVersions = versions.filter(
-                                        v => v.version_number !== version.version_number
-                                    );
-                                    if (filteredVersions.length === 0) return null;
-
-                                    return (
-                                        <SelectGroup key={release}>
-                                            <SelectLabel className="flex items-center gap-2">
-                                                {release}
-                                                <Badge variant="outline" className="text-xs">
-                                                    {filteredVersions.length}
+                                {otherVersions.map((v) => (
+                                    <SelectItem key={v._id} value={v.version_number.toString()}>
+                                        <span className="flex items-center gap-2">
+                                            Version {v.version_number}
+                                            {v.version_number === currentVersionNumber && (
+                                                <Badge variant="secondary" className="text-xs">
+                                                    Current
                                                 </Badge>
-                                            </SelectLabel>
-                                            {filteredVersions.map((v) => (
-                                                <SelectItem key={v._id} value={v.version_number.toString()}>
-                                                    <span className="flex items-center gap-2">
-                                                        Version {v.version_number}
-                                                        {v.is_release_end && (
-                                                            <Shield className="size-3 text-muted-foreground" />
-                                                        )}
-                                                        {v.version_number === currentVersionNumber && (
-                                                            <Badge variant="secondary" className="text-xs">
-                                                                Current
-                                                            </Badge>
-                                                        )}
-                                                    </span>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectGroup>
-                                    );
-                                })}
+                                            )}
+                                            {v.creator_name && (
+                                                <span className="text-muted-foreground text-xs">
+                                                    by {v.creator_name}
+                                                </span>
+                                            )}
+                                        </span>
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     )}
@@ -235,8 +239,7 @@ export function VersionPreviewModal({
                                                 Restore Version {version.version_number}?
                                             </AlertDialogTitle>
                                             <AlertDialogDescription>
-                                                This will restore the content to version {version.version_number}
-                                                {version.release && ` from release "${version.release}"`}.
+                                                This will restore the content to version {version.version_number}.
                                                 A new version will be created with the restored content.
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
@@ -261,10 +264,10 @@ function SingleVersionView({ version }: { version: ContentVersion }) {
     return (
         <div className="p-4 space-y-4">
             {/* Snapshot Info */}
-            {(version.snapshot?.title || version.title) && (
+            {version.snapshot?.title && (
                 <div className="p-4 bg-muted/30 rounded-lg space-y-2">
-                    <h3 className="font-semibold text-lg">{version.snapshot?.title || version.title}</h3>
-                    <p className="text-sm text-muted-foreground">/{version.snapshot?.slug || version.slug}</p>
+                    <h3 className="font-semibold text-lg">{version.snapshot.title}</h3>
+                    <p className="text-sm text-muted-foreground">/{version.snapshot?.slug}</p>
                 </div>
             )}
 
@@ -302,16 +305,16 @@ function CompareView({
 }) {
     // Create comparison objects
     const fromData = useMemo(() => ({
-        title: fromVersion.snapshot?.title || fromVersion.title,
-        slug: fromVersion.snapshot?.slug || fromVersion.slug,
+        title: fromVersion.snapshot?.title,
+        slug: fromVersion.snapshot?.slug,
         status: fromVersion.snapshot?.status,
         elements: fromVersion.elements || [],
         metadata: fromVersion.snapshot?.metadata || {},
     }), [fromVersion]);
 
     const toData = useMemo(() => ({
-        title: toVersion.snapshot?.title || toVersion.title,
-        slug: toVersion.snapshot?.slug || toVersion.slug,
+        title: toVersion.snapshot?.title,
+        slug: toVersion.snapshot?.slug,
         status: toVersion.snapshot?.status,
         elements: toVersion.elements || [],
         metadata: toVersion.snapshot?.metadata || {},
@@ -326,17 +329,13 @@ function CompareView({
                         <Badge variant="outline" className="bg-red-500/10">
                             Version {fromVersion.version_number}
                         </Badge>
-                        {fromVersion.release && (
-                            <Badge variant="secondary" className="text-xs">
-                                {fromVersion.release}
-                            </Badge>
-                        )}
                         {fromVersion.version_number === currentVersionNumber && (
                             <Badge variant="default" className="text-xs">Current</Badge>
                         )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                         {formatDateTime(fromVersion.created_at)}
+                        {fromVersion.creator_name && ` • ${fromVersion.creator_name}`}
                     </p>
                 </div>
                 <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
@@ -344,17 +343,13 @@ function CompareView({
                         <Badge variant="outline" className="bg-green-500/10">
                             Version {toVersion.version_number}
                         </Badge>
-                        {toVersion.release && (
-                            <Badge variant="secondary" className="text-xs">
-                                {toVersion.release}
-                            </Badge>
-                        )}
                         {toVersion.version_number === currentVersionNumber && (
                             <Badge variant="default" className="text-xs">Current</Badge>
                         )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                         {formatDateTime(toVersion.created_at)}
+                        {toVersion.creator_name && ` • ${toVersion.creator_name}`}
                     </p>
                 </div>
             </div>

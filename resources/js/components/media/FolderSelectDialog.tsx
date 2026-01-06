@@ -124,11 +124,13 @@ export function FolderSelectDialog({
             });
             if (response.ok) {
                 const data = await response.json();
-                setFolders(data);
+                // Handle new response format with { folders: [...] }
+                const foldersList: MediaFolderTree[] = data.folders || data;
+                setFolders(foldersList);
                 
                 // Auto-expand root folders and path to selected folder
                 const initialExpanded = new Set<string>();
-                data.forEach((f: MediaFolderTree) => initialExpanded.add(f.id));
+                foldersList.forEach((f: MediaFolderTree) => initialExpanded.add(f.id));
                 
                 // Expand path to currently selected folder
                 if (selectedFolderId) {
@@ -146,7 +148,7 @@ export function FolderSelectDialog({
                         }
                         return false;
                     };
-                    expandPath(data, selectedFolderId);
+                    expandPath(foldersList, selectedFolderId);
                 }
                 
                 setExpandedFolders(initialExpanded);

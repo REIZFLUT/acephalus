@@ -410,13 +410,16 @@ function MediaEditSheet({
     const handleSave = async () => {
         setSaving(true);
         try {
+            // Extract custom metadata fields (exclude alt and caption which are top-level)
+            const { alt, caption, ...customMetadata } = formData;
+            
             const updateData: Record<string, unknown> = {
-                alt: formData.alt,
-                caption: formData.caption,
+                alt: alt as string,
+                caption: caption as string,
                 tags: tags,
                 folder_id: folderSelection?.id || null,
                 metadata: {
-                    ...formData,
+                    ...customMetadata,
                 },
             };
 
@@ -890,7 +893,7 @@ export default function MediaIndex({ media, filters, metaFields = [], subfolders
                 </Dialog>
             }
         >
-            <div className="flex h-[calc(100vh-8rem)] -ml-6 -mt-6 -mr-6 -mb-6">
+            <div className="flex h-[calc(100vh-4rem)] -ml-6 -mt-6 -mr-6 -mb-6">
                 {/* Sidebar with Folder Tree - docked to the left edge */}
                 <div className={`
                     shrink-0 border-r bg-muted/30 transition-all duration-200
@@ -1055,7 +1058,7 @@ export default function MediaIndex({ media, filters, metaFields = [], subfolders
                             <>
                                 {viewMode === 'grid' ? (
                                     <>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                             {/* Subfolders */}
                                             {subfolders.map((folder) => (
                                                 <FolderCard 

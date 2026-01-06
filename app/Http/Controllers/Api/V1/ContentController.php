@@ -8,11 +8,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreContentRequest;
 use App\Http\Requests\Api\V1\UpdateContentRequest;
 use App\Http\Resources\ContentResource;
-use App\Http\Resources\ReleaseContentResource;
 use App\Models\Mongodb\Collection;
 use App\Models\Mongodb\Content;
 use App\Services\ContentService;
-use App\Services\ReleaseService;
 use App\Services\SchemaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,29 +22,19 @@ class ContentController extends Controller
     public function __construct(
         protected ContentService $contentService,
         protected SchemaService $schemaService,
-        protected ReleaseService $releaseService
     ) {}
 
     /**
      * Display a listing of contents for a collection.
      *
-     * Supports filtering by release: ?release=2024-01
-     * When filtering by release, only contents that have a version in that release are returned,
-     * with the content state as it was at the release endpoint.
-     *
      * Supports filtering by edition: ?edition=web
      * When filtering by edition, only contents visible for that edition are returned,
      * and elements within content are filtered according to edition rules.
      */
-    public function index(Request $request, Collection $collection): AnonymousResourceCollection|JsonResponse
+    public function index(Request $request, Collection $collection): AnonymousResourceCollection
     {
         $perPage = $request->integer('per_page', 15);
         $edition = $request->input('edition');
-
-        // If filtering by release, return release-specific content states
-        if ($request->filled('release')) {
-            return $this->indexByRelease($request, $collection);
-        }
 
         $query = $collection->contents()
             ->when($request->filled('status'), function ($query) use ($request) {
@@ -81,66 +69,6 @@ class ContentController extends Controller
     }
 
     /**
-     * Get contents filtered by a specific release.
-     * Returns content states as they were at the release endpoint.
-     */
-    protected function indexByRelease(Request $request, Collection $collection): JsonResponse
-    {
-        $release = $request->input('release');
-
-        // Validate release exists
-        if (! $this->releaseService->releaseExists($collection, $release)) {
-            return response()->json([
-                'message' => "Release '{$release}' not found in this collection.",
-                'available_releases' => collect($collection->releases ?? [])->pluck('name'),
-            ], 404);
-        }
-
-        // Get contents for this release
-        $releaseContents = $this->releaseService->getContentsForRelease($collection, $release);
-
-        // Apply filters
-        if ($request->filled('search')) {
-            $search = strtolower($request->input('search'));
-            $releaseContents = $releaseContents->filter(function ($item) use ($search) {
-                $title = $item['version']?->snapshot['title'] ?? $item['content']->title;
-
-                return str_contains(strtolower($title), $search);
-            });
-        }
-
-        if ($request->filled('status')) {
-            $status = $request->input('status');
-            $releaseContents = $releaseContents->filter(function ($item) use ($status) {
-                $contentStatus = $item['version']?->snapshot['status'] ?? $item['content']->status->value;
-
-                return $contentStatus === $status;
-            });
-        }
-
-        // Manual pagination
-        $perPage = $request->integer('per_page', 15);
-        $page = $request->integer('page', 1);
-        $total = $releaseContents->count();
-        $items = $releaseContents->slice(($page - 1) * $perPage, $perPage)->values();
-
-        $data = $items->map(function ($item) use ($release) {
-            return new ReleaseContentResource($item['content'], $release, $item['version']);
-        });
-
-        return response()->json([
-            'data' => $data,
-            'meta' => [
-                'release' => $release,
-                'current_page' => $page,
-                'per_page' => $perPage,
-                'total' => $total,
-                'last_page' => (int) ceil($total / $perPage),
-            ],
-        ]);
-    }
-
-    /**
      * Store a newly created content.
      */
     public function store(StoreContentRequest $request, Collection $collection): JsonResponse
@@ -162,9 +90,6 @@ class ContentController extends Controller
     /**
      * Display the specified content.
      *
-     * Supports release filter: ?release=2024-01
-     * When filtering by release, returns the content state as it was at that release endpoint.
-     *
      * Supports edition filter: ?edition=web
      * When filtering by edition, returns 404 if content is not visible for that edition,
      * and filters elements according to edition rules.
@@ -172,11 +97,6 @@ class ContentController extends Controller
     public function show(Request $request, Content $content): JsonResponse
     {
         $edition = $request->input('edition');
-
-        // If filtering by release, return release-specific content state
-        if ($request->filled('release')) {
-            return $this->showByRelease($request, $content);
-        }
 
         // Check edition visibility
         if ($edition && ! $this->isContentVisibleForEdition($content, $edition)) {
@@ -197,37 +117,6 @@ class ContentController extends Controller
 
         return response()->json([
             'data' => new ContentResource($content),
-        ]);
-    }
-
-    /**
-     * Get a single content's state for a specific release.
-     */
-    protected function showByRelease(Request $request, Content $content): JsonResponse
-    {
-        $release = $request->input('release');
-        $collection = $content->collection;
-
-        // Validate release exists
-        if (! $this->releaseService->releaseExists($collection, $release)) {
-            return response()->json([
-                'message' => "Release '{$release}' not found in this collection.",
-                'available_releases' => collect($collection->releases ?? [])->pluck('name'),
-            ], 404);
-        }
-
-        // Get the content version for this release
-        $releaseVersion = $this->releaseService->getContentForRelease($content, $release);
-
-        if (! $releaseVersion) {
-            return response()->json([
-                'message' => "Content not found in release '{$release}'.",
-                'hint' => 'This content may not have been created or modified during this release.',
-            ], 404);
-        }
-
-        return response()->json([
-            'data' => new ReleaseContentResource($content, $release, $releaseVersion),
         ]);
     }
 

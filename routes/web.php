@@ -4,7 +4,6 @@ use App\Http\Controllers\Api\V1\CustomElementController;
 use App\Http\Controllers\Api\V1\ReferenceController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\CollectionController;
-use App\Http\Controllers\Web\CollectionReleaseController;
 use App\Http\Controllers\Web\ContentController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\EditionController;
@@ -56,14 +55,6 @@ Route::middleware('auth')->group(function () {
     // Collections
     Route::resource('collections', CollectionController::class);
 
-    // Collection Releases
-    Route::post('collections/{collection}/releases', [CollectionReleaseController::class, 'store'])
-        ->name('collections.releases.store');
-    Route::delete('collections/{collection}/versions/purge', [CollectionReleaseController::class, 'purge'])
-        ->name('collections.versions.purge');
-    Route::get('collections/{collection}/versions/purge-preview', [CollectionReleaseController::class, 'purgePreview'])
-        ->name('collections.versions.purge-preview');
-
     // Contents
     Route::get('collections/{collection}/contents', [ContentController::class, 'index'])
         ->name('collections.contents.index');
@@ -78,6 +69,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('contents/{content}', [ContentController::class, 'destroy'])->name('contents.destroy');
     Route::post('contents/{content}/publish', [ContentController::class, 'publish'])->name('contents.publish');
     Route::post('contents/{content}/unpublish', [ContentController::class, 'unpublish'])->name('contents.unpublish');
+    Route::post('contents/{content}/versions/{version}/restore', [ContentController::class, 'restoreVersion'])->name('contents.versions.restore');
 
     // Media
     Route::get('media/{media}/file', [MediaController::class, 'file'])->name('media.file');
@@ -141,6 +133,8 @@ Route::middleware('auth')->group(function () {
             Route::post('resolve', [ReferenceController::class, 'resolve'])->name('resolve');
             // Preview for content with elements
             Route::get('preview/{contentId}', [ReferenceController::class, 'preview'])->name('preview');
+            // Preview for collection with sample contents
+            Route::get('preview/collection/{collectionId}', [ReferenceController::class, 'previewCollection'])->name('preview.collection');
         });
     });
 });

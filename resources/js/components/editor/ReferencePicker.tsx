@@ -87,7 +87,8 @@ interface BreadcrumbItem {
     name: string;
 }
 
-interface PreviewData {
+interface ContentPreviewData {
+    type: 'content' | 'element';
     content: {
         _id: string;
         title: string;
@@ -104,6 +105,26 @@ interface PreviewData {
     }>;
     targetElementId?: string;
 }
+
+interface CollectionPreviewData {
+    type: 'collection';
+    collection: {
+        _id: string;
+        name: string;
+        slug: string;
+        description: string | null;
+    };
+    contents: Array<{
+        _id: string;
+        title: string;
+        slug: string;
+        status: string;
+        created_at: string | null;
+    }>;
+    total_count: number;
+}
+
+type PreviewData = ContentPreviewData | CollectionPreviewData;
 
 const depthOrder: ReferenceType[] = ['collection', 'content', 'element'];
 
@@ -365,36 +386,82 @@ export function ReferencePicker({
         }
     }, []);
 
-    // Fetch preview data for a content (and optionally highlight an element)
+    // Fetch preview data for a reference (collection, content, or element)
     const fetchPreview = useCallback(async () => {
-        if (!value?.content_id) return;
+        if (!value) return;
 
         setIsPreviewLoading(true);
         try {
-            // Use the dedicated preview endpoint
-            const response = await fetch(`/api/v1/references/preview/${value.content_id}`, {
-                credentials: 'include',
-            });
+            if (value.reference_type === 'collection' && value.collection_id) {
+                // Fetch collection preview
+                const response = await fetch(`/api/v1/references/preview/collection/${value.collection_id}`, {
+                    credentials: 'include',
+                });
 
-            if (!response.ok) {
-                throw new Error('Failed to fetch content preview');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch collection preview');
+                }
+
+                const data = await response.json();
+
+                setPreviewData({
+                    type: 'collection',
+                    collection: data.collection,
+                    contents: data.contents || [],
+                    total_count: data.total_count || 0,
+                });
+                setIsPreviewOpen(true);
+            } else if (value.content_id) {
+                // Fetch content/element preview
+                const response = await fetch(`/api/v1/references/preview/${value.content_id}`, {
+                    credentials: 'include',
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch content preview');
+                }
+
+                const data = await response.json();
+
+                // For element references, filter to only the target element
+                let elements = data.elements || [];
+                const targetElementId = value.reference_type === 'element' ? value.element_id : undefined;
+
+                // If it's an element reference, find and show only that element
+                if (value.reference_type === 'element' && value.element_id) {
+                    const findElement = (elements: Array<{ id: string; type: string; data: Record<string, unknown>; children?: Array<unknown> }>, targetId: string): { id: string; type: string; data: Record<string, unknown>; children?: Array<unknown> } | null => {
+                        for (const element of elements) {
+                            if (element.id === targetId) {
+                                return element;
+                            }
+                            if (element.children && Array.isArray(element.children)) {
+                                const found = findElement(element.children as Array<{ id: string; type: string; data: Record<string, unknown>; children?: Array<unknown> }>, targetId);
+                                if (found) return found;
+                            }
+                        }
+                        return null;
+                    };
+                    const targetElement = findElement(elements, value.element_id);
+                    if (targetElement) {
+                        elements = [targetElement];
+                    }
+                }
+
+                setPreviewData({
+                    type: value.reference_type === 'element' ? 'element' : 'content',
+                    content: {
+                        _id: data.content._id,
+                        title: data.content.title,
+                        slug: data.content.slug,
+                        status: data.content.status,
+                        collection_id: data.content.collection_id,
+                        collection_slug: data.content.collection_slug,
+                    },
+                    elements,
+                    targetElementId,
+                });
+                setIsPreviewOpen(true);
             }
-
-            const data = await response.json();
-
-            setPreviewData({
-                content: {
-                    _id: data.content._id,
-                    title: data.content.title,
-                    slug: data.content.slug,
-                    status: data.content.status,
-                    collection_id: data.content.collection_id,
-                    collection_slug: data.content.collection_slug,
-                },
-                elements: data.elements || [],
-                targetElementId: value.element_id,
-            });
-            setIsPreviewOpen(true);
         } catch (error) {
             console.error('Failed to fetch preview:', error);
         } finally {
@@ -584,8 +651,10 @@ export function ReferencePicker({
                 </Button>
                 {value && (
                     <div className="flex items-center shrink-0">
-                        {/* Preview button - only for content or element references */}
-                        {(value.reference_type === 'content' || value.reference_type === 'element') && value.content_id && (
+                        {/* Preview button - for all reference types */}
+                        {((value.reference_type === 'collection' && value.collection_id) ||
+                          (value.reference_type === 'content' && value.content_id) ||
+                          (value.reference_type === 'element' && value.content_id)) && (
                             <Button
                                 type="button"
                                 variant="ghost"
@@ -853,56 +922,143 @@ export function ReferencePicker({
             {/* Preview Modal */}
             <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
                 <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col overflow-hidden">
-                    <DialogHeader className="flex flex-row items-center justify-between gap-4 space-y-0 shrink-0">
-                        <div className="flex-1 min-w-0">
-                            <DialogTitle className="text-lg truncate">
-                                {previewData?.content.title || 'Preview'}
-                            </DialogTitle>
-                            <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
-                                <span className="truncate">{previewData?.content.slug}</span>
-                                {previewData?.targetElementId && (
-                                    <Badge variant="outline" className="text-xs shrink-0">
-                                        Element: {previewData.targetElementId.slice(0, 20)}...
-                                    </Badge>
+                    {previewData?.type === 'collection' ? (
+                        // Collection Preview
+                        <>
+                            <DialogHeader className="shrink-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <Folder className="size-5 text-amber-500" />
+                                    <Badge variant="secondary" className="text-xs">Collection</Badge>
+                                </div>
+                                <DialogTitle className="text-lg">
+                                    {previewData.collection.name}
+                                </DialogTitle>
+                                {previewData.collection.description && (
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        {previewData.collection.description}
+                                    </p>
                                 )}
-                            </p>
-                        </div>
-                        <Button
-                            size="sm"
-                            onClick={openEditOriginal}
-                            disabled={!previewData?.content._id}
-                            className="shrink-0"
-                        >
-                            <ExternalLink className="size-4 mr-2" />
-                            Original bearbeiten
-                        </Button>
-                    </DialogHeader>
+                            </DialogHeader>
 
-                    <Separator className="shrink-0" />
+                            <Separator className="shrink-0" />
 
-                    <div className="flex-1 overflow-y-auto min-h-0">
-                        {previewData?.elements && previewData.elements.length > 0 ? (
-                            <div className="space-y-3 p-4">
-                                {previewData.elements.map((element, index) => (
-                                    <PreviewElement
-                                        key={element.id || index}
-                                        element={element}
-                                        isTarget={element.id === previewData.targetElementId}
-                                    />
-                                ))}
+                            <div className="flex-1 overflow-y-auto min-h-0">
+                                <div className="p-4 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-sm font-medium text-muted-foreground">
+                                            Neueste Einträge
+                                        </h4>
+                                        <Badge variant="outline" className="text-xs">
+                                            {previewData.total_count} {previewData.total_count === 1 ? 'Eintrag' : 'Einträge'} gesamt
+                                        </Badge>
+                                    </div>
+                                    {previewData.contents.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {previewData.contents.map((content) => (
+                                                <Card key={content._id} className="overflow-hidden">
+                                                    <CardHeader className="py-3 px-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <FileText className="size-4 text-blue-500 shrink-0" />
+                                                            <div className="flex-1 min-w-0">
+                                                                <CardTitle className="text-sm font-medium truncate">
+                                                                    {content.title}
+                                                                </CardTitle>
+                                                                <p className="text-xs text-muted-foreground truncate">
+                                                                    {content.slug}
+                                                                </p>
+                                                            </div>
+                                                            <Badge 
+                                                                variant={content.status === 'published' ? 'default' : 'secondary'}
+                                                                className="text-xs shrink-0"
+                                                            >
+                                                                {content.status}
+                                                            </Badge>
+                                                        </div>
+                                                    </CardHeader>
+                                                </Card>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-8 text-muted-foreground">
+                                            Diese Collection hat keine Einträge.
+                                        </div>
+                                    )}
+                                    {previewData.total_count > 3 && (
+                                        <p className="text-xs text-muted-foreground text-center">
+                                            + {previewData.total_count - 3} weitere Einträge
+                                        </p>
+                                    )}
+                                </div>
                             </div>
-                        ) : (
-                            <div className="text-center py-12 text-muted-foreground">
-                                Dieser Content hat keine Elemente.
-                            </div>
-                        )}
-                    </div>
 
-                    <DialogFooter className="shrink-0">
-                        <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>
-                            Schließen
-                        </Button>
-                    </DialogFooter>
+                            <DialogFooter className="shrink-0">
+                                <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>
+                                    Schließen
+                                </Button>
+                            </DialogFooter>
+                        </>
+                    ) : (
+                        // Content or Element Preview
+                        <>
+                            <DialogHeader className="flex flex-row items-center justify-between gap-4 space-y-0 shrink-0">
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        {previewData?.type === 'element' ? (
+                                            <Box className="size-4 text-purple-500" />
+                                        ) : (
+                                            <FileText className="size-4 text-blue-500" />
+                                        )}
+                                        <Badge variant="secondary" className="text-xs">
+                                            {previewData?.type === 'element' ? 'Element' : 'Content'}
+                                        </Badge>
+                                    </div>
+                                    <DialogTitle className="text-lg truncate">
+                                        {previewData?.content.title || 'Preview'}
+                                    </DialogTitle>
+                                    <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
+                                        <span className="truncate">{previewData?.content.slug}</span>
+                                    </p>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    onClick={openEditOriginal}
+                                    disabled={!previewData?.content._id}
+                                    className="shrink-0"
+                                >
+                                    <ExternalLink className="size-4 mr-2" />
+                                    Original bearbeiten
+                                </Button>
+                            </DialogHeader>
+
+                            <Separator className="shrink-0" />
+
+                            <div className="flex-1 overflow-y-auto min-h-0">
+                                {previewData?.elements && previewData.elements.length > 0 ? (
+                                    <div className="space-y-3 p-4">
+                                        {previewData.elements.map((element, index) => (
+                                            <PreviewElement
+                                                key={element.id || index}
+                                                element={element}
+                                                isTarget={previewData.type === 'element'}
+                                            />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-12 text-muted-foreground">
+                                        {previewData?.type === 'element' 
+                                            ? 'Element konnte nicht gefunden werden.'
+                                            : 'Dieser Content hat keine Elemente.'}
+                                    </div>
+                                )}
+                            </div>
+
+                            <DialogFooter className="shrink-0">
+                                <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>
+                                    Schließen
+                                </Button>
+                            </DialogFooter>
+                        </>
+                    )}
                 </DialogContent>
             </Dialog>
         </div>

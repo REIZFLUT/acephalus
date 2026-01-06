@@ -61,13 +61,13 @@ class FixVersionNumbers extends Command
 
                 if ($oldNumber !== $versionNumber) {
                     if ($dryRun) {
-                        $this->line("    Would change v{$oldNumber} -> v{$versionNumber} ({$version->release})");
+                        $this->line("    Would change v{$oldNumber} -> v{$versionNumber}");
                     } else {
                         $version->update(['version_number' => $versionNumber]);
-                        $this->line("    Changed v{$oldNumber} -> v{$versionNumber} ({$version->release})");
+                        $this->line("    Changed v{$oldNumber} -> v{$versionNumber}");
                     }
                 } else {
-                    $this->line("    v{$versionNumber} is correct ({$version->release})");
+                    $this->line("    v{$versionNumber} is correct");
                 }
 
                 $versionNumber++;

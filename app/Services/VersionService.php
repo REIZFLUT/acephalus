@@ -25,18 +25,12 @@ class VersionService
 
         $elements = $this->getElementsSnapshot($content);
 
-        // Get the release from the parent collection
-        $collection = $content->collection;
-        $release = $collection?->current_release ?? ReleaseService::DEFAULT_RELEASE;
-
         return ContentVersion::create([
             'content_id' => $content->_id,
             'version_number' => $content->current_version,
             'elements' => $elements,
             'created_by' => $user?->id,
             'change_note' => $changeNote,
-            'release' => $release,
-            'is_release_end' => false,
             'snapshot' => [
                 'title' => $content->title,
                 'slug' => $content->slug,
@@ -53,17 +47,23 @@ class VersionService
     {
         $version = $content->versions()->version($versionNumber)->firstOrFail();
 
-        // Restore the content's elements
-        $this->restoreElementsFromVersion($content, $version);
+        // Prepare restored data
+        $restoredData = [
+            'elements' => $version->elements ?? [],
+        ];
 
-        // Restore snapshot data
+        // Restore snapshot data if available
         if ($version->snapshot) {
-            $content->update([
-                'title' => $version->snapshot['title'] ?? $content->title,
-                'slug' => $version->snapshot['slug'] ?? $content->slug,
-                'metadata' => $version->snapshot['metadata'] ?? $content->metadata,
-            ]);
+            $restoredData['title'] = $version->snapshot['title'] ?? $content->title;
+            $restoredData['slug'] = $version->snapshot['slug'] ?? $content->slug;
+            $restoredData['metadata'] = $version->snapshot['metadata'] ?? $content->metadata;
         }
+
+        // Update content with all restored data at once
+        $content->update($restoredData);
+
+        // Refresh the model to ensure we have the latest data
+        $content->refresh();
 
         // Create new version record (this automatically increments current_version)
         $this->createVersion(
@@ -179,6 +179,102 @@ class VersionService
             'added' => $added,
             'removed' => $removed,
             'modified' => $modified,
+        ];
+    }
+
+    /**
+     * Get a diff summary between a version and its predecessor.
+     *
+     * @return array{added: int, removed: int, modified: int, title_changed: bool}
+     */
+    public function getVersionDiffSummary(ContentVersion $version, ?ContentVersion $previousVersion = null): array
+    {
+        if (! $previousVersion) {
+            // This is the first version - all elements are "added"
+            return [
+                'added' => count($version->elements ?? []),
+                'removed' => 0,
+                'modified' => 0,
+                'title_changed' => false,
+            ];
+        }
+
+        $changes = $this->calculateChanges($previousVersion, $version);
+
+        $titleChanged = ($previousVersion->snapshot['title'] ?? '') !== ($version->snapshot['title'] ?? '');
+
+        return [
+            'added' => count($changes['added']),
+            'removed' => count($changes['removed']),
+            'modified' => count($changes['modified']),
+            'title_changed' => $titleChanged,
+        ];
+    }
+
+    /**
+     * Get enhanced version history with creator info and diff preview.
+     *
+     * @return array<int, array{version: ContentVersion, creator: User|null, diff_summary: array}>
+     */
+    public function getEnhancedVersionHistory(Content $content): array
+    {
+        $versions = $content->versions()
+            ->latestVersion()
+            ->get();
+
+        // Load creators separately (cross-database: MongoDB -> SQLite)
+        $creatorIds = $versions->pluck('created_by')->filter()->unique()->values()->toArray();
+        $creators = User::whereIn('id', $creatorIds)->get()->keyBy('id');
+
+        $result = [];
+        $previousVersion = null;
+
+        // Process in reverse order (oldest first) to calculate diffs correctly
+        $versionsReversed = $versions->reverse();
+
+        foreach ($versionsReversed as $version) {
+            $diffSummary = $this->getVersionDiffSummary($version, $previousVersion);
+            $creator = $version->created_by ? ($creators[$version->created_by] ?? null) : null;
+
+            $result[] = [
+                'version' => $version,
+                'creator' => $creator,
+                'diff_summary' => $diffSummary,
+            ];
+
+            $previousVersion = $version;
+        }
+
+        // Reverse back to show newest first
+        return array_reverse($result);
+    }
+
+    /**
+     * Get a single version with its diff summary compared to the previous version.
+     *
+     * @return array{version: ContentVersion, creator: User|null, diff_summary: array}|null
+     */
+    public function getVersionWithDiff(Content $content, int $versionNumber): ?array
+    {
+        $version = $this->getVersion($content, $versionNumber);
+
+        if (! $version) {
+            return null;
+        }
+
+        // Load creator separately (cross-database: MongoDB -> SQLite)
+        $creator = $version->created_by ? User::find($version->created_by) : null;
+
+        // Get the previous version for diff calculation
+        $previousVersion = null;
+        if ($versionNumber > 1) {
+            $previousVersion = $this->getVersion($content, $versionNumber - 1);
+        }
+
+        return [
+            'version' => $version,
+            'creator' => $creator,
+            'diff_summary' => $this->getVersionDiffSummary($version, $previousVersion),
         ];
     }
 }

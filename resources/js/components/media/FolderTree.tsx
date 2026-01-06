@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { 
     ChevronRight, 
+    ChevronDown,
     Folder, 
     FolderOpen, 
     Plus, 
@@ -31,8 +32,12 @@ import {
     Library,
     Loader2,
     MoreHorizontal,
+    Search,
+    X,
 } from 'lucide-react';
 import type { MediaFolderTree } from '@/types';
+
+const FOLDERS_PER_PAGE = 50;
 
 interface FolderTreeProps {
     selectedFolderId: string | null;
@@ -157,9 +162,25 @@ function FolderNode({
     );
 }
 
+interface FolderTreeResponse {
+    folders: MediaFolderTree[];
+    total: number;
+    shown: number;
+    has_more: boolean;
+    remaining: number;
+}
+
+interface SearchResponse {
+    folders: MediaFolderTree[];
+    total: number;
+    has_more: boolean;
+    remaining: number;
+}
+
 export function FolderTree({ selectedFolderId, onSelectFolder }: FolderTreeProps) {
     const [folders, setFolders] = useState<MediaFolderTree[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [renameDialogOpen, setRenameDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -168,26 +189,149 @@ export function FolderTree({ selectedFolderId, onSelectFolder }: FolderTreeProps
     const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
     const [folderToRename, setFolderToRename] = useState<{ id: string; name: string } | null>(null);
     const [folderToDelete, setFolderToDelete] = useState<{ id: string; name: string } | null>(null);
+    
+    // Search and pagination state
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<MediaFolderTree[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [offset, setOffset] = useState(0);
+    const [hasMore, setHasMore] = useState(false);
+    const [remaining, setRemaining] = useState(0);
+    const [totalFolders, setTotalFolders] = useState(0);
 
-    const fetchFolders = useCallback(async () => {
+    const fetchFolders = useCallback(async (currentOffset = 0, append = false) => {
         try {
-            const response = await fetch('/media-folders/tree', {
+            if (currentOffset === 0) {
+                setLoading(true);
+            } else {
+                setLoadingMore(true);
+            }
+            
+            const params = new URLSearchParams({
+                limit: FOLDERS_PER_PAGE.toString(),
+                offset: currentOffset.toString(),
+            });
+            
+            const response = await fetch(`/media-folders/tree?${params}`, {
                 headers: { 'Accept': 'application/json' },
             });
+            
             if (response.ok) {
-                const data = await response.json();
-                setFolders(data);
+                const data: FolderTreeResponse = await response.json();
+                
+                if (append && currentOffset > 0) {
+                    // Append new folders to the Global folder's children
+                    setFolders(prev => {
+                        return prev.map(folder => {
+                            if (folder.type === 'root_global') {
+                                return {
+                                    ...folder,
+                                    children: [...folder.children, ...data.folders.find(f => f.type === 'root_global')?.children || []],
+                                };
+                            }
+                            return folder;
+                        });
+                    });
+                } else {
+                    setFolders(data.folders);
+                }
+                
+                setHasMore(data.has_more);
+                setRemaining(data.remaining);
+                setTotalFolders(data.total);
+                setOffset(currentOffset);
             }
         } catch (error) {
             console.error('Failed to fetch folders:', error);
         } finally {
             setLoading(false);
+            setLoadingMore(false);
+        }
+    }, []);
+
+    const searchFolders = useCallback(async (query: string, currentOffset = 0, append = false) => {
+        if (!query.trim()) {
+            setSearchResults([]);
+            setIsSearching(false);
+            return;
+        }
+        
+        try {
+            setIsSearching(true);
+            if (currentOffset === 0) {
+                setLoading(true);
+            } else {
+                setLoadingMore(true);
+            }
+            
+            const params = new URLSearchParams({
+                search: query,
+                limit: FOLDERS_PER_PAGE.toString(),
+                offset: currentOffset.toString(),
+            });
+            
+            const response = await fetch(`/media-folders/tree?${params}`, {
+                headers: { 'Accept': 'application/json' },
+            });
+            
+            if (response.ok) {
+                const data: SearchResponse = await response.json();
+                
+                if (append && currentOffset > 0) {
+                    setSearchResults(prev => [...prev, ...data.folders]);
+                } else {
+                    setSearchResults(data.folders);
+                }
+                
+                setHasMore(data.has_more);
+                setRemaining(data.remaining);
+                setTotalFolders(data.total);
+                setOffset(currentOffset);
+            }
+        } catch (error) {
+            console.error('Failed to search folders:', error);
+        } finally {
+            setLoading(false);
+            setLoadingMore(false);
         }
     }, []);
 
     useEffect(() => {
-        fetchFolders();
+        fetchFolders(0);
     }, [fetchFolders]);
+
+    // Debounced search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (searchQuery.trim()) {
+                searchFolders(searchQuery, 0);
+            } else {
+                setSearchResults([]);
+                setIsSearching(false);
+                // Reset to initial folder view
+                fetchFolders(0);
+            }
+        }, 300);
+        
+        return () => clearTimeout(timer);
+    }, [searchQuery, searchFolders, fetchFolders]);
+
+    const handleLoadMore = () => {
+        const newOffset = offset + FOLDERS_PER_PAGE;
+        if (isSearching) {
+            searchFolders(searchQuery, newOffset, true);
+        } else {
+            fetchFolders(newOffset, true);
+        }
+    };
+
+    const clearSearch = () => {
+        setSearchQuery('');
+        setSearchResults([]);
+        setIsSearching(false);
+        setOffset(0);
+        fetchFolders(0);
+    };
 
     const handleCreateFolder = (parentId: string) => {
         setSelectedParentId(parentId);
@@ -290,18 +434,70 @@ export function FolderTree({ selectedFolderId, onSelectFolder }: FolderTreeProps
         }
     };
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center py-8">
-                <Loader2 className="size-5 animate-spin text-muted-foreground" />
-            </div>
-        );
-    }
-
     return (
-        <div className="space-y-1">
-            {/* Folder Tree - Global and Collections as root items */}
-            {folders.map((folder) => (
+        <div className="space-y-2">
+            {/* Search Input */}
+            <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                <Input
+                    type="text"
+                    placeholder="Ordner suchen..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-8 pl-7 pr-7 text-sm"
+                />
+                {searchQuery && (
+                    <button
+                        type="button"
+                        onClick={clearSearch}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted"
+                    >
+                        <X className="size-3.5 text-muted-foreground" />
+                    </button>
+                )}
+            </div>
+
+            {/* Loading State */}
+            {loading && (
+                <div className="flex items-center justify-center py-8">
+                    <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                </div>
+            )}
+
+            {/* Empty Search Results */}
+            {!loading && isSearching && searchResults.length === 0 && (
+                <div className="py-4 text-center text-sm text-muted-foreground">
+                    Keine Ordner gefunden
+                </div>
+            )}
+
+            {/* Search Results (flat list) */}
+            {!loading && isSearching && searchResults.length > 0 && (
+                <div className="space-y-0.5">
+                    {searchResults.map((folder) => (
+                        <div
+                            key={folder.id}
+                            className={`
+                                flex items-center gap-2 py-1.5 px-2 rounded cursor-pointer transition-colors
+                                ${selectedFolderId === folder.id ? 'bg-primary/10 text-primary' : 'hover:bg-muted'}
+                            `}
+                            onClick={() => {
+                                onSelectFolder(folder.id);
+                                clearSearch();
+                            }}
+                        >
+                            <Folder className="size-4 text-muted-foreground shrink-0" />
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium truncate">{folder.name}</p>
+                                <p className="text-xs text-muted-foreground truncate">{folder.path}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Folder Tree (normal view) */}
+            {!loading && !isSearching && folders.map((folder) => (
                 <FolderNode
                     key={folder.id}
                     folder={folder}
@@ -313,6 +509,30 @@ export function FolderTree({ selectedFolderId, onSelectFolder }: FolderTreeProps
                     onDeleteFolder={handleDeleteFolder}
                 />
             ))}
+
+            {/* Load More Button */}
+            {!loading && hasMore && (
+                <div className="pt-2 pb-1">
+                    <button
+                        type="button"
+                        onClick={handleLoadMore}
+                        disabled={loadingMore}
+                        className="w-full flex items-center justify-center gap-2 py-1.5 px-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                    >
+                        {loadingMore ? (
+                            <>
+                                <Loader2 className="size-3.5 animate-spin" />
+                                Laden...
+                            </>
+                        ) : (
+                            <>
+                                <ChevronDown className="size-3.5" />
+                                {remaining} weitere Ordner laden
+                            </>
+                        )}
+                    </button>
+                </div>
+            )}
 
             {/* Create Folder Dialog */}
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>

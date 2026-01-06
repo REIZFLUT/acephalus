@@ -57,7 +57,7 @@
     <pre><code>{{ $data['content'] ?? '' }}</code></pre>
 
 @elseif($type === 'reference')
-    {{-- Internal Reference Element --}}
+    {{-- Internal Reference Element - Fully Rendered --}}
     @php
         $referenceType = $data['reference_type'] ?? 'unknown';
         $collectionId = $data['collection_id'] ?? null;
@@ -66,32 +66,52 @@
         $displayTitle = $data['display_title'] ?? 'Unknown Reference';
         
         // Resolve the reference to get the actual data
-        $referencedItem = null;
-        $referenceUrl = null;
+        $referencedCollection = null;
+        $referencedContent = null;
+        $referencedElement = null;
+        $collectionContents = [];
+        $totalCount = 0;
         
         if ($referenceType === 'collection' && $collectionId) {
-            $referencedItem = \App\Models\Mongodb\Collection::find($collectionId);
-            if ($referencedItem) {
-                $displayTitle = $referencedItem->name;
+            $referencedCollection = \App\Models\Mongodb\Collection::find($collectionId);
+            if ($referencedCollection) {
+                $displayTitle = $referencedCollection->name;
+                // Get the 3 newest contents from this collection
+                $collectionContents = \App\Models\Mongodb\Content::where('collection_id', $collectionId)
+                    ->orderByDesc('created_at')
+                    ->limit(3)
+                    ->get();
+                $totalCount = \App\Models\Mongodb\Content::where('collection_id', $collectionId)->count();
             }
         } elseif ($referenceType === 'content' && $contentId) {
-            $referencedItem = \App\Models\Mongodb\Content::find($contentId);
-            if ($referencedItem) {
-                $displayTitle = $referencedItem->title;
+            $referencedContent = \App\Models\Mongodb\Content::with('collection')->find($contentId);
+            if ($referencedContent) {
+                $displayTitle = $referencedContent->title;
             }
         } elseif ($referenceType === 'element' && $contentId && $elementId) {
-            $content = \App\Models\Mongodb\Content::find($contentId);
-            if ($content) {
-                // Find the element within the content
-                $elements = $content->elements ?? [];
-                // The display_title should already be set from the picker
+            $referencedContent = \App\Models\Mongodb\Content::with('collection')->find($contentId);
+            if ($referencedContent) {
+                // Find the element within the content (including nested elements)
+                $findElement = function($elements, $targetId) use (&$findElement) {
+                    foreach ($elements as $el) {
+                        if (($el['id'] ?? null) === $targetId) {
+                            return $el;
+                        }
+                        if (!empty($el['children']) && is_array($el['children'])) {
+                            $found = $findElement($el['children'], $targetId);
+                            if ($found) return $found;
+                        }
+                    }
+                    return null;
+                };
+                $referencedElement = $findElement($referencedContent->elements ?? [], $elementId);
             }
         }
     @endphp
     
-    <div class="reference-element" data-reference-type="{{ $referenceType }}">
-        <a href="#" class="reference-link" data-collection-id="{{ $collectionId }}" data-content-id="{{ $contentId }}" data-element-id="{{ $elementId }}">
-            <span class="reference-icon">
+    <div class="reference-box reference-box--{{ $referenceType }}">
+        <div class="reference-box__header">
+            <span class="reference-box__icon">
                 @if($referenceType === 'collection')
                     📁
                 @elseif($referenceType === 'content')
@@ -100,9 +120,62 @@
                     📦
                 @endif
             </span>
-            <span class="reference-title">{{ $displayTitle }}</span>
-            <span class="reference-type-badge">[{{ ucfirst($referenceType) }}]</span>
-        </a>
+            <span class="reference-box__badge">{{ ucfirst($referenceType) }}-Referenz</span>
+            <span class="reference-box__title">{{ $displayTitle }}</span>
+        </div>
+        
+        <div class="reference-box__content">
+            @if($referenceType === 'collection' && $referencedCollection)
+                {{-- Collection Reference: Show 3 newest entries --}}
+                @if($referencedCollection->description)
+                    <p class="reference-box__description">{{ $referencedCollection->description }}</p>
+                @endif
+                
+                @if(count($collectionContents) > 0)
+                    <div class="reference-box__list">
+                        @foreach($collectionContents as $item)
+                            <div class="reference-box__list-item">
+                                <span class="reference-box__list-icon">📄</span>
+                                <div class="reference-box__list-info">
+                                    <span class="reference-box__list-title">{{ $item->title }}</span>
+                                    <span class="reference-box__list-meta">{{ $item->slug }}</span>
+                                </div>
+                                <span class="reference-box__list-status reference-box__list-status--{{ $item->status->value ?? 'draft' }}">
+                                    {{ ucfirst($item->status->value ?? 'draft') }}
+                                </span>
+                            </div>
+                        @endforeach
+                    </div>
+                    @if($totalCount > 3)
+                        <p class="reference-box__more">+ {{ $totalCount - 3 }} weitere Einträge</p>
+                    @endif
+                @else
+                    <p class="reference-box__empty">Diese Collection hat keine Einträge.</p>
+                @endif
+                <p class="reference-box__total">Gesamt: {{ $totalCount }} {{ $totalCount === 1 ? 'Eintrag' : 'Einträge' }}</p>
+                
+            @elseif($referenceType === 'content' && $referencedContent)
+                {{-- Content Reference: Render all elements from the referenced content --}}
+                @if(count($referencedContent->elements ?? []) > 0)
+                    <div class="reference-box__elements">
+                        @foreach($referencedContent->elements as $refElement)
+                            @include('contents.partials.element', ['element' => $refElement])
+                        @endforeach
+                    </div>
+                @else
+                    <p class="reference-box__empty">Dieser Content hat keine Elemente.</p>
+                @endif
+                
+            @elseif($referenceType === 'element' && $referencedElement)
+                {{-- Element Reference: Render only the specific element --}}
+                <div class="reference-box__elements">
+                    @include('contents.partials.element', ['element' => $referencedElement])
+                </div>
+                
+            @else
+                <p class="reference-box__error">Referenz konnte nicht aufgelöst werden.</p>
+            @endif
+        </div>
     </div>
 
 @elseif(str_starts_with($type, 'custom_'))

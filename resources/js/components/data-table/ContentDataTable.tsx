@@ -123,9 +123,6 @@ function getCellValue(
                         {formatDate(content.created_at)}
                     </span>
                 )
-            case 'current_release':
-                // This would need to come from the collection context
-                return <span className="text-muted-foreground">—</span>
             case 'editions':
                 if (!content.editions || content.editions.length === 0) {
                     return <span className="text-muted-foreground">All</span>

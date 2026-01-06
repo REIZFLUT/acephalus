@@ -214,6 +214,50 @@ class ReferenceController extends Controller
     }
 
     /**
+     * Get collection preview with the 3 newest content items.
+     */
+    public function previewCollection(string $collectionId): JsonResponse
+    {
+        $collection = Collection::find($collectionId);
+
+        if (! $collection) {
+            return response()->json([
+                'message' => 'Collection not found.',
+            ], 404);
+        }
+
+        // Get the 3 newest contents from this collection
+        $contents = Content::where('collection_id', $collectionId)
+            ->select(['_id', 'title', 'slug', 'status', 'created_at'])
+            ->orderByDesc('created_at')
+            ->limit(3)
+            ->get()
+            ->map(function ($content) {
+                return [
+                    '_id' => (string) $content->_id,
+                    'title' => $content->title,
+                    'slug' => $content->slug,
+                    'status' => $content->status?->value ?? 'draft',
+                    'created_at' => $content->created_at?->toISOString(),
+                ];
+            });
+
+        // Count total contents in collection
+        $totalCount = Content::where('collection_id', $collectionId)->count();
+
+        return response()->json([
+            'collection' => [
+                '_id' => (string) $collection->_id,
+                'name' => $collection->name,
+                'slug' => $collection->slug,
+                'description' => $collection->description,
+            ],
+            'contents' => $contents,
+            'total_count' => $totalCount,
+        ]);
+    }
+
+    /**
      * Flatten elements including wrapper children into a tree structure.
      * Reference elements are excluded to prevent endless reference loops.
      *

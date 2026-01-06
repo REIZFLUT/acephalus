@@ -13,18 +13,69 @@ use Illuminate\Support\Str;
 
 class MediaFolderController extends Controller
 {
+    private const DEFAULT_FOLDER_LIMIT = 50;
+
     /**
      * Get all folders as a tree structure for the media library.
+     * Supports search, pagination, and limiting the number of folders.
      */
-    public function tree(): JsonResponse
+    public function tree(Request $request): JsonResponse
     {
+        $search = $request->input('search');
+        $limit = (int) $request->input('limit', self::DEFAULT_FOLDER_LIMIT);
+        $offset = (int) $request->input('offset', 0);
+
+        // If searching, return flat list of matching folders
+        if ($search) {
+            return $this->searchFolders($search, $limit, $offset);
+        }
+
+        // Build the tree structure with pagination for custom folders
         $folders = MediaFolder::with('children')
             ->whereNull('parent_id')
             ->orderBy('type')
             ->orderBy('name')
             ->get();
 
-        return response()->json($this->buildFolderTree($folders));
+        $tree = $this->buildFolderTreeWithPagination($folders, $limit, $offset);
+
+        return response()->json($tree);
+    }
+
+    /**
+     * Search folders by name.
+     */
+    protected function searchFolders(string $search, int $limit, int $offset): JsonResponse
+    {
+        $query = MediaFolder::where('name', 'like', "%{$search}%")
+            ->orderBy('created_at', 'desc');
+
+        $total = $query->count();
+        $folders = $query->skip($offset)->take($limit)->get();
+
+        $results = $folders->map(function ($folder) {
+            $breadcrumbs = $folder->getBreadcrumbs();
+            $path = collect($breadcrumbs)->pluck('name')->implode(' / ');
+
+            return [
+                'id' => (string) $folder->_id,
+                'name' => $folder->name,
+                'slug' => $folder->slug,
+                'path' => $path,
+                'type' => $folder->type,
+                'is_system' => $folder->is_system,
+                'can_create_subfolders' => $folder->canCreateSubfolders(),
+                'can_delete' => $folder->canBeDeleted(),
+                'children' => [],
+            ];
+        })->toArray();
+
+        return response()->json([
+            'folders' => $results,
+            'total' => $total,
+            'has_more' => ($offset + $limit) < $total,
+            'remaining' => max(0, $total - $offset - $limit),
+        ]);
     }
 
     /**
@@ -180,7 +231,120 @@ class MediaFolderController extends Controller
     }
 
     /**
-     * Build a nested folder tree structure.
+     * Build a nested folder tree structure with pagination for custom folders.
+     *
+     * @param  \Illuminate\Database\Eloquent\Collection<int, MediaFolder>  $folders
+     * @return array<string, mixed>
+     */
+    protected function buildFolderTreeWithPagination($folders, int $limit, int $offset): array
+    {
+        $tree = [];
+        $totalCustomFolders = 0;
+        $customFolderStats = ['total' => 0, 'shown' => 0];
+
+        foreach ($folders as $folder) {
+            $node = [
+                'id' => (string) $folder->_id,
+                'name' => $folder->name,
+                'slug' => $folder->slug,
+                'path' => $folder->path,
+                'type' => $folder->type,
+                'is_system' => $folder->is_system,
+                'can_create_subfolders' => $folder->canCreateSubfolders(),
+                'can_delete' => $folder->canBeDeleted(),
+                'children' => [],
+            ];
+
+            if ($folder->children && $folder->children->count() > 0) {
+                // For root_global, apply pagination to custom folders
+                if ($folder->type === MediaFolder::TYPE_ROOT_GLOBAL) {
+                    $childResult = $this->buildPaginatedChildren($folder, $limit, $offset);
+                    $node['children'] = $childResult['children'];
+                    $customFolderStats = [
+                        'total' => $childResult['total'],
+                        'shown' => $childResult['shown'],
+                    ];
+                } else {
+                    // For other types (like collections), show all children
+                    $node['children'] = $this->buildFolderTree($folder->children);
+                }
+            }
+
+            $tree[] = $node;
+        }
+
+        return [
+            'folders' => $tree,
+            'total' => $customFolderStats['total'],
+            'shown' => $customFolderStats['shown'],
+            'has_more' => ($offset + $limit) < $customFolderStats['total'],
+            'remaining' => max(0, $customFolderStats['total'] - $offset - $limit),
+        ];
+    }
+
+    /**
+     * Build paginated children for the global folder.
+     *
+     * @return array{children: array<int, array<string, mixed>>, total: int, shown: int}
+     */
+    protected function buildPaginatedChildren(MediaFolder $folder, int $limit, int $offset): array
+    {
+        // Get total count of direct custom children
+        $total = MediaFolder::where('parent_id', (string) $folder->_id)
+            ->where('type', MediaFolder::TYPE_CUSTOM)
+            ->count();
+
+        // Get paginated custom children, ordered by newest first
+        $customChildren = MediaFolder::with('children')
+            ->where('parent_id', (string) $folder->_id)
+            ->where('type', MediaFolder::TYPE_CUSTOM)
+            ->orderBy('created_at', 'desc')
+            ->skip($offset)
+            ->take($limit)
+            ->get();
+
+        $children = [];
+        foreach ($customChildren as $child) {
+            $children[] = $this->buildFolderNodeRecursive($child);
+        }
+
+        return [
+            'children' => $children,
+            'total' => $total,
+            'shown' => count($children),
+        ];
+    }
+
+    /**
+     * Recursively build a folder node with all children (no pagination).
+     *
+     * @return array<string, mixed>
+     */
+    protected function buildFolderNodeRecursive(MediaFolder $folder): array
+    {
+        $node = [
+            'id' => (string) $folder->_id,
+            'name' => $folder->name,
+            'slug' => $folder->slug,
+            'path' => $folder->path,
+            'type' => $folder->type,
+            'is_system' => $folder->is_system,
+            'can_create_subfolders' => $folder->canCreateSubfolders(),
+            'can_delete' => $folder->canBeDeleted(),
+            'children' => [],
+        ];
+
+        if ($folder->children && $folder->children->count() > 0) {
+            foreach ($folder->children as $child) {
+                $node['children'][] = $this->buildFolderNodeRecursive($child);
+            }
+        }
+
+        return $node;
+    }
+
+    /**
+     * Build a nested folder tree structure (legacy, no pagination).
      *
      * @param  \Illuminate\Database\Eloquent\Collection<int, MediaFolder>  $folders
      * @return array<int, array<string, mixed>>

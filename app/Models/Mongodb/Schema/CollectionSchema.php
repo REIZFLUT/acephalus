@@ -64,7 +64,6 @@ class CollectionSchema
             ['id' => 'updated_at', 'label' => 'Updated', 'type' => 'base', 'visible' => true, 'toggleable' => true, 'sortable' => true],
             ['id' => 'slug', 'label' => 'Slug', 'type' => 'base', 'visible' => false, 'toggleable' => true, 'sortable' => true],
             ['id' => 'created_at', 'label' => 'Created', 'type' => 'base', 'visible' => false, 'toggleable' => true, 'sortable' => true],
-            ['id' => 'current_release', 'label' => 'Release', 'type' => 'base', 'visible' => false, 'toggleable' => true, 'sortable' => true],
             ['id' => 'editions', 'label' => 'Editions', 'type' => 'base', 'visible' => false, 'toggleable' => true, 'sortable' => false],
         ],
         'default_per_page' => 20,

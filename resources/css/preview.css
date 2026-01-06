@@ -1,0 +1,543 @@
+/**
+ * Content Preview Styles
+ * 
+ * Styles for the standalone content preview page.
+ * This file is loaded independently via Vite for the preview route.
+ */
+
+/* ==========================================================================
+   Base & Layout
+   ========================================================================== */
+
+.preview-page {
+    font-family: system-ui, -apple-system, sans-serif;
+    line-height: 1.7;
+    color: #1f2937;
+    background: #fff;
+    margin: 0;
+    padding: 0;
+}
+
+.preview-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+}
+
+/* ==========================================================================
+   Header
+   ========================================================================== */
+
+.preview-header {
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 2rem;
+    margin-bottom: 3rem;
+}
+
+.preview-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    color: #111827;
+}
+
+.preview-meta {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+/* ==========================================================================
+   Content Area
+   ========================================================================== */
+
+.preview-content > * {
+    margin-bottom: 2rem;
+}
+
+.preview-content > *:last-child {
+    margin-bottom: 0;
+}
+
+/* ==========================================================================
+   Typography
+   ========================================================================== */
+
+.preview-content h1 {
+    font-size: 2em;
+    font-weight: 700;
+    margin-bottom: 0.75em;
+    margin-top: 1.5em;
+    line-height: 1.2;
+}
+
+.preview-content h2 {
+    font-size: 1.5em;
+    font-weight: 600;
+    margin-bottom: 0.65em;
+    margin-top: 1.3em;
+    line-height: 1.3;
+}
+
+.preview-content h3 {
+    font-size: 1.25em;
+    font-weight: 600;
+    margin-bottom: 0.5em;
+    margin-top: 1em;
+    line-height: 1.4;
+}
+
+.preview-content h1:first-child,
+.preview-content h2:first-child,
+.preview-content h3:first-child {
+    margin-top: 0;
+}
+
+.preview-content p {
+    margin-bottom: 1em;
+}
+
+.preview-content ul,
+.preview-content ol {
+    margin-bottom: 1em;
+    padding-left: 2em;
+}
+
+.preview-content li {
+    margin-bottom: 0.5em;
+}
+
+.preview-content strong {
+    font-weight: 700;
+}
+
+.preview-content em {
+    font-style: italic;
+}
+
+.preview-content a {
+    color: #2563eb;
+    text-decoration: underline;
+}
+
+/* ==========================================================================
+   Code
+   ========================================================================== */
+
+.preview-content code {
+    background: #f3f4f6;
+    padding: 0.2em 0.4em;
+    border-radius: 0.25rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+.preview-content pre {
+    background: #1f2937;
+    color: #f3f4f6;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin-bottom: 1em;
+}
+
+.preview-content pre code {
+    background: transparent;
+    padding: 0;
+    color: #f3f4f6;
+}
+
+/* ==========================================================================
+   Blockquotes & Dividers
+   ========================================================================== */
+
+.preview-content blockquote {
+    border-left: 4px solid #d1d5db;
+    padding-left: 1em;
+    margin: 1em 0;
+    font-style: italic;
+    color: #6b7280;
+}
+
+.preview-content hr {
+    border: 0;
+    border-top: 2px solid #e5e7eb;
+    margin: 2em 0;
+}
+
+/* ==========================================================================
+   Tables
+   ========================================================================== */
+
+.preview-content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 1em;
+}
+
+.preview-content th,
+.preview-content td {
+    border: 1px solid #e5e7eb;
+    padding: 0.5em;
+    text-align: left;
+}
+
+.preview-content th {
+    background: #f9fafb;
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   Media
+   ========================================================================== */
+
+.preview-content img,
+.preview-content video {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    display: block;
+}
+
+.media-caption {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    font-style: italic;
+}
+
+/* ==========================================================================
+   KaTeX Math
+   ========================================================================== */
+
+.katex-display {
+    margin: 2rem 0;
+}
+
+/* ==========================================================================
+   Meta Table (for Meta-Only Content)
+   ========================================================================== */
+
+.meta-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.meta-table th,
+.meta-table td {
+    padding: 1rem 1.25rem;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.meta-table th {
+    background: #f9fafb;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+}
+
+.meta-table tr:last-child td {
+    border-bottom: none;
+}
+
+.meta-table tr:hover td {
+    background: #f9fafb;
+}
+
+.meta-table td strong {
+    font-weight: 600;
+    color: #374151;
+}
+
+.meta-table td code {
+    background: #f3f4f6;
+    padding: 0.15em 0.4em;
+    border-radius: 0.25rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875em;
+}
+
+/* ==========================================================================
+   CodeMirror JSON Container
+   ========================================================================== */
+
+.json-codemirror-container {
+    border-radius: 0.5rem;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+.json-codemirror-container .CodeMirror {
+    height: auto;
+    max-height: 400px;
+    font-size: 0.875rem;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+.json-codemirror-container .CodeMirror-scroll {
+    max-height: 400px;
+}
+
+/* ==========================================================================
+   Reference Box
+   ========================================================================== */
+
+.reference-box {
+    border: 2px solid #e5e7eb;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    margin: 1.5rem 0;
+    background: #fafafa;
+}
+
+/* Reference Box Variants */
+.reference-box--collection {
+    border-color: #f59e0b;
+    background: linear-gradient(to bottom, #fffbeb, #fff);
+}
+
+.reference-box--content {
+    border-color: #3b82f6;
+    background: linear-gradient(to bottom, #eff6ff, #fff);
+}
+
+.reference-box--element {
+    border-color: #8b5cf6;
+    background: linear-gradient(to bottom, #f5f3ff, #fff);
+}
+
+/* Reference Box Header */
+.reference-box__header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1.25rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.reference-box__icon {
+    font-size: 1.25rem;
+}
+
+.reference-box__badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    background: rgba(0, 0, 0, 0.08);
+    color: #374151;
+}
+
+.reference-box--collection .reference-box__badge {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.reference-box--content .reference-box__badge {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.reference-box--element .reference-box__badge {
+    background: #ede9fe;
+    color: #5b21b6;
+}
+
+.reference-box__title {
+    font-weight: 600;
+    color: #111827;
+    flex: 1;
+}
+
+/* Reference Box Content */
+.reference-box__content {
+    padding: 1.25rem;
+    background: #fff;
+}
+
+.reference-box__description {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+    font-style: italic;
+}
+
+/* Reference Box List */
+.reference-box__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.reference-box__list-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+}
+
+.reference-box__list-icon {
+    font-size: 1rem;
+}
+
+.reference-box__list-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.reference-box__list-title {
+    display: block;
+    font-weight: 500;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.reference-box__list-meta {
+    display: block;
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+.reference-box__list-status {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.25rem;
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.reference-box__list-status--published {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.reference-box__list-status--draft {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+/* Reference Box Messages */
+.reference-box__more {
+    text-align: center;
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-top: 0.75rem;
+    margin-bottom: 0;
+}
+
+.reference-box__total {
+    text-align: center;
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.reference-box__empty {
+    text-align: center;
+    color: #9ca3af;
+    font-style: italic;
+    padding: 1rem;
+    margin: 0;
+}
+
+.reference-box__error {
+    text-align: center;
+    color: #dc2626;
+    font-style: italic;
+    padding: 1rem;
+    margin: 0;
+}
+
+/* Reference Box Elements */
+.reference-box__elements > *:first-child {
+    margin-top: 0;
+}
+
+.reference-box__elements > *:last-child {
+    margin-bottom: 0;
+}
+
+/* Nested Reference Boxes */
+.reference-box .reference-box {
+    margin: 1rem 0;
+    border-width: 1px;
+}
+
+/* ==========================================================================
+   Custom Elements (Generic Fallback)
+   ========================================================================== */
+
+.custom-element {
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    margin: 1rem 0;
+}
+
+.custom-element-header {
+    background: #f9fafb;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.custom-element-content {
+    padding: 1rem;
+}
+
+.custom-field {
+    margin-bottom: 0.75rem;
+}
+
+.custom-field:last-child {
+    margin-bottom: 0;
+}
+
+.custom-field .field-label {
+    font-weight: 600;
+    color: #374151;
+    margin-right: 0.5rem;
+}
+
+.custom-field .field-value {
+    color: #1f2937;
+}
+
+.custom-field .html-content {
+    margin-top: 0.5rem;
+}
+
+.custom-element-error {
+    padding: 1rem;
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+/* ==========================================================================
+   Utility Classes
+   ========================================================================== */
+
+.preview-empty {
+    color: #9ca3af;
+    text-align: center;
+    font-style: italic;
+}
+

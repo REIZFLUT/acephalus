@@ -260,9 +260,21 @@ class MediaController extends Controller
             'metadata.focus_area.height' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ]);
 
+        // Get metadata directly from request to preserve custom fields
+        // Laravel validation strips fields not explicitly in rules
+        $newMetadata = $request->input('metadata', []);
+        if (! is_array($newMetadata)) {
+            $newMetadata = [];
+        }
+
         // Merge metadata with existing metadata
-        $existingMetadata = $media->metadata ?? [];
-        $newMetadata = $validated['metadata'] ?? [];
+        // Convert BSON types to PHP arrays if needed
+        $existingMetadata = $media->metadata;
+        if ($existingMetadata instanceof \MongoDB\Model\BSONDocument || $existingMetadata instanceof \MongoDB\Model\BSONArray) {
+            $existingMetadata = $existingMetadata->getArrayCopy();
+        }
+        $existingMetadata = is_array($existingMetadata) ? $existingMetadata : [];
+
         $mergedMetadata = array_merge($existingMetadata, $newMetadata);
 
         $updateData = [

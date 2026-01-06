@@ -8,7 +8,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Mongodb\Collection;
 use App\Models\Mongodb\Edition;
 use App\Models\Mongodb\WrapperPurpose;
-use App\Services\ReleaseService;
 use App\Services\SchemaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,7 +19,6 @@ class CollectionController extends Controller
 {
     public function __construct(
         private readonly SchemaService $schemaService,
-        private readonly ReleaseService $releaseService,
     ) {}
 
     public function index(): Response
@@ -74,9 +72,7 @@ class CollectionController extends Controller
     {
         $collection->load('contents');
 
-        $selectedRelease = $request->query('release');
         $selectedEdition = $request->query('edition');
-        $releases = $collection->releases ?? [];
 
         // Get editions available for this collection
         // First, get all editions - we'll filter by allowed_editions if configured
@@ -108,86 +104,31 @@ class CollectionController extends Controller
             $perPage = $defaultPerPage;
         }
 
-        // If filtering by release, get release-specific content states
-        if ($selectedRelease && $this->releaseService->releaseExists($collection, $selectedRelease)) {
-            $releaseContents = $this->releaseService->getContentsForRelease($collection, $selectedRelease);
+        // Build query for all contents with sorting
+        $query = $collection->contents()
+            ->orderBy($defaultSortColumn, $defaultSortDirection);
 
-            // Filter by edition if specified
-            if ($selectedEdition) {
-                $releaseContents = $releaseContents->filter(function ($item) use ($selectedEdition) {
-                    $content = $item['content'];
-                    $contentEditions = $content->editions ?? [];
-
-                    // Content is visible if no specific editions set, or if it includes the selected edition
-                    return empty($contentEditions) || in_array($selectedEdition, $contentEditions, true);
-                });
-            }
-
-            // Manual pagination for release-filtered contents
-            $page = $request->integer('page', 1);
-            $total = $releaseContents->count();
-            $items = $releaseContents->slice(($page - 1) * $perPage, $perPage)->values();
-
-            // Transform to match expected format with release version data
-            $contentsData = $items->map(function ($item) use ($selectedRelease) {
-                $content = $item['content'];
-                $version = $item['version'];
-
-                return [
-                    '_id' => (string) $content->_id,
-                    'collection_id' => (string) $content->collection_id,
-                    'title' => $version?->snapshot['title'] ?? $content->title,
-                    'slug' => $version?->snapshot['slug'] ?? $content->slug,
-                    'status' => $version?->snapshot['status'] ?? $content->status->value,
-                    'current_version' => $version?->version_number ?? $content->current_version,
-                    'versions_count' => $version?->version_number,
-                    'release' => $selectedRelease,
-                    'is_release_end' => $version?->is_release_end ?? false,
-                    'editions' => $content->editions ?? [],
-                    'metadata' => $content->metadata ?? [],
-                    'updated_at' => $version?->created_at?->toIso8601String() ?? $content->updated_at?->toIso8601String(),
-                    'created_at' => $content->created_at?->toIso8601String(),
-                ];
-            })->toArray();
-
-            $contents = [
-                'data' => $contentsData,
-                'current_page' => $page,
-                'last_page' => (int) ceil($total / $perPage) ?: 1,
-                'per_page' => $perPage,
-                'total' => $total,
-                'from' => $total > 0 ? ($page - 1) * $perPage + 1 : null,
-                'to' => $total > 0 ? min($page * $perPage, $total) : null,
-            ];
-        } else {
-            // Build query for all contents with sorting
-            $query = $collection->contents()
-                ->orderBy($defaultSortColumn, $defaultSortDirection);
-
-            // Filter by edition if specified
-            if ($selectedEdition) {
-                $query->where(function ($q) use ($selectedEdition) {
-                    $q->whereNull('editions')
-                        ->orWhere('editions', [])
-                        ->orWhere('editions', $selectedEdition);
-                });
-            }
-
-            $contents = $query->paginate($perPage);
-
-            // Manually add versions_count for each content (withCount not supported by MongoDB)
-            $contents->getCollection()->transform(function ($content) {
-                $content->versions_count = $content->versions()->count();
-
-                return $content;
+        // Filter by edition if specified
+        if ($selectedEdition) {
+            $query->where(function ($q) use ($selectedEdition) {
+                $q->whereNull('editions')
+                    ->orWhere('editions', [])
+                    ->orWhere('editions', $selectedEdition);
             });
         }
+
+        $contents = $query->paginate($perPage);
+
+        // Manually add versions_count for each content (withCount not supported by MongoDB)
+        $contents->getCollection()->transform(function ($content) {
+            $content->versions_count = $content->versions()->count();
+
+            return $content;
+        });
 
         return Inertia::render('Collections/Show', [
             'collection' => $collection,
             'contents' => $contents,
-            'releases' => $releases,
-            'selectedRelease' => $selectedRelease,
             'editions' => $editions,
             'selectedEdition' => $selectedEdition,
         ]);

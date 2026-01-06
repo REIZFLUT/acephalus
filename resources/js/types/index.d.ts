@@ -604,6 +604,105 @@ export interface PaginatedData<T> {
     to: number | null;
 }
 
+// Filter Types
+
+/**
+ * Available filter operators
+ */
+export type FilterOperator =
+    | 'equals'
+    | 'not_equals'
+    | 'contains'
+    | 'not_contains'
+    | 'starts_with'
+    | 'ends_with'
+    | 'in'
+    | 'not_in'
+    | 'gt'
+    | 'gte'
+    | 'lt'
+    | 'lte'
+    | 'exists'
+    | 'not_exists'
+    | 'regex'
+    | 'is_empty'
+    | 'is_not_empty';
+
+/**
+ * A single filter condition
+ */
+export interface FilterCondition {
+    type: 'condition';
+    field: string;
+    operator: FilterOperator;
+    value: unknown;
+}
+
+/**
+ * A group of filter conditions (AND/OR)
+ */
+export interface FilterConditionGroup {
+    type: 'group';
+    operator: 'and' | 'or';
+    children: (FilterCondition | FilterConditionGroup)[];
+}
+
+/**
+ * Sort rule for filter views
+ */
+export interface FilterSortRule {
+    field: string;
+    direction: 'asc' | 'desc';
+}
+
+/**
+ * Filter view model
+ */
+export interface FilterView {
+    _id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    collection_id: string | null;
+    is_system: boolean;
+    conditions: FilterConditionGroup;
+    sort: FilterSortRule[];
+    raw_query: Record<string, unknown> | null;
+    created_at: string;
+    updated_at: string;
+}
+
+/**
+ * Available field for filtering
+ */
+export interface FilterField {
+    field: string;
+    label: string;
+    type: string;
+    options?: MetaFieldOption[];
+}
+
+/**
+ * Operator option for UI
+ */
+export interface FilterOperatorOption {
+    value: FilterOperator;
+    label: string;
+}
+
+/**
+ * Filter definition in collection settings
+ */
+export interface CollectionFilterDefinition {
+    id: string;
+    name: string;
+    field: string;
+    type: 'single' | 'multiple';
+    source: 'meta_field' | 'manual';
+    meta_field_name?: string;
+    options?: MetaFieldOption[];
+}
+
 /**
  * Auth data shared via Inertia
  */

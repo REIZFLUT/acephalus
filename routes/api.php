@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CollectionController;
 use App\Http\Controllers\Api\V1\ContentController;
 use App\Http\Controllers\Api\V1\ElementController;
+use App\Http\Controllers\Api\V1\FilterViewController;
 use App\Http\Controllers\Api\V1\MediaController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\VersionController;
@@ -39,6 +40,15 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::middleware('api.permission:collections:read')->group(function () {
             Route::get('collections', [CollectionController::class, 'index'])->name('collections.index');
             Route::get('collections/{collection}', [CollectionController::class, 'show'])->name('collections.show');
+
+            // Filter Views (read-only via API)
+            Route::get('filter-views', [FilterViewController::class, 'global'])->name('filter-views.global');
+            Route::get('filter-views/operators', [FilterViewController::class, 'operators'])->name('filter-views.operators');
+            Route::get('filter-views/{filterView}', [FilterViewController::class, 'show'])->name('filter-views.show');
+            Route::get('collections/{collection}/filter-views', [FilterViewController::class, 'forCollection'])
+                ->name('collections.filter-views');
+            Route::get('collections/{collection}/filter-fields', [FilterViewController::class, 'fields'])
+                ->name('collections.filter-fields');
         });
 
         // Collections - Write

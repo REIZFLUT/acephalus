@@ -11,14 +11,18 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Plus, FileText, Settings, X, BookOpen } from 'lucide-react';
-import type { PageProps, Collection, Content, PaginatedData, Edition, ListViewSettings, CollectionSchema } from '@/types';
+import type { PageProps, Collection, Content, PaginatedData, Edition, ListViewSettings, CollectionSchema, FilterView, FilterField } from '@/types';
 import { ContentDataTable } from '@/components/data-table';
+import { FilterViewSelector } from '@/components/filters';
 
 interface CollectionsShowProps extends PageProps {
     collection: Collection;
     contents: PaginatedData<Content>;
     editions?: Edition[];
     selectedEdition?: string | null;
+    filterViews?: FilterView[];
+    selectedFilterView?: FilterView | null;
+    availableFilterFields?: FilterField[];
 }
 
 // Default list view settings used when collection doesn't have custom settings
@@ -38,21 +42,97 @@ const defaultListViewSettings: ListViewSettings = {
     default_sort_direction: 'desc',
 };
 
-export default function CollectionsShow({ collection, contents, editions = [], selectedEdition }: CollectionsShowProps) {
+export default function CollectionsShow({ 
+    collection, 
+    contents, 
+    editions = [], 
+    selectedEdition,
+    filterViews = [],
+    selectedFilterView = null,
+    availableFilterFields = [],
+}: CollectionsShowProps) {
     // Get list view settings from collection schema or use defaults
     const schema = collection.schema as CollectionSchema | null;
     const listViewSettings: ListViewSettings = schema?.list_view_settings || defaultListViewSettings;
 
     const handleEditionFilter = (edition: string) => {
-        if (edition === 'all') {
-            router.get(`/collections/${collection.slug}`, {}, { preserveState: true });
-        } else {
-            router.get(`/collections/${collection.slug}`, { edition }, { preserveState: true });
+        const params: Record<string, string> = {};
+        if (edition !== 'all') {
+            params.edition = edition;
         }
+        if (selectedFilterView) {
+            params.filter_view = selectedFilterView._id;
+        }
+        router.get(`/collections/${collection.slug}`, params, { preserveState: true });
     };
 
     const clearEditionFilter = () => {
-        router.get(`/collections/${collection.slug}`, {}, { preserveState: true });
+        const params: Record<string, string> = {};
+        if (selectedFilterView) {
+            params.filter_view = selectedFilterView._id;
+        }
+        router.get(`/collections/${collection.slug}`, params, { preserveState: true });
+    };
+
+    const handleFilterViewSelect = (filterView: FilterView | null) => {
+        const params: Record<string, string> = {};
+        if (selectedEdition) {
+            params.edition = selectedEdition;
+        }
+        if (filterView) {
+            params.filter_view = filterView._id;
+        }
+        router.get(`/collections/${collection.slug}`, params, { preserveState: true });
+    };
+
+    const handleSaveFilterView = async (filterViewData: Partial<FilterView>) => {
+        return new Promise<void>((resolve, reject) => {
+            router.post('/settings/filter-views/json', {
+                ...filterViewData,
+                collection_id: collection._id,
+            }, {
+                preserveState: true,
+                onSuccess: () => {
+                    // Reload to get updated filter views
+                    router.reload({ only: ['filterViews'] });
+                    resolve();
+                },
+                onError: () => reject(),
+            });
+        });
+    };
+
+    const handleUpdateFilterView = async (id: string, filterViewData: Partial<FilterView>) => {
+        return new Promise<void>((resolve, reject) => {
+            router.put(`/settings/filter-views/${id}/json`, filterViewData, {
+                preserveState: true,
+                onSuccess: () => {
+                    router.reload({ only: ['filterViews', 'selectedFilterView'] });
+                    resolve();
+                },
+                onError: () => reject(),
+            });
+        });
+    };
+
+    const handleDeleteFilterView = async (id: string) => {
+        return new Promise<void>((resolve, reject) => {
+            router.delete(`/settings/filter-views/${id}/json`, {
+                preserveState: true,
+                onSuccess: () => {
+                    // Clear selection if deleted view was selected
+                    const params: Record<string, string> = {};
+                    if (selectedEdition) {
+                        params.edition = selectedEdition;
+                    }
+                    router.get(`/collections/${collection.slug}`, params, { 
+                        preserveState: true,
+                        onSuccess: () => resolve(),
+                    });
+                },
+                onError: () => reject(),
+            });
+        });
     };
 
     return (
@@ -95,55 +175,69 @@ export default function CollectionsShow({ collection, contents, editions = [], s
                 </div>
 
                 {/* Filters */}
-                {editions.length > 0 && (
-                    <Card>
-                        <CardContent className="py-4">
-                            <div className="flex flex-wrap items-center gap-4">
-                                {/* Edition Filter */}
-                                <div className="flex items-center gap-2">
-                                    <BookOpen className="size-4 text-muted-foreground" />
-                                    <span className="text-sm font-medium">Edition:</span>
-                                </div>
-                                <Select
-                                    value={selectedEdition || 'all'}
-                                    onValueChange={handleEditionFilter}
-                                >
-                                    <SelectTrigger className="w-[180px]">
-                                        <SelectValue placeholder="All Editions" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All Editions</SelectItem>
-                                        {editions.map((edition) => (
-                                            <SelectItem key={edition._id} value={edition.slug}>
-                                                {edition.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {selectedEdition && (
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={clearEditionFilter}
-                                        className="text-muted-foreground"
-                                    >
-                                        <X className="size-4 mr-1" />
-                                        Clear
-                                    </Button>
-                                )}
+                <Card>
+                    <CardContent className="py-4">
+                        <div className="flex flex-col gap-4">
+                            {/* Filter View Selector */}
+                            <FilterViewSelector
+                                filterViews={filterViews}
+                                selectedFilterView={selectedFilterView}
+                                availableFields={availableFilterFields}
+                                collectionId={collection._id}
+                                onSelect={handleFilterViewSelect}
+                                onSave={handleSaveFilterView}
+                                onUpdate={handleUpdateFilterView}
+                                onDelete={handleDeleteFilterView}
+                            />
 
-                                {/* Active filter badge */}
-                                {selectedEdition && (
-                                    <div className="flex items-center gap-2 ml-auto">
-                                        <Badge variant="outline">
-                                            Edition: {editions.find(e => e.slug === selectedEdition)?.name || selectedEdition}
-                                        </Badge>
+                            {/* Edition Filter */}
+                            {editions.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-4 pt-2 border-t">
+                                    <div className="flex items-center gap-2">
+                                        <BookOpen className="size-4 text-muted-foreground" />
+                                        <span className="text-sm font-medium">Edition:</span>
                                     </div>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
+                                    <Select
+                                        value={selectedEdition || 'all'}
+                                        onValueChange={handleEditionFilter}
+                                    >
+                                        <SelectTrigger className="w-[180px]">
+                                            <SelectValue placeholder="All Editions" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Editions</SelectItem>
+                                            {editions.map((edition) => (
+                                                <SelectItem key={edition._id} value={edition.slug}>
+                                                    {edition.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {selectedEdition && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={clearEditionFilter}
+                                            className="text-muted-foreground"
+                                        >
+                                            <X className="size-4 mr-1" />
+                                            Clear
+                                        </Button>
+                                    )}
+
+                                    {/* Active filter badge */}
+                                    {selectedEdition && (
+                                        <div className="flex items-center gap-2 ml-auto">
+                                            <Badge variant="outline">
+                                                Edition: {editions.find(e => e.slug === selectedEdition)?.name || selectedEdition}
+                                            </Badge>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
 
                 {/* Contents Data Table */}
                 {contents.data.length === 0 ? (

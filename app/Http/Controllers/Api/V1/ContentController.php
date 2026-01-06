@@ -10,6 +10,8 @@ use App\Http\Requests\Api\V1\UpdateContentRequest;
 use App\Http\Resources\ContentResource;
 use App\Models\Mongodb\Collection;
 use App\Models\Mongodb\Content;
+use App\Models\Mongodb\FilterView;
+use App\Services\ContentFilterService;
 use App\Services\ContentService;
 use App\Services\SchemaService;
 use Illuminate\Http\JsonResponse;
@@ -22,24 +24,43 @@ class ContentController extends Controller
     public function __construct(
         protected ContentService $contentService,
         protected SchemaService $schemaService,
+        protected ContentFilterService $filterService,
     ) {}
 
     /**
      * Display a listing of contents for a collection.
      *
-     * Supports filtering by edition: ?edition=web
-     * When filtering by edition, only contents visible for that edition are returned,
-     * and elements within content are filtered according to edition rules.
+     * Supports filtering by:
+     * - edition: ?edition=web - Filter by edition visibility
+     * - filter_view: ?filter_view={id} - Apply a saved filter view
+     * - status: ?status=published - Filter by content status
+     * - search: ?search=term - Search in title
+     * - Custom filters: ?metadata.category=news - Filter by metadata fields
+     * - sort: ?sort=created_at&direction=desc - Custom sorting
      */
     public function index(Request $request, Collection $collection): AnonymousResourceCollection
     {
         $perPage = $request->integer('per_page', 15);
         $edition = $request->input('edition');
+        $filterViewId = $request->input('filter_view');
 
-        $query = $collection->contents()
-            ->when($request->filled('status'), function ($query) use ($request) {
-                $query->where('status', $request->input('status'));
-            })
+        $query = $collection->contents();
+
+        // Apply filter view if specified
+        if ($filterViewId) {
+            $filterView = FilterView::find($filterViewId);
+            if ($filterView) {
+                // Ensure filter view is available for this collection
+                if ($filterView->isGlobal() || (string) $filterView->collection_id === (string) $collection->_id) {
+                    $query = $this->filterService->applyFilterView($query, $filterView, $collection);
+                }
+            }
+        }
+
+        // Apply basic filters
+        $query->when($request->filled('status'), function ($query) use ($request) {
+            $query->where('status', $request->input('status'));
+        })
             ->when($request->filled('search'), function ($query) use ($request) {
                 $query->where('title', 'like', '%'.$request->input('search').'%');
             });
@@ -54,7 +75,22 @@ class ContentController extends Controller
             });
         }
 
-        $contents = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        // Apply custom metadata filters
+        $metadataFilters = $request->except(['per_page', 'page', 'edition', 'filter_view', 'status', 'search', 'sort', 'direction']);
+        if (! empty($metadataFilters)) {
+            $query = $this->filterService->applyFilters($query, $metadataFilters, $collection);
+        }
+
+        // Apply custom sorting (if not already applied by filter view)
+        if ($request->filled('sort') && ! $filterViewId) {
+            $sortField = $request->input('sort');
+            $sortDirection = $request->input('direction', 'desc');
+            $query->orderBy($sortField, $sortDirection);
+        } elseif (! $filterViewId) {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        $contents = $query->paginate($perPage);
 
         // If edition filtering is active, filter elements within each content
         if ($edition) {

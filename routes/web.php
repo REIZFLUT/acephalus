@@ -7,6 +7,7 @@ use App\Http\Controllers\Web\CollectionController;
 use App\Http\Controllers\Web\ContentController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\EditionController;
+use App\Http\Controllers\Web\FilterViewController;
 use App\Http\Controllers\Web\MediaController;
 use App\Http\Controllers\Web\MediaFolderController;
 use App\Http\Controllers\Web\MediaMetaFieldController;
@@ -70,6 +71,10 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:collections.view')->group(function () {
         Route::get('collections', [CollectionController::class, 'index'])->name('collections.index');
         Route::get('collections/{collection}', [CollectionController::class, 'show'])->name('collections.show');
+        Route::get('collections/{collection}/filter-views', [FilterViewController::class, 'forCollection'])
+            ->name('collections.filter-views');
+        Route::get('collections/{collection}/filter-fields', [FilterViewController::class, 'fields'])
+            ->name('collections.filter-fields');
     });
 
     // Collections - Create/Update/Delete
@@ -287,6 +292,24 @@ Route::middleware('auth')->group(function () {
         Route::middleware('permission:media-meta-fields.delete')->group(function () {
             Route::delete('media-meta-fields/{mediaMetaField}', [MediaMetaFieldController::class, 'destroy'])
                 ->name('media-meta-fields.destroy');
+        });
+
+        // Filter Views
+        Route::middleware('permission:collections.view')->group(function () {
+            Route::get('filter-views', [FilterViewController::class, 'index'])->name('filter-views.index');
+            Route::get('filter-views/global', [FilterViewController::class, 'globalList'])->name('filter-views.global');
+            Route::get('filter-views/operators', [FilterViewController::class, 'operators'])->name('filter-views.operators');
+        });
+
+        Route::middleware('permission:collections.update')->group(function () {
+            Route::get('filter-views/create', [FilterViewController::class, 'create'])->name('filter-views.create');
+            Route::post('filter-views', [FilterViewController::class, 'store'])->name('filter-views.store');
+            Route::post('filter-views/json', [FilterViewController::class, 'storeJson'])->name('filter-views.store.json');
+            Route::get('filter-views/{filterView}/edit', [FilterViewController::class, 'edit'])->name('filter-views.edit');
+            Route::put('filter-views/{filterView}', [FilterViewController::class, 'update'])->name('filter-views.update');
+            Route::put('filter-views/{filterView}/json', [FilterViewController::class, 'updateJson'])->name('filter-views.update.json');
+            Route::delete('filter-views/{filterView}', [FilterViewController::class, 'destroy'])->name('filter-views.destroy');
+            Route::delete('filter-views/{filterView}/json', [FilterViewController::class, 'destroyJson'])->name('filter-views.destroy.json');
         });
     });
 

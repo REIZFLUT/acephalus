@@ -7,7 +7,9 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\Mongodb\Collection;
 use App\Models\Mongodb\Edition;
+use App\Models\Mongodb\FilterView;
 use App\Models\Mongodb\WrapperPurpose;
+use App\Services\ContentFilterService;
 use App\Services\SchemaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,6 +21,7 @@ class CollectionController extends Controller
 {
     public function __construct(
         private readonly SchemaService $schemaService,
+        private readonly ContentFilterService $filterService,
     ) {}
 
     public function index(): Response
@@ -73,6 +76,7 @@ class CollectionController extends Controller
         $collection->load('contents');
 
         $selectedEdition = $request->query('edition');
+        $filterViewId = $request->query('filter_view');
 
         // Get editions available for this collection
         // First, get all editions - we'll filter by allowed_editions if configured
@@ -90,6 +94,25 @@ class CollectionController extends Controller
             $editions = $allEditions;
         }
 
+        // Get filter views available for this collection
+        $filterViews = FilterView::availableFor((string) $collection->_id)
+            ->orderBy('is_system', 'desc')
+            ->orderBy('name')
+            ->get();
+
+        // Get available fields for filtering
+        $availableFilterFields = $this->filterService->getAvailableFields($collection);
+
+        // Get the selected filter view
+        $selectedFilterView = null;
+        if ($filterViewId) {
+            $selectedFilterView = FilterView::find($filterViewId);
+            // Ensure filter view is available for this collection
+            if ($selectedFilterView && ! $selectedFilterView->isGlobal() && (string) $selectedFilterView->collection_id !== (string) $collection->_id) {
+                $selectedFilterView = null;
+            }
+        }
+
         // Get list view settings from schema
         $listViewSettings = $schema['list_view_settings'] ?? [];
         $defaultPerPage = (int) ($listViewSettings['default_per_page'] ?? 20);
@@ -104,9 +127,18 @@ class CollectionController extends Controller
             $perPage = $defaultPerPage;
         }
 
-        // Build query for all contents with sorting
-        $query = $collection->contents()
-            ->orderBy($defaultSortColumn, $defaultSortDirection);
+        // Build query for all contents
+        $query = $collection->contents();
+
+        // Apply filter view if selected
+        if ($selectedFilterView) {
+            $query = $this->filterService->applyFilterView($query, $selectedFilterView, $collection);
+        }
+
+        // Apply default sorting only if filter view doesn't have sorting
+        if (! $selectedFilterView || ! $selectedFilterView->hasSort()) {
+            $query->orderBy($defaultSortColumn, $defaultSortDirection);
+        }
 
         // Filter by edition if specified
         if ($selectedEdition) {
@@ -131,6 +163,9 @@ class CollectionController extends Controller
             'contents' => $contents,
             'editions' => $editions,
             'selectedEdition' => $selectedEdition,
+            'filterViews' => $filterViews,
+            'selectedFilterView' => $selectedFilterView,
+            'availableFilterFields' => $availableFilterFields,
         ]);
     }
 

@@ -24,10 +24,14 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Lock, Box, Layers, BookCopy, Image } from 'lucide-react';
+import { Plus, Pencil, Trash2, Lock, Box, Layers, BookCopy, Image, Shield, Key, Users } from 'lucide-react';
 import { WrapperPurposeIcon } from '@/components/WrapperPurposeIcon';
 import { EditionIcon } from '@/components/EditionIcon';
+import { Can, usePermission } from '@/hooks/use-permission';
 import type { PageProps, WrapperPurpose, Edition } from '@/types';
+
+/** Roles that cannot be deleted */
+const PROTECTED_ROLES = ['super-admin', 'admin', 'editor', 'author'];
 
 interface MediaMetaField {
     _id: string;
@@ -42,15 +46,24 @@ interface MediaMetaField {
     order: number;
 }
 
+interface Role {
+    id: number;
+    name: string;
+    permissions_count?: number;
+    users_count?: number;
+}
+
 interface SettingsIndexProps extends PageProps {
     purposes: WrapperPurpose[];
     editions: Edition[];
     mediaMetaFields?: MediaMetaField[];
+    roles?: Role[];
     activeTab?: string;
 }
 
-export default function SettingsIndex({ purposes, editions, mediaMetaFields = [], activeTab = 'wrapper-purposes' }: SettingsIndexProps) {
+export default function SettingsIndex({ purposes, editions, mediaMetaFields = [], roles = [], activeTab = 'wrapper-purposes' }: SettingsIndexProps) {
     const [currentTab, setCurrentTab] = useState(activeTab);
+    const { can } = usePermission();
 
     const handleDeletePurpose = (slug: string) => {
         router.delete(`/settings/wrapper-purposes/${slug}`, {
@@ -73,6 +86,13 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
         });
     };
 
+    const handleDeleteRole = (roleId: number) => {
+        router.delete(`/settings/roles/${roleId}`, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    };
+
     const getFieldTypeLabel = (type: string) => {
         const labels: Record<string, string> = {
             text: 'Text',
@@ -87,42 +107,82 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
         return labels[type] || type;
     };
 
+    const getRoleBadgeVariant = (roleName: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
+        switch (roleName) {
+            case 'super-admin':
+                return 'destructive';
+            case 'admin':
+                return 'default';
+            default:
+                return 'secondary';
+        }
+    };
+
+    const getActionButton = () => {
+        switch (currentTab) {
+            case 'wrapper-purposes':
+                return (
+                    <Can permission="wrapper-purposes.create">
+                        <Button asChild>
+                            <Link href="/settings/wrapper-purposes/create">
+                                <Plus className="size-4 mr-2" />
+                                Add Purpose
+                            </Link>
+                        </Button>
+                    </Can>
+                );
+            case 'editions':
+                return (
+                    <Can permission="editions.create">
+                        <Button asChild>
+                            <Link href="/settings/editions/create">
+                                <Plus className="size-4 mr-2" />
+                                Add Edition
+                            </Link>
+                        </Button>
+                    </Can>
+                );
+            case 'media-meta-fields':
+                return (
+                    <Can permission="media-meta-fields.create">
+                        <Button asChild>
+                            <Link href="/settings/media-meta-fields/create">
+                                <Plus className="size-4 mr-2" />
+                                Add Field
+                            </Link>
+                        </Button>
+                    </Can>
+                );
+            case 'roles':
+                return (
+                    <Can permission="roles.create">
+                        <Button asChild>
+                            <Link href="/settings/roles/create">
+                                <Plus className="size-4 mr-2" />
+                                Add Role
+                            </Link>
+                        </Button>
+                    </Can>
+                );
+            default:
+                return null;
+        }
+    };
+
     return (
         <AppLayout
             title="Settings"
             breadcrumbs={[
                 { label: 'Settings' },
             ]}
-            actions={
-                currentTab === 'wrapper-purposes' ? (
-                    <Button asChild>
-                        <Link href="/settings/wrapper-purposes/create">
-                            <Plus className="size-4 mr-2" />
-                            Add Purpose
-                        </Link>
-                    </Button>
-                ) : currentTab === 'editions' ? (
-                    <Button asChild>
-                        <Link href="/settings/editions/create">
-                            <Plus className="size-4 mr-2" />
-                            Add Edition
-                        </Link>
-                    </Button>
-                ) : (
-                    <Button asChild>
-                        <Link href="/settings/media-meta-fields/create">
-                            <Plus className="size-4 mr-2" />
-                            Add Field
-                        </Link>
-                    </Button>
-                )
-            }
+            actions={getActionButton()}
         >
             <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6">
-                <TabsList className="grid w-full max-w-xl grid-cols-3">
+                <TabsList className="grid w-full max-w-3xl grid-cols-4">
                     <TabsTrigger value="wrapper-purposes" className="gap-2">
                         <Layers className="size-4" />
-                        Wrapper Purposes
+                        <span className="hidden sm:inline">Wrapper Purposes</span>
+                        <span className="sm:hidden">Wrappers</span>
                     </TabsTrigger>
                     <TabsTrigger value="editions" className="gap-2">
                         <BookCopy className="size-4" />
@@ -130,8 +190,15 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                     </TabsTrigger>
                     <TabsTrigger value="media-meta-fields" className="gap-2">
                         <Image className="size-4" />
-                        Media Fields
+                        <span className="hidden sm:inline">Media Fields</span>
+                        <span className="sm:hidden">Media</span>
                     </TabsTrigger>
+                    {can('roles.view') && (
+                        <TabsTrigger value="roles" className="gap-2">
+                            <Shield className="size-4" />
+                            Roles
+                        </TabsTrigger>
+                    )}
                 </TabsList>
 
                 {/* Wrapper Purposes Tab */}
@@ -152,12 +219,14 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                                     <p className="text-muted-foreground mb-4">
                                         Create your first wrapper purpose to get started.
                                     </p>
-                                    <Button asChild>
-                                        <Link href="/settings/wrapper-purposes/create">
-                                            <Plus className="size-4 mr-2" />
-                                            Add Purpose
-                                        </Link>
-                                    </Button>
+                                    <Can permission="wrapper-purposes.create">
+                                        <Button asChild>
+                                            <Link href="/settings/wrapper-purposes/create">
+                                                <Plus className="size-4 mr-2" />
+                                                Add Purpose
+                                            </Link>
+                                        </Button>
+                                    </Can>
                                 </div>
                             ) : (
                                 <Table>
@@ -212,42 +281,46 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex items-center justify-end gap-2">
-                                                        <Button variant="ghost" size="icon" asChild>
-                                                            <Link href={`/settings/wrapper-purposes/${purpose.slug}/edit`}>
-                                                                <Pencil className="size-4" />
-                                                            </Link>
-                                                        </Button>
-                                                        {!purpose.is_system && (
-                                                            <AlertDialog>
-                                                                <AlertDialogTrigger asChild>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="text-destructive hover:text-destructive"
-                                                                    >
-                                                                        <Trash2 className="size-4" />
-                                                                    </Button>
-                                                                </AlertDialogTrigger>
-                                                                <AlertDialogContent>
-                                                                    <AlertDialogHeader>
-                                                                        <AlertDialogTitle>Delete Purpose</AlertDialogTitle>
-                                                                        <AlertDialogDescription>
-                                                                            Are you sure you want to delete "{purpose.name}"? 
-                                                                            This action cannot be undone.
-                                                                        </AlertDialogDescription>
-                                                                    </AlertDialogHeader>
-                                                                    <AlertDialogFooter>
-                                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                        <AlertDialogAction
-                                                                            onClick={() => handleDeletePurpose(purpose.slug)}
-                                                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                        <Can permission="wrapper-purposes.update">
+                                                            <Button variant="ghost" size="icon" asChild>
+                                                                <Link href={`/settings/wrapper-purposes/${purpose.slug}/edit`}>
+                                                                    <Pencil className="size-4" />
+                                                                </Link>
+                                                            </Button>
+                                                        </Can>
+                                                        <Can permission="wrapper-purposes.delete">
+                                                            {!purpose.is_system && (
+                                                                <AlertDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="text-destructive hover:text-destructive"
                                                                         >
-                                                                            Delete
-                                                                        </AlertDialogAction>
-                                                                    </AlertDialogFooter>
-                                                                </AlertDialogContent>
-                                                            </AlertDialog>
-                                                        )}
+                                                                            <Trash2 className="size-4" />
+                                                                        </Button>
+                                                                    </AlertDialogTrigger>
+                                                                    <AlertDialogContent>
+                                                                        <AlertDialogHeader>
+                                                                            <AlertDialogTitle>Delete Purpose</AlertDialogTitle>
+                                                                            <AlertDialogDescription>
+                                                                                Are you sure you want to delete "{purpose.name}"? 
+                                                                                This action cannot be undone.
+                                                                            </AlertDialogDescription>
+                                                                        </AlertDialogHeader>
+                                                                        <AlertDialogFooter>
+                                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                            <AlertDialogAction
+                                                                                onClick={() => handleDeletePurpose(purpose.slug)}
+                                                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                                            >
+                                                                                Delete
+                                                                            </AlertDialogAction>
+                                                                        </AlertDialogFooter>
+                                                                    </AlertDialogContent>
+                                                                </AlertDialog>
+                                                            )}
+                                                        </Can>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
@@ -277,12 +350,14 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                                     <p className="text-muted-foreground mb-4">
                                         Create your first edition to get started.
                                     </p>
-                                    <Button asChild>
-                                        <Link href="/settings/editions/create">
-                                            <Plus className="size-4 mr-2" />
-                                            Add Edition
-                                        </Link>
-                                    </Button>
+                                    <Can permission="editions.create">
+                                        <Button asChild>
+                                            <Link href="/settings/editions/create">
+                                                <Plus className="size-4 mr-2" />
+                                                Add Edition
+                                            </Link>
+                                        </Button>
+                                    </Can>
                                 </div>
                             ) : (
                                 <Table>
@@ -327,42 +402,46 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex items-center justify-end gap-2">
-                                                        <Button variant="ghost" size="icon" asChild>
-                                                            <Link href={`/settings/editions/${edition.slug}/edit`}>
-                                                                <Pencil className="size-4" />
-                                                            </Link>
-                                                        </Button>
-                                                        {!edition.is_system && (
-                                                            <AlertDialog>
-                                                                <AlertDialogTrigger asChild>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="text-destructive hover:text-destructive"
-                                                                    >
-                                                                        <Trash2 className="size-4" />
-                                                                    </Button>
-                                                                </AlertDialogTrigger>
-                                                                <AlertDialogContent>
-                                                                    <AlertDialogHeader>
-                                                                        <AlertDialogTitle>Delete Edition</AlertDialogTitle>
-                                                                        <AlertDialogDescription>
-                                                                            Are you sure you want to delete "{edition.name}"? 
-                                                                            This action cannot be undone.
-                                                                        </AlertDialogDescription>
-                                                                    </AlertDialogHeader>
-                                                                    <AlertDialogFooter>
-                                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                        <AlertDialogAction
-                                                                            onClick={() => handleDeleteEdition(edition.slug)}
-                                                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                        <Can permission="editions.update">
+                                                            <Button variant="ghost" size="icon" asChild>
+                                                                <Link href={`/settings/editions/${edition.slug}/edit`}>
+                                                                    <Pencil className="size-4" />
+                                                                </Link>
+                                                            </Button>
+                                                        </Can>
+                                                        <Can permission="editions.delete">
+                                                            {!edition.is_system && (
+                                                                <AlertDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="text-destructive hover:text-destructive"
                                                                         >
-                                                                            Delete
-                                                                        </AlertDialogAction>
-                                                                    </AlertDialogFooter>
-                                                                </AlertDialogContent>
-                                                            </AlertDialog>
-                                                        )}
+                                                                            <Trash2 className="size-4" />
+                                                                        </Button>
+                                                                    </AlertDialogTrigger>
+                                                                    <AlertDialogContent>
+                                                                        <AlertDialogHeader>
+                                                                            <AlertDialogTitle>Delete Edition</AlertDialogTitle>
+                                                                            <AlertDialogDescription>
+                                                                                Are you sure you want to delete "{edition.name}"? 
+                                                                                This action cannot be undone.
+                                                                            </AlertDialogDescription>
+                                                                        </AlertDialogHeader>
+                                                                        <AlertDialogFooter>
+                                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                            <AlertDialogAction
+                                                                                onClick={() => handleDeleteEdition(edition.slug)}
+                                                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                                            >
+                                                                                Delete
+                                                                            </AlertDialogAction>
+                                                                        </AlertDialogFooter>
+                                                                    </AlertDialogContent>
+                                                                </AlertDialog>
+                                                            )}
+                                                        </Can>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
@@ -392,12 +471,14 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                                     <p className="text-muted-foreground mb-4">
                                         Create your first media meta field to get started.
                                     </p>
-                                    <Button asChild>
-                                        <Link href="/settings/media-meta-fields/create">
-                                            <Plus className="size-4 mr-2" />
-                                            Add Field
-                                        </Link>
-                                    </Button>
+                                    <Can permission="media-meta-fields.create">
+                                        <Button asChild>
+                                            <Link href="/settings/media-meta-fields/create">
+                                                <Plus className="size-4 mr-2" />
+                                                Add Field
+                                            </Link>
+                                        </Button>
+                                    </Can>
                                 </div>
                             ) : (
                                 <Table>
@@ -447,42 +528,46 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex items-center justify-end gap-2">
-                                                        <Button variant="ghost" size="icon" asChild>
-                                                            <Link href={`/settings/media-meta-fields/${field.slug}/edit`}>
-                                                                <Pencil className="size-4" />
-                                                            </Link>
-                                                        </Button>
-                                                        {!field.is_system && (
-                                                            <AlertDialog>
-                                                                <AlertDialogTrigger asChild>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="text-destructive hover:text-destructive"
-                                                                    >
-                                                                        <Trash2 className="size-4" />
-                                                                    </Button>
-                                                                </AlertDialogTrigger>
-                                                                <AlertDialogContent>
-                                                                    <AlertDialogHeader>
-                                                                        <AlertDialogTitle>Delete Field</AlertDialogTitle>
-                                                                        <AlertDialogDescription>
-                                                                            Are you sure you want to delete "{field.name}"? 
-                                                                            This action cannot be undone.
-                                                                        </AlertDialogDescription>
-                                                                    </AlertDialogHeader>
-                                                                    <AlertDialogFooter>
-                                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                        <AlertDialogAction
-                                                                            onClick={() => handleDeleteMediaMetaField(field.slug)}
-                                                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                        <Can permission="media-meta-fields.update">
+                                                            <Button variant="ghost" size="icon" asChild>
+                                                                <Link href={`/settings/media-meta-fields/${field.slug}/edit`}>
+                                                                    <Pencil className="size-4" />
+                                                                </Link>
+                                                            </Button>
+                                                        </Can>
+                                                        <Can permission="media-meta-fields.delete">
+                                                            {!field.is_system && (
+                                                                <AlertDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="text-destructive hover:text-destructive"
                                                                         >
-                                                                            Delete
-                                                                        </AlertDialogAction>
-                                                                    </AlertDialogFooter>
-                                                                </AlertDialogContent>
-                                                            </AlertDialog>
-                                                        )}
+                                                                            <Trash2 className="size-4" />
+                                                                        </Button>
+                                                                    </AlertDialogTrigger>
+                                                                    <AlertDialogContent>
+                                                                        <AlertDialogHeader>
+                                                                            <AlertDialogTitle>Delete Field</AlertDialogTitle>
+                                                                            <AlertDialogDescription>
+                                                                                Are you sure you want to delete "{field.name}"? 
+                                                                                This action cannot be undone.
+                                                                            </AlertDialogDescription>
+                                                                        </AlertDialogHeader>
+                                                                        <AlertDialogFooter>
+                                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                            <AlertDialogAction
+                                                                                onClick={() => handleDeleteMediaMetaField(field.slug)}
+                                                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                                            >
+                                                                                Delete
+                                                                            </AlertDialogAction>
+                                                                        </AlertDialogFooter>
+                                                                    </AlertDialogContent>
+                                                                </AlertDialog>
+                                                            )}
+                                                        </Can>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
@@ -493,8 +578,145 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                         </CardContent>
                     </Card>
                 </TabsContent>
+
+                {/* Roles Tab */}
+                <Can permission="roles.view">
+                    <TabsContent value="roles">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Shield className="size-5" />
+                                    Roles & Permissions
+                                </CardTitle>
+                                <CardDescription>
+                                    Manage user roles and their associated permissions.
+                                    Roles determine what actions users can perform in the system.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {roles.length === 0 ? (
+                                    <div className="text-center py-12">
+                                        <Shield className="size-12 mx-auto text-muted-foreground/50 mb-4" />
+                                        <h3 className="text-lg font-medium mb-2">No Roles</h3>
+                                        <p className="text-muted-foreground mb-4">
+                                            Run the database seeder to create default roles.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Role</TableHead>
+                                                <TableHead className="text-center">
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        <Key className="size-4" />
+                                                        Permissions
+                                                    </div>
+                                                </TableHead>
+                                                <TableHead className="text-center">
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        <Users className="size-4" />
+                                                        Users
+                                                    </div>
+                                                </TableHead>
+                                                <TableHead className="text-right">Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {roles.map((role) => {
+                                                const isProtected = PROTECTED_ROLES.includes(role.name);
+                                                const isSuperAdmin = role.name === 'super-admin';
+                                                
+                                                return (
+                                                    <TableRow key={role.id}>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                <Badge variant={getRoleBadgeVariant(role.name)}>
+                                                                    {role.name}
+                                                                </Badge>
+                                                                {isProtected && (
+                                                                    <Lock className="size-3.5 text-muted-foreground" />
+                                                                )}
+                                                            </div>
+                                                            {isSuperAdmin && (
+                                                                <p className="text-xs text-muted-foreground mt-1">
+                                                                    Bypasses all permission checks
+                                                                </p>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            {isSuperAdmin ? (
+                                                                <span className="text-muted-foreground text-sm">All</span>
+                                                            ) : (
+                                                                <span className="font-mono text-sm">
+                                                                    {role.permissions_count ?? 0}
+                                                                </span>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            <span className="font-mono text-sm">
+                                                                {role.users_count ?? 0}
+                                                            </span>
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <Can permission="roles.update">
+                                                                    <Button 
+                                                                        variant="ghost" 
+                                                                        size="icon" 
+                                                                        asChild
+                                                                    >
+                                                                        <Link href={`/settings/roles/${role.id}/edit`}>
+                                                                            <Pencil className="size-4" />
+                                                                        </Link>
+                                                                    </Button>
+                                                                </Can>
+                                                                <Can permission="roles.delete">
+                                                                    {!isProtected && (role.users_count ?? 0) === 0 && (
+                                                                        <AlertDialog>
+                                                                            <AlertDialogTrigger asChild>
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="icon"
+                                                                                    className="text-destructive hover:text-destructive"
+                                                                                >
+                                                                                    <Trash2 className="size-4" />
+                                                                                </Button>
+                                                                            </AlertDialogTrigger>
+                                                                            <AlertDialogContent>
+                                                                                <AlertDialogHeader>
+                                                                                    <AlertDialogTitle>Delete Role</AlertDialogTitle>
+                                                                                    <AlertDialogDescription>
+                                                                                        Are you sure you want to delete the "{role.name}" role?
+                                                                                        This action cannot be undone.
+                                                                                    </AlertDialogDescription>
+                                                                                </AlertDialogHeader>
+                                                                                <AlertDialogFooter>
+                                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                                    <AlertDialogAction
+                                                                                        onClick={() => handleDeleteRole(role.id)}
+                                                                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                                                    >
+                                                                                        Delete
+                                                                                    </AlertDialogAction>
+                                                                                </AlertDialogFooter>
+                                                                            </AlertDialogContent>
+                                                                        </AlertDialog>
+                                                                    )}
+                                                                </Can>
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Can>
             </Tabs>
         </AppLayout>
     );
 }
-

@@ -8,7 +8,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { BlockEditorProps } from '../BlockItem';
-import { useSchema } from '../BlockEditor';
+import { useSchema } from '../SchemaContext';
 import { MetaFieldInput } from '../MetaFieldInput';
 import { WrapperPurposeIcon, getWrapperPurposeIcon } from '@/components/WrapperPurposeIcon';
 

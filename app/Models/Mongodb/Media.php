@@ -25,6 +25,7 @@ class Media extends Model
         'media_type',
         'size',
         'gridfs_id',
+        'thumbnails',
         'alt',
         'caption',
         'tags',
@@ -143,5 +144,39 @@ class Media extends Model
     public function getRouteKeyName(): string
     {
         return '_id';
+    }
+
+    /**
+     * Check if thumbnails have been generated for this media.
+     */
+    public function hasThumbnails(): bool
+    {
+        return ! empty($this->thumbnails);
+    }
+
+    /**
+     * Check if a specific thumbnail size exists.
+     */
+    public function hasThumbnail(string $size): bool
+    {
+        $thumbnails = $this->thumbnails;
+        if ($thumbnails instanceof \MongoDB\Model\BSONDocument || $thumbnails instanceof \MongoDB\Model\BSONArray) {
+            $thumbnails = $thumbnails->getArrayCopy();
+        }
+
+        return is_array($thumbnails) && isset($thumbnails[$size]);
+    }
+
+    /**
+     * Get the GridFS ID for a specific thumbnail size.
+     */
+    public function getThumbnailGridFsId(string $size): ?string
+    {
+        $thumbnails = $this->thumbnails;
+        if ($thumbnails instanceof \MongoDB\Model\BSONDocument || $thumbnails instanceof \MongoDB\Model\BSONArray) {
+            $thumbnails = $thumbnails->getArrayCopy();
+        }
+
+        return is_array($thumbnails) ? ($thumbnails[$size] ?? null) : null;
     }
 }

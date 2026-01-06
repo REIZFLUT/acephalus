@@ -67,6 +67,12 @@ Route::middleware('auth')->group(function () {
     // Dashboard (accessible to all authenticated users)
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    // Collections - Create (must come before parameterized routes)
+    Route::middleware('permission:collections.create')->group(function () {
+        Route::get('collections/create', [CollectionController::class, 'create'])->name('collections.create');
+        Route::post('collections', [CollectionController::class, 'store'])->name('collections.store');
+    });
+
     // Collections - View
     Route::middleware('permission:collections.view')->group(function () {
         Route::get('collections', [CollectionController::class, 'index'])->name('collections.index');
@@ -77,12 +83,7 @@ Route::middleware('auth')->group(function () {
             ->name('collections.filter-fields');
     });
 
-    // Collections - Create/Update/Delete
-    Route::middleware('permission:collections.create')->group(function () {
-        Route::get('collections/create', [CollectionController::class, 'create'])->name('collections.create');
-        Route::post('collections', [CollectionController::class, 'store'])->name('collections.store');
-    });
-
+    // Collections - Update/Delete
     Route::middleware('permission:collections.update')->group(function () {
         Route::get('collections/{collection}/edit', [CollectionController::class, 'edit'])->name('collections.edit');
         Route::put('collections/{collection}', [CollectionController::class, 'update'])->name('collections.update');
@@ -139,6 +140,7 @@ Route::middleware('auth')->group(function () {
         Route::get('media', [MediaController::class, 'index'])->name('media.index');
         Route::get('media/{media}', [MediaController::class, 'show'])->name('media.show');
         Route::get('media/{media}/file', [MediaController::class, 'file'])->name('media.file');
+        Route::get('media/{media}/thumb/{size}', [MediaController::class, 'thumbnail'])->name('media.thumbnail');
 
         // Media Folders
         Route::get('media-folders/tree', [MediaFolderController::class, 'tree'])->name('media-folders.tree');

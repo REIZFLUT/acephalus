@@ -347,10 +347,10 @@ export function FilterViewSelector({
                     </div>
 
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                        <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                             Cancel
                         </Button>
-                        <Button onClick={handleSaveNew} disabled={isSaving || !formName.trim()}>
+                        <Button type="button" onClick={handleSaveNew} disabled={isSaving || !formName.trim()}>
                             <Save className="size-4 mr-2" />
                             {isSaving ? 'Saving...' : 'Save Filter'}
                         </Button>
@@ -409,14 +409,28 @@ export function FilterViewSelector({
                         />
                     </div>
 
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                            Cancel
+                    <DialogFooter className="flex justify-between sm:justify-between">
+                        <Button 
+                            type="button" 
+                            variant="destructive" 
+                            onClick={() => {
+                                setIsEditDialogOpen(false);
+                                setIsDeleteDialogOpen(true);
+                            }}
+                            disabled={isSaving}
+                        >
+                            <Trash2 className="size-4 mr-2" />
+                            Delete
                         </Button>
-                        <Button onClick={handleSaveEdit} disabled={isSaving || !formName.trim()}>
-                            <Save className="size-4 mr-2" />
-                            {isSaving ? 'Saving...' : 'Save Changes'}
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button type="button" onClick={handleSaveEdit} disabled={isSaving || !formName.trim()}>
+                                <Save className="size-4 mr-2" />
+                                {isSaving ? 'Saving...' : 'Save Changes'}
+                            </Button>
+                        </div>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

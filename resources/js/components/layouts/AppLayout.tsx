@@ -68,7 +68,6 @@ const navigationItems = [
         label: 'Administration',
         items: [
             { name: 'Users', href: '/users', icon: Users },
-            { name: 'Permissions', href: '/settings/roles', icon: Shield },
             { name: 'Settings', href: '/settings', icon: Settings },
         ],
     },

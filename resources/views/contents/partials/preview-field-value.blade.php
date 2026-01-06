@@ -46,3 +46,4 @@
     <span>{{ is_array($value) ? json_encode($value) : $value }}</span>
 @endif
 
+

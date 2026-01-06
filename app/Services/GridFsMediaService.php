@@ -19,6 +19,13 @@ class GridFsMediaService
 
     protected ?Client $client = null;
 
+    public ThumbnailService $thumbnailService;
+
+    public function __construct(ThumbnailService $thumbnailService)
+    {
+        $this->thumbnailService = $thumbnailService;
+    }
+
     /**
      * Get the MongoDB client.
      */
@@ -74,6 +81,15 @@ class GridFsMediaService
         );
         fclose($stream);
 
+        // Generate thumbnails for images
+        $thumbnails = [];
+        if ($this->thumbnailService->isSupported($mimeType)) {
+            $imageData = file_get_contents($file->getPathname());
+            if ($imageData !== false) {
+                $thumbnails = $this->generateAndStoreThumbnails($imageData, $filename);
+            }
+        }
+
         // Create media record
         // Note: tags and metadata must be arrays for proper MongoDB BSON storage
         return Media::create([
@@ -83,6 +99,7 @@ class GridFsMediaService
             'media_type' => $mediaType,
             'size' => $file->getSize(),
             'gridfs_id' => (string) $gridFsId,
+            'thumbnails' => $thumbnails,
             'alt' => $metadata['alt'] ?? null,
             'caption' => $metadata['caption'] ?? null,
             'tags' => [],
@@ -130,6 +147,7 @@ class GridFsMediaService
      */
     public function delete(Media $media): bool
     {
+        // Delete original file
         if ($media->gridfs_id) {
             try {
                 $gridFsId = new ObjectId($media->gridfs_id);
@@ -140,8 +158,35 @@ class GridFsMediaService
             }
         }
 
+        // Delete thumbnails
+        $this->deleteThumbnails($media);
+
         // MongoDB delete() can return null, so we ensure a boolean is returned
         return (bool) $media->delete();
+    }
+
+    /**
+     * Delete all thumbnails for a media item.
+     */
+    protected function deleteThumbnails(Media $media): void
+    {
+        $thumbnails = $media->thumbnails;
+        if ($thumbnails instanceof \MongoDB\Model\BSONDocument || $thumbnails instanceof \MongoDB\Model\BSONArray) {
+            $thumbnails = $thumbnails->getArrayCopy();
+        }
+
+        if (! is_array($thumbnails)) {
+            return;
+        }
+
+        foreach ($thumbnails as $gridFsId) {
+            try {
+                $this->getBucket()->delete(new ObjectId($gridFsId));
+            } catch (\Exception $exception) {
+                // Thumbnail might already be deleted
+                report($exception);
+            }
+        }
     }
 
     /**
@@ -203,5 +248,109 @@ class GridFsMediaService
     public function getUrl(Media $media): string
     {
         return route('api.v1.media.show', ['media' => $media->_id]);
+    }
+
+    /**
+     * Download a thumbnail from GridFS.
+     *
+     * @return resource|null
+     */
+    public function downloadThumbnail(Media $media, string $size)
+    {
+        $gridFsId = $media->getThumbnailGridFsId($size);
+
+        if ($gridFsId === null) {
+            return null;
+        }
+
+        try {
+            return $this->getBucket()->openDownloadStream(new ObjectId($gridFsId));
+        } catch (\Exception $exception) {
+            report($exception);
+
+            return null;
+        }
+    }
+
+    /**
+     * Generate and store thumbnails in GridFS.
+     *
+     * @param  string  $imageData  Raw image data
+     * @param  string  $originalFilename  Original filename for naming thumbnails
+     * @return array<string, string> Map of size => GridFS ID
+     */
+    protected function generateAndStoreThumbnails(string $imageData, string $originalFilename): array
+    {
+        $thumbnails = $this->thumbnailService->generateAll($imageData);
+        $stored = [];
+
+        $baseName = pathinfo($originalFilename, PATHINFO_FILENAME);
+
+        foreach ($thumbnails as $size => $encodedImage) {
+            $thumbnailFilename = "{$baseName}-thumb-{$size}.webp";
+
+            try {
+                $gridFsId = $this->getBucket()->uploadFromStream(
+                    $thumbnailFilename,
+                    $this->createStreamFromString($encodedImage->toString()),
+                    [
+                        'metadata' => [
+                            'type' => 'thumbnail',
+                            'size' => $size,
+                            'mime_type' => 'image/webp',
+                            'original_filename' => $originalFilename,
+                        ],
+                    ]
+                );
+                $stored[$size] = (string) $gridFsId;
+            } catch (\Exception $exception) {
+                report($exception);
+            }
+        }
+
+        return $stored;
+    }
+
+    /**
+     * Generate thumbnails for an existing media item.
+     *
+     * @return array<string, string> Map of size => GridFS ID
+     */
+    public function generateThumbnailsForMedia(Media $media): array
+    {
+        // Skip if not an image
+        if (! $this->thumbnailService->isSupported($media->mime_type)) {
+            return [];
+        }
+
+        // Get original image contents
+        $imageData = $this->getContents($media);
+        if ($imageData === null) {
+            return [];
+        }
+
+        // Generate and store thumbnails
+        $thumbnails = $this->generateAndStoreThumbnails($imageData, $media->filename);
+
+        // Update media record with thumbnail IDs
+        if (! empty($thumbnails)) {
+            $media->update(['thumbnails' => $thumbnails]);
+        }
+
+        return $thumbnails;
+    }
+
+    /**
+     * Create a stream from a string.
+     *
+     * @return resource
+     */
+    protected function createStreamFromString(string $data)
+    {
+        $stream = fopen('php://temp', 'r+');
+        fwrite($stream, $data);
+        rewind($stream);
+
+        return $stream;
     }
 }

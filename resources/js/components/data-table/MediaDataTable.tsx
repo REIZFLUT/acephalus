@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/table"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { ThumbnailImage } from "@/components/ui/thumbnail-image"
 import { DataTableColumnHeader } from "./DataTableColumnHeader"
 import { DataTablePagination } from "./DataTablePagination"
 import { DataTableViewOptions } from "./DataTableViewOptions"
@@ -139,10 +140,12 @@ export function MediaDataTable({
                 
                 return (
                     <div className="size-10 shrink-0 rounded bg-muted flex items-center justify-center overflow-hidden">
-                        {isImage && item.url ? (
-                            <img
-                                src={item.url}
+                        {isImage && (item.thumbnail_urls || item.url) ? (
+                            <ThumbnailImage
+                                thumbnailUrls={item.thumbnail_urls}
+                                fallbackUrl={item.url}
                                 alt={item.original_filename}
+                                sizes="40px"
                                 className="w-full h-full object-cover"
                             />
                         ) : (

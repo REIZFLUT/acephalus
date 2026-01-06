@@ -63,7 +63,7 @@ export default function CollectionsShow({
             },
             body: JSON.stringify({
                 ...filterViewData,
-                collection_id: collection._id,
+                collection_id: collection.id,
             }),
         });
 
@@ -71,7 +71,6 @@ export default function CollectionsShow({
             throw new Error('Failed to save filter view');
         }
 
-        // Reload to get updated filter views
         router.reload({ only: ['filterViews'] });
     };
 
@@ -156,7 +155,7 @@ export default function CollectionsShow({
                             filterViews={filterViews}
                             selectedFilterView={selectedFilterView}
                             availableFields={availableFilterFields}
-                            collectionId={collection._id}
+                            collectionId={collection.id}
                             onSelect={handleFilterViewSelect}
                             onSave={handleSaveFilterView}
                             onUpdate={handleUpdateFilterView}

@@ -22,6 +22,27 @@ export default defineConfig({
             '@': '/resources/js',
         },
     },
+    build: {
+        chunkSizeWarningLimit: 1500,
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    // Group CodeMirror packages
+                    if (id.includes('node_modules/@codemirror') || id.includes('node_modules/@lezer')) {
+                        return 'vendor-codemirror';
+                    }
+                    // Group TipTap packages
+                    if (id.includes('node_modules/@tiptap') || id.includes('node_modules/prosemirror') || id.includes('node_modules/lowlight')) {
+                        return 'vendor-tiptap';
+                    }
+                    // Group KaTeX and markdown
+                    if (id.includes('node_modules/katex') || id.includes('node_modules/react-markdown') || id.includes('node_modules/rehype') || id.includes('node_modules/remark')) {
+                        return 'vendor-markdown';
+                    }
+                }
+            }
+        }
+    },
     server: {
         watch: {
             ignored: ['**/storage/framework/views/**'],

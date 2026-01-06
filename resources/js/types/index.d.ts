@@ -95,6 +95,7 @@ export type PermissionName =
 
 export interface Collection {
     _id: string;
+    id: string; // MongoDB models serialize _id as 'id' in JSON
     name: string;
     slug: string;
     description: string | null;
@@ -510,12 +511,21 @@ export interface Media {
     caption: string | null;
     tags: string[] | null;
     metadata: Record<string, unknown> | null;
+    thumbnails?: Record<string, string> | null;
     folder_id: string | null;
     folder_path?: string;
     folder_name?: string;
     created_at: string;
     updated_at: string;
     url: string;
+    /** @deprecated Use thumbnail_urls instead */
+    thumbnail_url?: string;
+    /** Thumbnail URLs for different sizes (small: 80px, medium: 300px, large: 800px) */
+    thumbnail_urls?: {
+        small?: string;
+        medium?: string;
+        large?: string;
+    };
 }
 
 export interface MediaFolder {

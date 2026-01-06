@@ -72,6 +72,7 @@ import { FolderTree } from '@/components/media/FolderTree';
 import { FolderSelectDialog } from '@/components/media/FolderSelectDialog';
 import { FocusAreaSelector, type FocusArea } from '@/components/media/FocusAreaSelector';
 import { MediaDataTable } from '@/components/data-table';
+import { ThumbnailImage } from '@/components/ui/thumbnail-image';
 import type { PageProps, Media, PaginatedData, MediaMetaField } from '@/types';
 import { formatDateTime } from '@/utils/date';
 
@@ -135,10 +136,12 @@ function MediaCard({
     return (
         <Card className="group overflow-hidden">
             <div className="aspect-square relative bg-muted flex items-center justify-center">
-                {isImage && item.url ? (
-                    <img
-                        src={item.url}
+                {isImage && (item.thumbnail_urls || item.url) ? (
+                    <ThumbnailImage
+                        thumbnailUrls={item.thumbnail_urls}
+                        fallbackUrl={item.url}
                         alt={item.original_filename}
+                        sizes="(min-width: 1280px) 200px, (min-width: 768px) 180px, 150px"
                         className="w-full h-full object-cover"
                     />
                 ) : (
@@ -203,10 +206,12 @@ function MediaListItem({
             <div className="flex items-center gap-4 p-3">
                 {/* Thumbnail */}
                 <div className="size-14 shrink-0 rounded-md bg-muted flex items-center justify-center overflow-hidden">
-                    {isImage && item.url ? (
-                        <img
-                            src={item.url}
+                    {isImage && (item.thumbnail_urls || item.url) ? (
+                        <ThumbnailImage
+                            thumbnailUrls={item.thumbnail_urls}
+                            fallbackUrl={item.url}
                             alt={item.original_filename}
+                            sizes="56px"
                             className="w-full h-full object-cover"
                         />
                     ) : (

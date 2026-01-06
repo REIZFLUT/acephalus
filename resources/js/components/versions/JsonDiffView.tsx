@@ -263,3 +263,4 @@ function flattenObject(obj: unknown, path: string, indent: number, type: 'added'
     return lines;
 }
 
+

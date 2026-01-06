@@ -39,8 +39,9 @@ import {
     Search,
 } from 'lucide-react';
 import { BlockEditorProps } from '../BlockItem';
-import { useSchema } from '../BlockEditor';
+import { useSchema } from '../SchemaContext';
 import { MetaFieldsEditor } from '../MetaFieldsEditor';
+import { ThumbnailImage } from '@/components/ui/thumbnail-image';
 
 const mediaTypeLabels: Record<string, string> = {
     image: 'Image',
@@ -510,9 +511,11 @@ function MediaPicker({
                                         `}
                                     >
                                         {media.media_type === 'image' ? (
-                                            <img 
-                                                src={media.url} 
+                                            <ThumbnailImage
+                                                thumbnailUrls={media.thumbnail_urls}
+                                                fallbackUrl={media.url}
                                                 alt={media.alt || media.original_filename}
+                                                sizes="(min-width: 640px) 80px, 60px"
                                                 className="w-full h-full object-cover"
                                             />
                                         ) : (

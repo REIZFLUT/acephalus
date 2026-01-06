@@ -11,10 +11,12 @@ use App\Models\Mongodb\Media;
 use App\Models\Mongodb\MediaFolder;
 use App\Models\Mongodb\MediaMetaField;
 use App\Services\GridFsMediaService;
+use App\Services\ThumbnailService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MediaController extends Controller
 {
@@ -53,6 +55,18 @@ class MediaController extends Controller
         // Add URLs and folder info to media items for the web interface
         $media->getCollection()->transform(function ($item) {
             $item->url = route('media.file', ['media' => $item->_id]);
+
+            // Add thumbnail URLs for images (all sizes for context-appropriate usage)
+            if (str_starts_with($item->mime_type, 'image/') && $item->mime_type !== 'image/svg+xml') {
+                $item->thumbnail_urls = [
+                    'small' => route('media.thumbnail', ['media' => $item->_id, 'size' => 'small']),
+                    'medium' => route('media.thumbnail', ['media' => $item->_id, 'size' => 'medium']),
+                    'large' => route('media.thumbnail', ['media' => $item->_id, 'size' => 'large']),
+                ];
+                // Keep backward compatibility
+                $item->thumbnail_url = $item->thumbnail_urls['small'];
+            }
+
             $item->_id = (string) $item->_id;
 
             // Add folder path information if media is in a folder
@@ -126,7 +140,7 @@ class MediaController extends Controller
         ]);
     }
 
-    public function file(Media $media): \Symfony\Component\HttpFoundation\StreamedResponse
+    public function file(Media $media): StreamedResponse
     {
         $stream = $this->mediaService->download($media);
 
@@ -142,6 +156,49 @@ class MediaController extends Controller
             'Content-Length' => $media->size,
             'Content-Disposition' => 'inline; filename="'.$media->original_filename.'"',
             'Cache-Control' => 'public, max-age=3600',
+        ]);
+    }
+
+    /**
+     * Serve a thumbnail for a media file.
+     */
+    public function thumbnail(Media $media, string $size): StreamedResponse
+    {
+        // Validate size parameter
+        $validSizes = array_keys(ThumbnailService::SIZES);
+        if (! in_array($size, $validSizes)) {
+            abort(400, 'Invalid thumbnail size. Valid sizes: '.implode(', ', $validSizes));
+        }
+
+        // Check if thumbnail exists
+        if (! $media->hasThumbnail($size)) {
+            // For images without thumbnails, try to generate them on-the-fly
+            // (for existing images that were uploaded before thumbnail support)
+            if ($this->mediaService->thumbnailService->isSupported($media->mime_type)) {
+                $this->mediaService->generateThumbnailsForMedia($media);
+                $media->refresh();
+            }
+
+            // If still no thumbnail, fallback to original file
+            if (! $media->hasThumbnail($size)) {
+                return $this->file($media);
+            }
+        }
+
+        $stream = $this->mediaService->downloadThumbnail($media, $size);
+
+        if ($stream === null) {
+            // Fallback to original file
+            return $this->file($media);
+        }
+
+        return response()->stream(function () use ($stream) {
+            fpassthru($stream);
+            fclose($stream);
+        }, 200, [
+            'Content-Type' => 'image/webp',
+            'Content-Disposition' => 'inline',
+            'Cache-Control' => 'public, max-age=31536000, immutable', // 1 year cache for thumbnails
         ]);
     }
 
@@ -178,6 +235,17 @@ class MediaController extends Controller
             $mediaData = $media->toArray();
             $mediaData['_id'] = (string) $media->_id;
             $mediaData['url'] = route('media.file', ['media' => $media->_id]);
+
+            // Add thumbnail URLs for images (all sizes for context-appropriate usage)
+            if (str_starts_with($media->mime_type, 'image/') && $media->mime_type !== 'image/svg+xml') {
+                $mediaData['thumbnail_urls'] = [
+                    'small' => route('media.thumbnail', ['media' => $media->_id, 'size' => 'small']),
+                    'medium' => route('media.thumbnail', ['media' => $media->_id, 'size' => 'medium']),
+                    'large' => route('media.thumbnail', ['media' => $media->_id, 'size' => 'large']),
+                ];
+                // Keep backward compatibility
+                $mediaData['thumbnail_url'] = $mediaData['thumbnail_urls']['small'];
+            }
 
             return response()->json([
                 'data' => $mediaData,

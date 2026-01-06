@@ -41,7 +41,7 @@ import KatexBlockEditor from './blocks/KatexBlockEditor';
 import WrapperBlockEditor from './blocks/WrapperBlockEditor';
 import ReferenceBlockEditor from './blocks/ReferenceBlockEditor';
 import CustomBlockEditor from './blocks/CustomBlockEditor';
-import { useSchema } from './BlockEditor';
+import { useSchema } from './SchemaContext';
 import { useCustomElements, isCustomElementType } from '@/hooks/use-custom-elements';
 import { EditionBadges } from './EditionSelector';
 import { isElementVisibleForEdition } from './EditionPreviewFilter';

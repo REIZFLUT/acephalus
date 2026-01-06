@@ -4,7 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { WysiwygEditor } from '../WysiwygEditor';
 import { CodeEditor } from '../CodeEditor';
 import { BlockEditorProps } from '../BlockItem';
-import { useSchema } from '../BlockEditor';
+import { useSchema } from '../SchemaContext';
 import { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Eye, Code } from 'lucide-react';

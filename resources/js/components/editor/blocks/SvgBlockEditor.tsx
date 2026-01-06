@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CodeEditor } from '../CodeEditor';
 import { Eye, Code } from 'lucide-react';
 import { BlockEditorProps } from '../BlockItem';
-import { useSchema } from '../BlockEditor';
+import { useSchema } from '../SchemaContext';
 import { MetaFieldsEditor } from '../MetaFieldsEditor';
 
 export default function SvgBlockEditor({ block, onUpdate }: BlockEditorProps) {

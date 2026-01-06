@@ -3,56 +3,31 @@ import { Link, useForm, router } from '@inertiajs/react';
 import AppLayout from '@/components/layouts/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import {
     Loader2,
     ArrowLeft,
     Save,
     Send,
     Archive,
-    Trash2,
-    RotateCcw,
-    Clock,
-    Eye,
     ChevronsUpDown,
     ChevronsDownUp,
-    Plus,
-    Minus,
-    Pencil,
-    User,
+    Eye,
     Copy,
 } from 'lucide-react';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
-import type { PageProps, Content, ContentVersion, BlockElement, ElementType, CollectionSchema, WrapperPurpose, Edition, VersionDiffSummary } from '@/types';
+import type { PageProps, Content, ContentVersion, BlockElement, CollectionSchema, WrapperPurpose, Edition } from '@/types';
 import { BlockEditor } from '@/components/editor/BlockEditor';
 import { MetadataEditor } from '@/components/editor/MetadataEditor';
 import { MetaFieldInput } from '@/components/editor/MetaFieldInput';
 import { EditionSelector } from '@/components/editor/EditionSelector';
-import { EditionPreviewFilter, getHiddenElementIds, isContentVisibleForEdition } from '@/components/editor/EditionPreviewFilter';
+import { EditionPreviewFilter, isContentVisibleForEdition } from '@/components/editor/EditionPreviewFilter';
 import { VersionPreviewModal } from '@/components/versions/VersionPreviewModal';
-import { formatDate, formatDateTime } from '@/utils/date';
+import { ensureElementIds } from './edit/utils';
+import { Sidebar } from './edit/Sidebar';
+import { SettingsTab } from './edit/SettingsTab';
+import { VersionsTab } from './edit/VersionsTab';
+import { DuplicateDialog } from './edit/DuplicateDialog';
 
 interface ContentsEditProps extends PageProps {
     content: Content & { 
@@ -66,45 +41,6 @@ interface ContentsEditProps extends PageProps {
     elementTypes: Array<{ value: string; label: string }>;
     wrapperPurposes: WrapperPurpose[];
     editions: Edition[];
-}
-
-// Helper to ensure elements have client IDs
-function ensureElementIds(elements: BlockElement[]): BlockElement[] {
-    return elements.map((el, index) => ({
-        ...el,
-        id: el.id || el._id || `element-${index}-${Date.now()}`,
-        children: el.children ? ensureElementIds(el.children) : undefined,
-    }));
-}
-
-// Component to display diff summary badges
-function DiffSummaryBadges({ diff }: { diff: VersionDiffSummary }) {
-    if (diff.added === 0 && diff.removed === 0 && diff.modified === 0) {
-        return null;
-    }
-
-    return (
-        <div className="flex items-center gap-1.5">
-            {diff.added > 0 && (
-                <Badge variant="outline" className="text-xs gap-1 text-green-600 border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-800">
-                    <Plus className="size-3" />
-                    {diff.added}
-                </Badge>
-            )}
-            {diff.removed > 0 && (
-                <Badge variant="outline" className="text-xs gap-1 text-red-600 border-red-200 bg-red-50 dark:bg-red-950 dark:border-red-800">
-                    <Minus className="size-3" />
-                    {diff.removed}
-                </Badge>
-            )}
-            {diff.modified > 0 && (
-                <Badge variant="outline" className="text-xs gap-1 text-amber-600 border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800">
-                    <Pencil className="size-3" />
-                    {diff.modified}
-                </Badge>
-            )}
-        </div>
-    );
 }
 
 export default function ContentsEdit({ content, elementTypes, wrapperPurposes, editions }: ContentsEditProps) {
@@ -134,9 +70,6 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
     
     // Duplicate dialog state
     const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
-    const [duplicateSlug, setDuplicateSlug] = useState('');
-    const [duplicateError, setDuplicateError] = useState<string | null>(null);
-    const [isDuplicating, setIsDuplicating] = useState(false);
 
     const handleVersionClick = (version: ContentVersion) => {
         setPreviewVersion(version);
@@ -199,45 +132,6 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
         router.post(`/contents/${content._id}/versions/${versionNumber}/restore`);
     };
 
-    const handleDuplicate = () => {
-        if (!duplicateSlug.trim()) {
-            setDuplicateError('Please enter a slug.');
-            return;
-        }
-
-        // Validate slug format
-        if (!/^[a-z0-9-]+$/.test(duplicateSlug)) {
-            setDuplicateError('Slug must only contain lowercase letters, numbers, and hyphens.');
-            return;
-        }
-
-        setIsDuplicating(true);
-        setDuplicateError(null);
-
-        router.post(
-            `/contents/${content._id}/duplicate`,
-            { slug: duplicateSlug },
-            {
-                onError: (errors) => {
-                    setDuplicateError(errors.slug || 'Failed to duplicate content.');
-                    setIsDuplicating(false);
-                },
-                onSuccess: () => {
-                    setIsDuplicateDialogOpen(false);
-                    setDuplicateSlug('');
-                    setIsDuplicating(false);
-                },
-            }
-        );
-    };
-
-    const openDuplicateDialog = () => {
-        // Pre-populate with current slug + "-copy"
-        setDuplicateSlug(`${content.slug}-copy`);
-        setDuplicateError(null);
-        setIsDuplicateDialogOpen(true);
-    };
-
     const handleElementsChange = useCallback((elements: BlockElement[]) => {
         setData('elements', elements);
     }, [setData]);
@@ -292,7 +186,7 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
                         />
                     )}
                     <div className="flex gap-2">
-                        <Button onClick={openDuplicateDialog} variant="outline" size="sm">
+                        <Button onClick={() => setIsDuplicateDialogOpen(true)} variant="outline" size="sm">
                             <Copy className="size-4 mr-2" />
                             Duplicate
                         </Button>
@@ -473,252 +367,35 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
                             )}
                         </TabsContent>
 
-                        <TabsContent value="settings" className="space-y-4">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Content Settings</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="title">Title</Label>
-                                        <Input
-                                            id="title"
-                                            value={data.title}
-                                            onChange={(e) => setData('title', e.target.value)}
-                                        />
-                                        {errors.title && (
-                                            <p className="text-sm text-destructive">{errors.title}</p>
-                                        )}
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="slug">Slug</Label>
-                                        <Input
-                                            id="slug"
-                                            value={data.slug}
-                                            onChange={(e) => setData('slug', e.target.value)}
-                                        />
-                                        <p className="text-sm text-muted-foreground">
-                                            URL: /{content.collection.slug}/{data.slug}
-                                        </p>
-                                        {errors.slug && (
-                                            <p className="text-sm text-destructive">{errors.slug}</p>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            {/* Danger Zone */}
-                            <Card className="border-destructive/50">
-                                <CardHeader>
-                                    <CardTitle className="text-destructive">Danger Zone</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="destructive">
-                                                <Trash2 className="size-4 mr-2" />
-                                                Delete Content
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Delete Content</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    Are you sure you want to delete "{content.title}"? 
-                                                    This action cannot be undone.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction
-                                                    onClick={handleDelete}
-                                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                                >
-                                                    Delete
-                                                </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </CardContent>
-                            </Card>
+                        <TabsContent value="settings">
+                            <SettingsTab 
+                                content={content} 
+                                data={data} 
+                                setData={setData} 
+                                errors={errors} 
+                                onDelete={handleDelete} 
+                            />
                         </TabsContent>
 
                         <TabsContent value="versions" className="space-y-4">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Version History</CardTitle>
-                                    <CardDescription>
-                                        All previous versions of this content. 
-                                        Restore any version to revert changes.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    {content.versions?.length > 0 ? (
-                                        <div className="space-y-2">
-                                            {content.versions.map((version) => (
-                                                <div
-                                                    key={version._id}
-                                                    className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer group"
-                                                    onClick={() => handleVersionClick(version)}
-                                                >
-                                                    <div className="flex items-start gap-3">
-                                                        <div className="p-2 bg-muted rounded-md group-hover:bg-primary/10 transition-colors">
-                                                            <Clock className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <div className="flex items-center gap-2 flex-wrap">
-                                                                <span className="font-medium group-hover:text-primary transition-colors">
-                                                                    Version {version.version_number}
-                                                                </span>
-                                                                {Number(version.version_number) === Number(content.current_version) && (
-                                                                    <Badge variant="secondary" className="text-xs">
-                                                                        Current
-                                                                    </Badge>
-                                                                )}
-                                                                {/* Show title if it differs from current content title */}
-                                                                {version.snapshot?.title && version.snapshot.title !== content.title && (
-                                                                    <span className="text-xs text-muted-foreground">
-                                                                        "{version.snapshot.title}"
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                                <span>{formatDateTime(version.created_at)}</span>
-                                                                {version.creator_name && (
-                                                                    <span className="flex items-center gap-1">
-                                                                        <User className="size-3" />
-                                                                        {version.creator_name}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            {version.change_note && (
-                                                                <p className="text-sm text-muted-foreground">
-                                                                    "{version.change_note}"
-                                                                </p>
-                                                            )}
-                                                            {/* Diff Summary */}
-                                                            {version.diff_summary && (
-                                                                <DiffSummaryBadges diff={version.diff_summary} />
-                                                            )}
-                                                            <p className="text-xs text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                Click to preview
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => handleVersionClick(version)}
-                                                        >
-                                                            <Eye className="size-4 mr-2" />
-                                                            Preview
-                                                        </Button>
-                                                        {Number(version.version_number) !== Number(content.current_version) && (
-                                                            <AlertDialog>
-                                                                <AlertDialogTrigger asChild>
-                                                                    <Button variant="outline" size="sm">
-                                                                        <RotateCcw className="size-4 mr-2" />
-                                                                        Restore
-                                                                    </Button>
-                                                                </AlertDialogTrigger>
-                                                                <AlertDialogContent>
-                                                                    <AlertDialogHeader>
-                                                                        <AlertDialogTitle>
-                                                                            Restore Version {version.version_number}
-                                                                        </AlertDialogTitle>
-                                                                        <AlertDialogDescription>
-                                                                            This will restore the content to version {version.version_number}.
-                                                                            A new version will be created with the restored content.
-                                                                        </AlertDialogDescription>
-                                                                    </AlertDialogHeader>
-                                                                    <AlertDialogFooter>
-                                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                        <AlertDialogAction
-                                                                            onClick={() => handleRestoreVersion(version.version_number)}
-                                                                        >
-                                                                            Restore
-                                                                        </AlertDialogAction>
-                                                                    </AlertDialogFooter>
-                                                                </AlertDialogContent>
-                                                            </AlertDialog>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="text-center py-8 text-muted-foreground">
-                                            <Clock className="size-12 mx-auto mb-4 opacity-50" />
-                                            <p>No version history yet</p>
-                                            <p className="text-sm">
-                                                Versions are created when you save changes
-                                            </p>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
+                            <VersionsTab 
+                                content={content} 
+                                onVersionClick={handleVersionClick}
+                                onRestoreVersion={handleRestoreVersion}
+                            />
                         </TabsContent>
                     </Tabs>
                 </div>
 
                 {/* Sidebar */}
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-sm">Content Info</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3 text-sm">
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Status</span>
-                                {getStatusBadge()}
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Version</span>
-                                <span className="font-mono">v{content.versions?.length || content.current_version || 1}</span>
-                            </div>
-                            {!isMetaOnlyContent && (
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Elements</span>
-                                    <span>{countElements(data.elements)}</span>
-                                </div>
-                            )}
-                            <hr className="my-2" />
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Created</span>
-                                <span>{formatDate(content.created_at)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Updated</span>
-                                <span>{formatDate(content.updated_at)}</span>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Content Metadata - Desktop only (hidden in meta-only mode since it's shown in main area) */}
-                    {!isMetaOnlyContent && contentMetaFields.length > 0 && (
-                        <div className="hidden lg:block">
-                            <MetadataEditor
-                                fields={contentMetaFields}
-                                values={data.metadata}
-                                onChange={handleMetadataChange}
-                                title="Content Metadata"
-                                compact
-                            />
-                        </div>
-                    )}
-
-                    {isDirty && (
-                        <Card className="border-amber-500/50 bg-amber-500/5">
-                            <CardContent className="py-4">
-                                <p className="text-sm text-amber-600 dark:text-amber-400">
-                                    You have unsaved changes
-                                </p>
-                            </CardContent>
-                        </Card>
-                    )}
-                </div>
+                <Sidebar 
+                    content={content}
+                    data={data}
+                    schema={schema}
+                    isMetaOnlyContent={isMetaOnlyContent}
+                    isDirty={isDirty}
+                    onMetadataChange={handleMetadataChange}
+                />
             </div>
 
             {/* Version Preview Modal */}
@@ -733,61 +410,12 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
             />
 
             {/* Duplicate Dialog */}
-            <Dialog open={isDuplicateDialogOpen} onOpenChange={setIsDuplicateDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Duplicate Content</DialogTitle>
-                        <DialogDescription>
-                            Create a copy of "{content.title}" with a new unique slug.
-                            All elements, metadata, and editions will be copied.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="duplicate-slug">New Slug</Label>
-                            <Input
-                                id="duplicate-slug"
-                                value={duplicateSlug}
-                                onChange={(e) => {
-                                    setDuplicateSlug(e.target.value);
-                                    setDuplicateError(null);
-                                }}
-                                placeholder="new-content-slug"
-                            />
-                            <p className="text-sm text-muted-foreground">
-                                URL: /{content.collection.slug}/{duplicateSlug || 'new-slug'}
-                            </p>
-                            {duplicateError && (
-                                <p className="text-sm text-destructive">{duplicateError}</p>
-                            )}
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setIsDuplicateDialogOpen(false)}
-                            disabled={isDuplicating}
-                        >
-                            Cancel
-                        </Button>
-                        <Button onClick={handleDuplicate} disabled={isDuplicating}>
-                            {isDuplicating ? (
-                                <Loader2 className="size-4 mr-2 animate-spin" />
-                            ) : (
-                                <Copy className="size-4 mr-2" />
-                            )}
-                            Duplicate
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <DuplicateDialog
+                open={isDuplicateDialogOpen}
+                onOpenChange={setIsDuplicateDialogOpen}
+                content={content}
+                initialSlug={`${content.slug}-copy`}
+            />
         </AppLayout>
     );
-}
-
-// Helper to count all elements including nested ones
-function countElements(elements: BlockElement[]): number {
-    return elements.reduce((count, el) => {
-        return count + 1 + (el.children ? countElements(el.children) : 0);
-    }, 0);
 }

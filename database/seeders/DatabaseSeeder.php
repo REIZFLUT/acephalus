@@ -7,6 +7,15 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
+/**
+ * Development/Testing Database Seeder
+ *
+ * This seeder is intended for development and testing environments.
+ * It creates test users with various roles for local development.
+ *
+ * For production setup, use the browser-based setup wizard at /setup
+ * or run: php artisan db:seed --class=SystemSetupSeeder
+ */
 class DatabaseSeeder extends Seeder
 {
     /**
@@ -14,26 +23,17 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create roles and permissions first
-        $this->call(RolesAndPermissionsSeeder::class);
+        // Create system data (roles, permissions, wrapper purposes, etc.)
+        $this->call(SystemSetupSeeder::class);
 
-        // Create wrapper purposes
-        $this->call(WrapperPurposeSeeder::class);
-
-        // Create media meta fields
-        $this->call(MediaMetaFieldSeeder::class);
-
-        // Create media folders
-        $this->call(MediaFolderSeeder::class);
-
-        // Create admin user
+        // Create test admin user (for development only)
         $admin = User::factory()->create([
             'name' => 'Admin User',
             'email' => 'admin@example.com',
         ]);
-        $admin->assignRole('admin');
+        $admin->assignRole('super-admin');
 
-        // Create test users with different roles
+        // Create additional test users with different roles
         $editor = User::factory()->create([
             'name' => 'Editor User',
             'email' => 'editor@example.com',
@@ -45,5 +45,10 @@ class DatabaseSeeder extends Seeder
             'email' => 'author@example.com',
         ]);
         $author->assignRole('author');
+
+        $this->command->info('Development users created:');
+        $this->command->line('  Super Admin: admin@example.com / password');
+        $this->command->line('  Editor:      editor@example.com / password');
+        $this->command->line('  Author:      author@example.com / password');
     }
 }

@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'scope' => \Laravel\Passport\Http\Middleware\CheckTokenForAnyScope::class,
             'api.permission' => \App\Http\Middleware\CheckApiPermission::class,
+            'setup.required' => \App\Http\Middleware\RedirectIfSetupRequired::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

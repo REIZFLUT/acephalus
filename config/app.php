@@ -123,4 +123,17 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Setup Mode
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, the setup wizard at /setup becomes accessible. This should
+    | only be enabled during initial installation. Once setup is complete,
+    | set SETUP_ENABLED=false in your .env file for security.
+    |
+    */
+
+    'setup_enabled' => (bool) env('SETUP_ENABLED', false),
+
 ];

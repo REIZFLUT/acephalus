@@ -13,6 +13,7 @@ use App\Http\Controllers\Web\MediaMetaFieldController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\RoleController;
 use App\Http\Controllers\Web\SettingsController;
+use App\Http\Controllers\Web\SetupController;
 use App\Http\Controllers\Web\UserController;
 use App\Http\Controllers\Web\WrapperPurposeController;
 use Illuminate\Support\Facades\Route;
@@ -26,8 +27,20 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Redirect root to dashboard or login
+// Setup routes (only accessible when SETUP_ENABLED=true in .env)
+Route::prefix('setup')->name('setup.')->group(function () {
+    Route::get('/', [SetupController::class, 'index'])->name('index');
+    Route::post('/', [SetupController::class, 'store'])->name('store');
+    Route::post('check-connections', [SetupController::class, 'checkConnections'])->name('check-connections');
+});
+
+// Redirect root to dashboard, login, or setup
 Route::get('/', function () {
+    // Check if setup can be accessed (enabled AND required)
+    if (SetupController::canAccessSetup()) {
+        return redirect()->route('setup.index');
+    }
+
     if (auth()->check()) {
         return redirect()->route('dashboard');
     }
@@ -35,8 +48,8 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
-// Auth routes (public)
-Route::middleware('guest')->group(function () {
+// Auth routes (public, but redirects to setup if no admin exists)
+Route::middleware(['guest', 'setup.required'])->group(function () {
     Route::get('login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('login', [AuthController::class, 'login']);
 });
@@ -175,7 +188,6 @@ Route::middleware('auth')->group(function () {
         Route::middleware('permission:roles.view')->group(function () {
             Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
             Route::get('roles/list', [RoleController::class, 'list'])->name('roles.list');
-            Route::get('roles/{role}', [RoleController::class, 'show'])->name('roles.show');
         });
 
         Route::middleware('permission:roles.create')->group(function () {
@@ -190,6 +202,10 @@ Route::middleware('auth')->group(function () {
 
         Route::middleware('permission:roles.delete')->group(function () {
             Route::delete('roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy');
+        });
+
+        Route::middleware('permission:roles.view')->group(function () {
+            Route::get('roles/{role}', [RoleController::class, 'show'])->name('roles.show');
         });
 
         // Wrapper Purposes

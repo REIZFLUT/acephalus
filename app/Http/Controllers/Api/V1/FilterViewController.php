@@ -18,26 +18,11 @@ class FilterViewController extends Controller
     ) {}
 
     /**
-     * Get global filter views.
-     */
-    public function global(): JsonResponse
-    {
-        $filterViews = FilterView::global()
-            ->orderBy('is_system', 'desc')
-            ->orderBy('name')
-            ->get();
-
-        return response()->json([
-            'data' => $filterViews,
-        ]);
-    }
-
-    /**
-     * Get filter views available for a collection (global + collection-specific).
+     * Get filter views for a specific collection.
      */
     public function forCollection(Collection $collection): JsonResponse
     {
-        $filterViews = FilterView::availableFor((string) $collection->_id)
+        $filterViews = FilterView::forCollection((string) $collection->_id)
             ->orderBy('is_system', 'desc')
             ->orderBy('name')
             ->get();

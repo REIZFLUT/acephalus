@@ -57,51 +57,19 @@ afterEach(function () {
     FilterView::query()->delete();
 });
 
-it('can list global filter views', function () {
+it('can list filter views for a collection', function () {
     FilterView::create([
-        'name' => 'Published Only',
-        'slug' => 'published-only',
-        'collection_id' => null,
-        'is_system' => false,
-        'conditions' => [
-            'type' => 'group',
-            'operator' => 'and',
-            'children' => [
-                ['type' => 'condition', 'field' => 'status', 'operator' => 'equals', 'value' => 'published'],
-            ],
-        ],
-        'sort' => [],
-    ]);
-
-    FilterView::create([
-        'name' => 'Collection Specific',
-        'slug' => 'collection-specific',
+        'name' => 'Articles Filter',
+        'slug' => 'articles-filter',
         'collection_id' => (string) $this->collection->_id,
         'is_system' => false,
         'conditions' => ['type' => 'group', 'operator' => 'and', 'children' => []],
         'sort' => [],
     ]);
 
-    $response = $this->getJson('/api/v1/filter-views');
-
-    $response->assertOk()
-        ->assertJsonCount(1, 'data')
-        ->assertJsonPath('data.0.name', 'Published Only');
-});
-
-it('can list filter views for a collection', function () {
     FilterView::create([
-        'name' => 'Global Filter',
-        'slug' => 'global-filter',
-        'collection_id' => null,
-        'is_system' => false,
-        'conditions' => ['type' => 'group', 'operator' => 'and', 'children' => []],
-        'sort' => [],
-    ]);
-
-    FilterView::create([
-        'name' => 'Articles Filter',
-        'slug' => 'articles-filter',
+        'name' => 'Another Filter',
+        'slug' => 'another-filter',
         'collection_id' => (string) $this->collection->_id,
         'is_system' => false,
         'conditions' => ['type' => 'group', 'operator' => 'and', 'children' => []],

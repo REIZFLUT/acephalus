@@ -86,53 +86,64 @@ export default function CollectionsShow({
     };
 
     const handleSaveFilterView = async (filterViewData: Partial<FilterView>) => {
-        return new Promise<void>((resolve, reject) => {
-            router.post('/settings/filter-views/json', {
+        const response = await fetch('/settings/filter-views/json', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '',
+            },
+            body: JSON.stringify({
                 ...filterViewData,
                 collection_id: collection._id,
-            }, {
-                preserveState: true,
-                onSuccess: () => {
-                    // Reload to get updated filter views
-                    router.reload({ only: ['filterViews'] });
-                    resolve();
-                },
-                onError: () => reject(),
-            });
+            }),
         });
+
+        if (!response.ok) {
+            throw new Error('Failed to save filter view');
+        }
+
+        // Reload to get updated filter views
+        router.reload({ only: ['filterViews'] });
     };
 
     const handleUpdateFilterView = async (id: string, filterViewData: Partial<FilterView>) => {
-        return new Promise<void>((resolve, reject) => {
-            router.put(`/settings/filter-views/${id}/json`, filterViewData, {
-                preserveState: true,
-                onSuccess: () => {
-                    router.reload({ only: ['filterViews', 'selectedFilterView'] });
-                    resolve();
-                },
-                onError: () => reject(),
-            });
+        const response = await fetch(`/settings/filter-views/${id}/json`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '',
+            },
+            body: JSON.stringify(filterViewData),
         });
+
+        if (!response.ok) {
+            throw new Error('Failed to update filter view');
+        }
+
+        router.reload({ only: ['filterViews', 'selectedFilterView'] });
     };
 
     const handleDeleteFilterView = async (id: string) => {
-        return new Promise<void>((resolve, reject) => {
-            router.delete(`/settings/filter-views/${id}/json`, {
-                preserveState: true,
-                onSuccess: () => {
-                    // Clear selection if deleted view was selected
-                    const params: Record<string, string> = {};
-                    if (selectedEdition) {
-                        params.edition = selectedEdition;
-                    }
-                    router.get(`/collections/${collection.slug}`, params, { 
-                        preserveState: true,
-                        onSuccess: () => resolve(),
-                    });
-                },
-                onError: () => reject(),
-            });
+        const response = await fetch(`/settings/filter-views/${id}/json`, {
+            method: 'DELETE',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '',
+            },
         });
+
+        if (!response.ok) {
+            throw new Error('Failed to delete filter view');
+        }
+
+        // Clear selection if deleted view was selected
+        const params: Record<string, string> = {};
+        if (selectedEdition) {
+            params.edition = selectedEdition;
+        }
+        router.get(`/collections/${collection.slug}`, params, { preserveState: true });
     };
 
     return (

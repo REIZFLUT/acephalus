@@ -181,7 +181,7 @@ export function FilterViewSelector({
         setFormRawQuery(rawQuery ?? null);
     };
 
-    const globalViews = filterViews.filter(v => v.collection_id === null);
+    // Only show collection-specific filter views
     const collectionViews = filterViews.filter(v => v.collection_id !== null);
 
     return (
@@ -210,41 +210,16 @@ export function FilterViewSelector({
                 <SelectContent>
                     <SelectItem value="none">No filter</SelectItem>
                     
-                    {collectionViews.length > 0 && (
-                        <>
-                            <SelectItem value="__collection_header__" disabled className="font-semibold text-xs uppercase text-muted-foreground">
-                                Collection Filters
-                            </SelectItem>
-                            {collectionViews.map((view) => (
-                                <SelectItem key={view._id} value={view._id}>
-                                    <div className="flex items-center gap-2">
-                                        {view.name}
-                                        {view.is_system && (
-                                            <Badge variant="outline" className="text-[10px] px-1">System</Badge>
-                                        )}
-                                    </div>
-                                </SelectItem>
-                            ))}
-                        </>
-                    )}
-                    
-                    {globalViews.length > 0 && (
-                        <>
-                            <SelectItem value="__global_header__" disabled className="font-semibold text-xs uppercase text-muted-foreground">
-                                Global Filters
-                            </SelectItem>
-                            {globalViews.map((view) => (
-                                <SelectItem key={view._id} value={view._id}>
-                                    <div className="flex items-center gap-2">
-                                        {view.name}
-                                        {view.is_system && (
-                                            <Badge variant="outline" className="text-[10px] px-1">System</Badge>
-                                        )}
-                                    </div>
-                                </SelectItem>
-                            ))}
-                        </>
-                    )}
+                    {collectionViews.map((view) => (
+                        <SelectItem key={view._id} value={view._id}>
+                            <div className="flex items-center gap-2">
+                                {view.name}
+                                {view.is_system && (
+                                    <Badge variant="outline" className="text-[10px] px-1">System</Badge>
+                                )}
+                            </div>
+                        </SelectItem>
+                    ))}
                 </SelectContent>
             </Select>
 

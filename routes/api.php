@@ -41,8 +41,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('collections', [CollectionController::class, 'index'])->name('collections.index');
             Route::get('collections/{collection}', [CollectionController::class, 'show'])->name('collections.show');
 
-            // Filter Views (read-only via API)
-            Route::get('filter-views', [FilterViewController::class, 'global'])->name('filter-views.global');
+            // Filter Views (read-only via API, collection-specific only)
             Route::get('filter-views/operators', [FilterViewController::class, 'operators'])->name('filter-views.operators');
             Route::get('filter-views/{filterView}', [FilterViewController::class, 'show'])->name('filter-views.show');
             Route::get('collections/{collection}/filter-views', [FilterViewController::class, 'forCollection'])

@@ -22,38 +22,21 @@ class FilterViewController extends Controller
     ) {}
 
     /**
-     * Display a listing of all filter views (settings page).
+     * Redirect to collections index (filter views are now collection-specific).
      */
-    public function index(): Response
+    public function index(): RedirectResponse
     {
-        $filterViews = FilterView::orderBy('is_system', 'desc')
-            ->orderBy('name')
-            ->get();
-
-        return Inertia::render('Settings/FilterViews/Index', [
-            'filterViews' => $filterViews,
-        ]);
+        return redirect()
+            ->route('collections.index')
+            ->with('info', 'Filter views are managed within each collection.');
     }
 
     /**
-     * Get global filter views as JSON.
-     */
-    public function globalList(): JsonResponse
-    {
-        $filterViews = FilterView::global()
-            ->orderBy('is_system', 'desc')
-            ->orderBy('name')
-            ->get();
-
-        return response()->json($filterViews);
-    }
-
-    /**
-     * Get filter views available for a specific collection (global + collection-specific).
+     * Get filter views for a specific collection.
      */
     public function forCollection(Collection $collection): JsonResponse
     {
-        $filterViews = FilterView::availableFor((string) $collection->_id)
+        $filterViews = FilterView::forCollection((string) $collection->_id)
             ->orderBy('is_system', 'desc')
             ->orderBy('name')
             ->get();
@@ -69,20 +52,30 @@ class FilterViewController extends Controller
 
     /**
      * Show form for creating a new filter view.
+     * Requires a collection query parameter.
      */
-    public function create(Request $request): Response
+    public function create(Request $request): Response|RedirectResponse
     {
         $collectionId = $request->query('collection');
-        $collection = $collectionId ? Collection::find($collectionId) : null;
 
-        $collections = Collection::orderBy('name')->get(['_id', 'name', 'slug']);
-        $availableFields = $collection
-            ? $this->filterService->getAvailableFields($collection)
-            : [];
+        if (! $collectionId) {
+            return redirect()
+                ->route('collections.index')
+                ->with('error', 'Please select a collection first to create a filter view.');
+        }
+
+        $collection = Collection::find($collectionId);
+
+        if (! $collection) {
+            return redirect()
+                ->route('collections.index')
+                ->with('error', 'Collection not found.');
+        }
+
+        $availableFields = $this->filterService->getAvailableFields($collection);
 
         return Inertia::render('Settings/FilterViews/Create', [
-            'collections' => $collections,
-            'selectedCollection' => $collection,
+            'collection' => $collection,
             'availableFields' => $availableFields,
         ]);
     }
@@ -96,7 +89,7 @@ class FilterViewController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255', 'regex:/^[a-z0-9-]+$/'],
             'description' => ['nullable', 'string', 'max:500'],
-            'collection_id' => ['nullable', 'string'],
+            'collection_id' => ['required', 'string', 'exists:collections,_id'],
             'conditions' => ['nullable', 'array'],
             'sort' => ['nullable', 'array'],
             'raw_query' => ['nullable', 'array'],
@@ -119,25 +112,17 @@ class FilterViewController extends Controller
             'name' => $validated['name'],
             'slug' => $slug,
             'description' => $validated['description'] ?? null,
-            'collection_id' => $validated['collection_id'] ?? null,
+            'collection_id' => $validated['collection_id'],
             'is_system' => false,
             'conditions' => $this->filterService->buildFilterViewData($validated)['conditions'],
             'sort' => $this->filterService->buildFilterViewData($validated)['sort'],
             'raw_query' => $validated['raw_query'] ?? null,
         ]);
 
-        // Redirect based on context
-        if (! empty($validated['collection_id'])) {
-            $collection = Collection::find($validated['collection_id']);
-            if ($collection) {
-                return redirect()
-                    ->route('collections.show', $collection->slug)
-                    ->with('success', 'Filter view created successfully.');
-            }
-        }
+        $collection = Collection::find($validated['collection_id']);
 
         return redirect()
-            ->route('settings.filter-views.index')
+            ->route('collections.show', $collection->slug)
             ->with('success', 'Filter view created successfully.');
     }
 
@@ -150,7 +135,7 @@ class FilterViewController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255', 'regex:/^[a-z0-9-]+$/'],
             'description' => ['nullable', 'string', 'max:500'],
-            'collection_id' => ['nullable', 'string'],
+            'collection_id' => ['required', 'string', 'exists:collections,_id'],
             'conditions' => ['nullable', 'array'],
             'sort' => ['nullable', 'array'],
             'raw_query' => ['nullable', 'array'],
@@ -174,7 +159,7 @@ class FilterViewController extends Controller
             'name' => $validated['name'],
             'slug' => $slug,
             'description' => $validated['description'] ?? null,
-            'collection_id' => $validated['collection_id'] ?? null,
+            'collection_id' => $validated['collection_id'],
             'is_system' => false,
             'conditions' => $this->filterService->buildFilterViewData($validated)['conditions'],
             'sort' => $this->filterService->buildFilterViewData($validated)['sort'],
@@ -190,22 +175,21 @@ class FilterViewController extends Controller
     /**
      * Show form for editing a filter view.
      */
-    public function edit(FilterView $filterView): Response
+    public function edit(FilterView $filterView): Response|RedirectResponse
     {
-        $collections = Collection::orderBy('name')->get(['_id', 'name', 'slug']);
+        $collection = Collection::find($filterView->collection_id);
 
-        $collection = $filterView->collection_id
-            ? Collection::find($filterView->collection_id)
-            : null;
+        if (! $collection) {
+            return redirect()
+                ->route('collections.index')
+                ->with('error', 'Collection not found for this filter view.');
+        }
 
-        $availableFields = $collection
-            ? $this->filterService->getAvailableFields($collection)
-            : [];
+        $availableFields = $this->filterService->getAvailableFields($collection);
 
         return Inertia::render('Settings/FilterViews/Edit', [
             'filterView' => $filterView,
-            'collections' => $collections,
-            'selectedCollection' => $collection,
+            'collection' => $collection,
             'availableFields' => $availableFields,
         ]);
     }
@@ -225,7 +209,6 @@ class FilterViewController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255', 'regex:/^[a-z0-9-]+$/'],
             'description' => ['nullable', 'string', 'max:500'],
-            'collection_id' => ['nullable', 'string'],
             'conditions' => ['nullable', 'array'],
             'sort' => ['nullable', 'array'],
             'raw_query' => ['nullable', 'array'],
@@ -246,14 +229,15 @@ class FilterViewController extends Controller
             'name' => $validated['name'],
             'slug' => $validated['slug'] ?? $filterView->slug,
             'description' => $validated['description'] ?? null,
-            'collection_id' => $validated['collection_id'] ?? null,
             'conditions' => $this->filterService->buildFilterViewData($validated)['conditions'],
             'sort' => $this->filterService->buildFilterViewData($validated)['sort'],
             'raw_query' => $validated['raw_query'] ?? null,
         ]);
 
+        $collection = Collection::find($filterView->collection_id);
+
         return redirect()
-            ->route('settings.filter-views.index')
+            ->route('collections.show', $collection->slug)
             ->with('success', 'Filter view updated successfully.');
     }
 
@@ -272,7 +256,6 @@ class FilterViewController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255', 'regex:/^[a-z0-9-]+$/'],
             'description' => ['nullable', 'string', 'max:500'],
-            'collection_id' => ['nullable', 'string'],
             'conditions' => ['nullable', 'array'],
             'sort' => ['nullable', 'array'],
             'raw_query' => ['nullable', 'array'],
@@ -294,7 +277,6 @@ class FilterViewController extends Controller
             'name' => $validated['name'],
             'slug' => $validated['slug'] ?? $filterView->slug,
             'description' => $validated['description'] ?? null,
-            'collection_id' => $validated['collection_id'] ?? null,
             'conditions' => $this->filterService->buildFilterViewData($validated)['conditions'],
             'sort' => $this->filterService->buildFilterViewData($validated)['sort'],
             'raw_query' => $validated['raw_query'] ?? null,

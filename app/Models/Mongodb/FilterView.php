@@ -12,7 +12,7 @@ use MongoDB\Laravel\Eloquent\Model;
 /**
  * Represents a saved filter view for content filtering.
  *
- * Filter views can be global (collection_id = null) or collection-specific.
+ * Filter views are always collection-specific.
  * They support complex filter conditions with AND/OR groups.
  */
 class FilterView extends Model
@@ -78,11 +78,11 @@ class FilterView extends Model
     }
 
     /**
-     * Check if this filter view is global (not tied to a collection).
+     * Check if this filter view belongs to a specific collection.
      */
-    public function isGlobal(): bool
+    public function belongsToCollection(string $collectionId): bool
     {
-        return $this->collection_id === null;
+        return (string) $this->collection_id === $collectionId;
     }
 
     /**
@@ -126,16 +126,6 @@ class FilterView extends Model
     }
 
     /**
-     * Scope to get only global filter views.
-     *
-     * @param  \MongoDB\Laravel\Eloquent\Builder  $query
-     */
-    public function scopeGlobal($query): mixed
-    {
-        return $query->whereNull('collection_id');
-    }
-
-    /**
      * Scope to get filter views for a specific collection.
      *
      * @param  \MongoDB\Laravel\Eloquent\Builder  $query
@@ -146,16 +136,13 @@ class FilterView extends Model
     }
 
     /**
-     * Scope to get filter views available for a collection (global + collection-specific).
+     * Scope to get filter views available for a collection (collection-specific only).
      *
      * @param  \MongoDB\Laravel\Eloquent\Builder  $query
      */
     public function scopeAvailableFor($query, string $collectionId): mixed
     {
-        return $query->where(function ($q) use ($collectionId) {
-            $q->whereNull('collection_id')
-                ->orWhere('collection_id', $collectionId);
-        });
+        return $query->where('collection_id', $collectionId);
     }
 
     /**

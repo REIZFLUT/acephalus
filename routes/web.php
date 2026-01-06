@@ -297,7 +297,6 @@ Route::middleware('auth')->group(function () {
         // Filter Views
         Route::middleware('permission:collections.view')->group(function () {
             Route::get('filter-views', [FilterViewController::class, 'index'])->name('filter-views.index');
-            Route::get('filter-views/global', [FilterViewController::class, 'globalList'])->name('filter-views.global');
             Route::get('filter-views/operators', [FilterViewController::class, 'operators'])->name('filter-views.operators');
         });
 

@@ -107,8 +107,8 @@ class CollectionController extends Controller
         $selectedFilterView = null;
         if ($filterViewId) {
             $selectedFilterView = FilterView::find($filterViewId);
-            // Ensure filter view is available for this collection
-            if ($selectedFilterView && ! $selectedFilterView->isGlobal() && (string) $selectedFilterView->collection_id !== (string) $collection->_id) {
+            // Ensure filter view belongs to this collection
+            if ($selectedFilterView && ! $selectedFilterView->belongsToCollection((string) $collection->_id)) {
                 $selectedFilterView = null;
             }
         }

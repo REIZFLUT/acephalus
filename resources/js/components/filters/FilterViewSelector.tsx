@@ -82,6 +82,7 @@ export function FilterViewSelector({
 
     // Form state for create/edit
     const [formName, setFormName] = useState('');
+    const [formSlug, setFormSlug] = useState('');
     const [formDescription, setFormDescription] = useState('');
     const [formConditions, setFormConditions] = useState<FilterConditionGroup>(emptyConditions);
     const [formSort, setFormSort] = useState<FilterSortRule[]>([]);
@@ -89,10 +90,21 @@ export function FilterViewSelector({
 
     const resetForm = () => {
         setFormName('');
+        setFormSlug('');
         setFormDescription('');
         setFormConditions(emptyConditions);
         setFormSort([]);
         setFormRawQuery(null);
+    };
+
+    // Auto-generate slug from name (only for new filters)
+    const generateSlug = (name: string) => {
+        return name
+            .toLowerCase()
+            .replace(/[äöü]/g, (char) => ({ 'ä': 'ae', 'ö': 'oe', 'ü': 'ue' }[char] || char))
+            .replace(/ß/g, 'ss')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
     };
 
     const handleCreateClick = () => {
@@ -103,6 +115,7 @@ export function FilterViewSelector({
     const handleEditClick = (filterView: FilterView) => {
         setEditingFilterView(filterView);
         setFormName(filterView.name);
+        setFormSlug(filterView.slug || '');
         setFormDescription(filterView.description || '');
         setFormConditions(filterView.conditions || emptyConditions);
         setFormSort(filterView.sort || []);
@@ -122,6 +135,7 @@ export function FilterViewSelector({
         try {
             await onSave({
                 name: formName,
+                slug: formSlug || generateSlug(formName),
                 description: formDescription || null,
                 collection_id: collectionId || null,
                 conditions: formConditions,
@@ -142,6 +156,7 @@ export function FilterViewSelector({
         try {
             await onUpdate(editingFilterView._id, {
                 name: formName,
+                slug: formSlug || editingFilterView.slug,
                 description: formDescription || null,
                 conditions: formConditions,
                 sort: formSort,
@@ -285,14 +300,29 @@ export function FilterViewSelector({
                     </DialogHeader>
                     
                     <div className="space-y-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="name">Name</Label>
                                 <Input
                                     id="name"
                                     value={formName}
-                                    onChange={(e) => setFormName(e.target.value)}
+                                    onChange={(e) => {
+                                        setFormName(e.target.value);
+                                        // Auto-generate slug if not manually edited
+                                        if (!formSlug || formSlug === generateSlug(formName)) {
+                                            setFormSlug(generateSlug(e.target.value));
+                                        }
+                                    }}
                                     placeholder="My Filter"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="slug">Slug</Label>
+                                <Input
+                                    id="slug"
+                                    value={formSlug}
+                                    onChange={(e) => setFormSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+                                    placeholder="my-filter"
                                 />
                             </div>
                             <div className="space-y-2">
@@ -339,7 +369,7 @@ export function FilterViewSelector({
                     </DialogHeader>
                     
                     <div className="space-y-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="edit-name">Name</Label>
                                 <Input
@@ -347,6 +377,15 @@ export function FilterViewSelector({
                                     value={formName}
                                     onChange={(e) => setFormName(e.target.value)}
                                     placeholder="My Filter"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-slug">Slug</Label>
+                                <Input
+                                    id="edit-slug"
+                                    value={formSlug}
+                                    onChange={(e) => setFormSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+                                    placeholder="my-filter"
                                 />
                             </div>
                             <div className="space-y-2">

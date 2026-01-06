@@ -13,6 +13,7 @@ use App\Policies\CollectionPolicy;
 use App\Policies\ContentPolicy;
 use App\Policies\MediaPolicy;
 use App\Policies\UserPolicy;
+use App\Services\ScopeService;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -25,7 +26,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(ScopeService::class);
     }
 
     /**
@@ -76,8 +77,15 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configurePassport(): void
     {
+        // Token expiration times
         Passport::tokensExpireIn(now()->addDays(15));
         Passport::refreshTokensExpireIn(now()->addDays(30));
         Passport::personalAccessTokensExpireIn(now()->addMonths(6));
+
+        // Define API scopes
+        Passport::tokensCan(ScopeService::SCOPES);
+
+        // Set default scope (empty - no default permissions)
+        Passport::setDefaultScope([]);
     }
 }

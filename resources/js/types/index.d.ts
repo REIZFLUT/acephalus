@@ -13,13 +13,85 @@ export interface Role {
     id: number;
     name: string;
     guard_name: string;
+    created_at?: string;
+    updated_at?: string;
+    permissions?: Permission[];
+    permissions_count?: number;
+    users_count?: number;
 }
 
 export interface Permission {
     id: number;
     name: string;
     guard_name: string;
+    created_at?: string;
+    updated_at?: string;
 }
+
+/**
+ * Permission categories as defined in the seeder
+ */
+export type PermissionCategory = 
+    | 'contents'
+    | 'collections'
+    | 'collections_schema'
+    | 'media'
+    | 'media_meta_fields'
+    | 'editions'
+    | 'wrapper_purposes'
+    | 'users'
+    | 'roles'
+    | 'settings';
+
+/**
+ * All available permission names
+ */
+export type PermissionName =
+    // Contents
+    | 'contents.view'
+    | 'contents.create'
+    | 'contents.update'
+    | 'contents.delete'
+    | 'contents.publish'
+    // Collections
+    | 'collections.view'
+    | 'collections.create'
+    | 'collections.update'
+    | 'collections.delete'
+    | 'collections.schema.view'
+    | 'collections.schema.update'
+    // Media
+    | 'media.view'
+    | 'media.create'
+    | 'media.update'
+    | 'media.delete'
+    // Media Meta Fields
+    | 'media-meta-fields.view'
+    | 'media-meta-fields.create'
+    | 'media-meta-fields.update'
+    | 'media-meta-fields.delete'
+    // Editions
+    | 'editions.view'
+    | 'editions.create'
+    | 'editions.update'
+    | 'editions.delete'
+    // Wrapper Purposes
+    | 'wrapper-purposes.view'
+    | 'wrapper-purposes.create'
+    | 'wrapper-purposes.update'
+    | 'wrapper-purposes.delete'
+    // Users
+    | 'users.view'
+    | 'users.create'
+    | 'users.update'
+    | 'users.delete'
+    // Roles
+    | 'roles.view'
+    | 'roles.create'
+    | 'roles.update'
+    | 'roles.delete'
+    // Settings
+    | 'settings.view';
 
 export interface Collection {
     _id: string;
@@ -532,10 +604,19 @@ export interface PaginatedData<T> {
     to: number | null;
 }
 
+/**
+ * Auth data shared via Inertia
+ */
+export interface AuthData {
+    user: (Pick<User, 'id' | 'name' | 'email' | 'email_verified_at'> & {
+        roles: string[];
+        permissions: string[];
+        is_super_admin: boolean;
+    }) | null;
+}
+
 export type PageProps<T extends Record<string, unknown> = Record<string, unknown>> = T & {
-    auth: {
-        user: User | null;
-    };
+    auth: AuthData;
     flash: {
         success?: string;
         error?: string;

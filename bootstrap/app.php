@@ -18,15 +18,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
 
-        // Register Spatie Permission middleware aliases
+        // Register middleware aliases (Spatie Permission + Passport Scopes)
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
-        ]);
-
-        // Register Laravel Passport scope middleware aliases
-        $middleware->alias([
             'scope' => \Laravel\Passport\Http\Middleware\CheckTokenForAnyScope::class,
             'api.permission' => \App\Http\Middleware\CheckApiPermission::class,
         ]);

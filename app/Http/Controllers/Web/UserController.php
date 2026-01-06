@@ -30,7 +30,7 @@ class UserController extends Controller
 
     public function create(): Response
     {
-        $roles = Role::all();
+        $roles = Role::where('guard_name', 'web')->orderBy('name')->get();
 
         return Inertia::render('Users/Create', [
             'roles' => $roles,
@@ -73,7 +73,7 @@ class UserController extends Controller
     public function edit(User $user): Response
     {
         $user->load('roles');
-        $roles = Role::all();
+        $roles = Role::where('guard_name', 'web')->orderBy('name')->get();
 
         return Inertia::render('Users/Edit', [
             'user' => $user,

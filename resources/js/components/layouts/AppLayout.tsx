@@ -10,6 +10,7 @@ import {
     LogOut,
     ChevronDown,
     Menu,
+    Shield,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -67,6 +68,7 @@ const navigationItems = [
         label: 'Administration',
         items: [
             { name: 'Users', href: '/users', icon: Users },
+            { name: 'Permissions', href: '/settings/roles', icon: Shield },
             { name: 'Settings', href: '/settings', icon: Settings },
         ],
     },

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight, Code } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,7 +72,7 @@ const operatorsForType: Record<string, FilterOperator[]> = {
     datetime: ['equals', 'not_equals', 'gt', 'gte', 'lt', 'lte', 'exists', 'not_exists'],
     time: ['equals', 'not_equals', 'gt', 'gte', 'lt', 'lte', 'exists', 'not_exists'],
     select: ['equals', 'not_equals', 'in', 'not_in', 'is_empty', 'is_not_empty', 'exists', 'not_exists'],
-    multi_select: ['equals', 'not_equals', 'in', 'not_in', 'is_empty', 'is_not_empty', 'exists', 'not_exists'],
+    multi_select: ['contains', 'not_contains', 'equals', 'not_equals', 'in', 'not_in', 'is_empty', 'is_not_empty', 'exists', 'not_exists'],
     email: ['equals', 'not_equals', 'contains', 'not_contains', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty', 'exists', 'not_exists'],
     url: ['equals', 'not_equals', 'contains', 'not_contains', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty', 'exists', 'not_exists'],
 };
@@ -502,6 +502,14 @@ export function FilterBuilder({
         rawQuery ? JSON.stringify(rawQuery, null, 2) : ''
     );
     const [rawQueryError, setRawQueryError] = useState<string | null>(null);
+
+    // Sync isRawMode when rawQuery prop changes (e.g., when dialog opens with different filter)
+    useEffect(() => {
+        const hasRawQuery = rawQuery !== null && rawQuery !== undefined && Object.keys(rawQuery).length > 0;
+        setIsRawMode(hasRawQuery);
+        setRawQueryText(hasRawQuery ? JSON.stringify(rawQuery, null, 2) : '');
+        setRawQueryError(null);
+    }, [rawQuery]);
 
     const handleConditionsChange = useCallback((newConditions: FilterConditionGroup) => {
         onChange(newConditions, sort, rawQuery);

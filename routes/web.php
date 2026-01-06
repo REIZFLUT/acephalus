@@ -117,6 +117,12 @@ Route::middleware('auth')->group(function () {
             ->name('contents.versions.restore');
     });
 
+    // Contents - Duplicate (requires create permission)
+    Route::middleware('permission:contents.create')->group(function () {
+        Route::post('contents/{content}/duplicate', [ContentController::class, 'duplicate'])
+            ->name('contents.duplicate');
+    });
+
     // Contents - Delete
     Route::middleware('permission:contents.delete')->group(function () {
         Route::delete('contents/{content}', [ContentController::class, 'destroy'])->name('contents.destroy');

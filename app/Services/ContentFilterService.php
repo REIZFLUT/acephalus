@@ -172,6 +172,13 @@ class ContentFilterService
     }
 
     /**
+     * Fields that are known to be arrays.
+     *
+     * @var array<string>
+     */
+    protected const ARRAY_FIELDS = ['editions'];
+
+    /**
      * Apply a single condition.
      *
      * @param  Builder<Content>|\MongoDB\Laravel\Relations\HasMany<Content>  $query
@@ -193,12 +200,19 @@ class ContentFilterService
         }
 
         $method = $groupOperator === 'or' ? 'orWhere' : 'where';
+        $isArrayField = in_array($field, self::ARRAY_FIELDS, true);
 
         match ($operator) {
             FilterOperator::EQUALS => $query->$method($field, '=', $value),
             FilterOperator::NOT_EQUALS => $query->$method($field, '!=', $value),
-            FilterOperator::CONTAINS => $query->$method($field, 'like', '%'.$value.'%'),
-            FilterOperator::NOT_CONTAINS => $query->$method($field, 'not like', '%'.$value.'%'),
+            // For array fields, "contains" checks if the array contains the value
+            // For text fields, "contains" does a substring match
+            FilterOperator::CONTAINS => $isArrayField
+                ? $query->$method($field, $value)  // MongoDB array contains
+                : $query->$method($field, 'like', '%'.$value.'%'),
+            FilterOperator::NOT_CONTAINS => $isArrayField
+                ? $query->$method($field, '!=', $value)  // MongoDB array not contains
+                : $query->$method($field, 'not like', '%'.$value.'%'),
             FilterOperator::STARTS_WITH => $query->$method($field, 'like', $value.'%'),
             FilterOperator::ENDS_WITH => $query->$method($field, 'like', '%'.$value),
             FilterOperator::IN => $query->{$method.'In'}($field, (array) $value),

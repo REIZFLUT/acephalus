@@ -183,6 +183,8 @@ enum FilterOperator: string
     public static function forSelect(): array
     {
         return [
+            self::CONTAINS,
+            self::NOT_CONTAINS,
             self::EQUALS,
             self::NOT_EQUALS,
             self::IN,

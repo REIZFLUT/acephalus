@@ -231,4 +231,50 @@ class ContentController extends Controller
             ->route('contents.edit', $content->_id)
             ->with('success', "Content restored to version {$version}.");
     }
+
+    public function duplicate(Request $request, Content $content): RedirectResponse
+    {
+        $validated = $request->validate([
+            'slug' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[a-z0-9-]+$/',
+                function (string $attribute, mixed $value, \Closure $fail) use ($content) {
+                    // Check if slug already exists in the same collection
+                    $exists = Content::where('collection_id', $content->collection_id)
+                        ->where('slug', $value)
+                        ->exists();
+
+                    if ($exists) {
+                        $fail('This slug is already used in this collection.');
+                    }
+                },
+            ],
+        ]);
+
+        // Create the duplicate with all data from the original
+        $duplicatedContent = Content::create([
+            'collection_id' => $content->collection_id,
+            'title' => $content->title.' (Copy)',
+            'slug' => $validated['slug'],
+            'status' => ContentStatus::DRAFT,
+            'current_version' => 1,
+            'elements' => $content->elements ?? [],
+            'metadata' => $content->metadata ?? [],
+            'editions' => $content->editions ?? [],
+        ]);
+
+        // Create initial version for the duplicate
+        $this->versionService->createVersion(
+            $duplicatedContent,
+            $request->user(),
+            'Duplicated from '.$content->title,
+            false
+        );
+
+        return redirect()
+            ->route('contents.edit', $duplicatedContent->_id)
+            ->with('success', 'Content duplicated successfully.');
+    }
 }

@@ -14,7 +14,7 @@ import {
     type VisibilityState,
 } from "@tanstack/react-table"
 import { Link, router } from "@inertiajs/react"
-import { MoreHorizontal, Edit, Trash2, Send, Archive } from "lucide-react"
+import { MoreHorizontal, Edit, Trash2, Send, Archive, Copy, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -35,6 +35,15 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import {
     Table,
@@ -207,6 +216,13 @@ export function ContentDataTable({
     listViewSettings,
     editions = [],
 }: ContentDataTableProps) {
+    // Duplicate dialog state
+    const [duplicateDialogOpen, setDuplicateDialogOpen] = React.useState(false)
+    const [duplicateContent, setDuplicateContent] = React.useState<Content | null>(null)
+    const [duplicateSlug, setDuplicateSlug] = React.useState('')
+    const [duplicateError, setDuplicateError] = React.useState<string | null>(null)
+    const [isDuplicating, setIsDuplicating] = React.useState(false)
+
     // Get content metadata fields from schema (must be defined first)
     const contentMetaFields: MetaFieldDefinition[] = React.useMemo(() => {
         const schema = collection.schema as any
@@ -271,6 +287,46 @@ export function ContentDataTable({
         router.post(`/contents/${content._id}/unpublish`)
     }
 
+    const openDuplicateDialog = (content: Content) => {
+        setDuplicateContent(content)
+        setDuplicateSlug(`${content.slug}-copy`)
+        setDuplicateError(null)
+        setDuplicateDialogOpen(true)
+    }
+
+    const handleDuplicate = () => {
+        if (!duplicateContent || !duplicateSlug.trim()) {
+            setDuplicateError('Please enter a slug.')
+            return
+        }
+
+        // Validate slug format
+        if (!/^[a-z0-9-]+$/.test(duplicateSlug)) {
+            setDuplicateError('Slug must only contain lowercase letters, numbers, and hyphens.')
+            return
+        }
+
+        setIsDuplicating(true)
+        setDuplicateError(null)
+
+        router.post(
+            `/contents/${duplicateContent._id}/duplicate`,
+            { slug: duplicateSlug },
+            {
+                onError: (errors) => {
+                    setDuplicateError(errors.slug || 'Failed to duplicate content.')
+                    setIsDuplicating(false)
+                },
+                onSuccess: () => {
+                    setDuplicateDialogOpen(false)
+                    setDuplicateContent(null)
+                    setDuplicateSlug('')
+                    setIsDuplicating(false)
+                },
+            }
+        )
+    }
+
     // Build columns from list view settings (using valid columns only)
     const columns: ColumnDef<Content>[] = React.useMemo(() => {
         const cols: ColumnDef<Content>[] = []
@@ -315,6 +371,10 @@ export function ContentDataTable({
                                         <Edit className="size-4 mr-2" />
                                         Edit
                                     </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openDuplicateDialog(content)}>
+                                    <Copy className="size-4 mr-2" />
+                                    Duplicate
                                 </DropdownMenuItem>
                                 {content.status === 'draft' ? (
                                     <DropdownMenuItem onClick={() => handlePublish(content)}>
@@ -452,6 +512,56 @@ export function ContentDataTable({
                 table={table} 
                 pageSizeOptions={listViewSettings.per_page_options}
             />
+
+            {/* Duplicate Dialog */}
+            <Dialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Duplicate Content</DialogTitle>
+                        <DialogDescription>
+                            Create a copy of "{duplicateContent?.title}" with a new unique slug.
+                            All elements, metadata, and editions will be copied.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="duplicate-slug-table">New Slug</Label>
+                            <Input
+                                id="duplicate-slug-table"
+                                value={duplicateSlug}
+                                onChange={(e) => {
+                                    setDuplicateSlug(e.target.value)
+                                    setDuplicateError(null)
+                                }}
+                                placeholder="new-content-slug"
+                            />
+                            <p className="text-sm text-muted-foreground">
+                                URL: /{collection.slug}/{duplicateSlug || 'new-slug'}
+                            </p>
+                            {duplicateError && (
+                                <p className="text-sm text-destructive">{duplicateError}</p>
+                            )}
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDuplicateDialogOpen(false)}
+                            disabled={isDuplicating}
+                        >
+                            Cancel
+                        </Button>
+                        <Button onClick={handleDuplicate} disabled={isDuplicating}>
+                            {isDuplicating ? (
+                                <Loader2 className="size-4 mr-2 animate-spin" />
+                            ) : (
+                                <Copy className="size-4 mr-2" />
+                            )}
+                            Duplicate
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

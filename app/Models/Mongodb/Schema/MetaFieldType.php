@@ -15,6 +15,7 @@ enum MetaFieldType: string
     case BOOLEAN = 'boolean';
     case DATE = 'date';
     case DATETIME = 'datetime';
+    case TIME = 'time';
     case SELECT = 'select';
     case MULTI_SELECT = 'multi_select';
     case URL = 'url';
@@ -34,6 +35,7 @@ enum MetaFieldType: string
             self::BOOLEAN => 'Boolean',
             self::DATE => 'Date',
             self::DATETIME => 'Date & Time',
+            self::TIME => 'Time',
             self::SELECT => 'Select',
             self::MULTI_SELECT => 'Multi-Select',
             self::URL => 'URL',
@@ -63,11 +65,10 @@ enum MetaFieldType: string
             self::TEXT, self::TEXTAREA, self::URL, self::EMAIL, self::COLOR => '',
             self::NUMBER => 0,
             self::BOOLEAN => false,
-            self::DATE, self::DATETIME => null,
+            self::DATE, self::DATETIME, self::TIME => null,
             self::SELECT => null,
             self::MULTI_SELECT => [],
             self::JSON => [],
         };
     }
 }
-

@@ -90,6 +90,7 @@ const metaFieldTypes: { value: MetaFieldType; label: string }[] = [
     { value: 'boolean', label: 'Boolean' },
     { value: 'date', label: 'Date' },
     { value: 'datetime', label: 'Date & Time' },
+    { value: 'time', label: 'Time' },
     { value: 'select', label: 'Select' },
     { value: 'multi_select', label: 'Multi-Select' },
     { value: 'url', label: 'URL' },

@@ -155,6 +155,7 @@ export type MetaFieldType =
     | 'boolean'
     | 'date'
     | 'datetime'
+    | 'time'
     | 'select'
     | 'multi_select'
     | 'url'

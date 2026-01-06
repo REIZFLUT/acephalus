@@ -22,16 +22,22 @@ class MediaMetaField extends Model
 
     /**
      * Available field types.
+     * These should match MetaFieldType enum for consistency.
      */
     public const FIELD_TYPES = [
         'text',
         'textarea',
+        'number',
+        'boolean',
+        'date',
+        'datetime',
+        'time',
         'select',
         'multi_select',
-        'number',
-        'date',
         'url',
         'email',
+        'color',
+        'json',
     ];
 
     protected $fillable = [

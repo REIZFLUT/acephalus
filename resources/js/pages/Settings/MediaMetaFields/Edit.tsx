@@ -76,13 +76,18 @@ export default function MediaMetaFieldsEdit({ field, fieldTypes }: EditProps) {
     const getFieldTypeLabel = (type: string) => {
         const labels: Record<string, string> = {
             text: 'Text',
-            textarea: 'Textarea',
-            select: 'Select (Dropdown)',
-            multi_select: 'Multi-Select',
+            textarea: 'Long Text',
             number: 'Number',
+            boolean: 'Boolean',
             date: 'Date',
+            datetime: 'Date & Time',
+            time: 'Time',
+            select: 'Select',
+            multi_select: 'Multi-Select',
             url: 'URL',
             email: 'Email',
+            color: 'Color',
+            json: 'JSON',
         };
         return labels[type] || type;
     };

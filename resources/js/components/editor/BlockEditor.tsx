@@ -320,7 +320,7 @@ function getDefaultData(type: ElementType): BlockElement['data'] {
         case 'xml':
             return { content: '', schema: '' };
         case 'wrapper':
-            return { layout: 'vertical', gap: '1rem' };
+            return {};
         default:
             return {};
     }

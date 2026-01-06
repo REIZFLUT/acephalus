@@ -158,6 +158,17 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                     />
                 );
 
+            case 'time':
+                return (
+                    <Input
+                        id={name}
+                        type="time"
+                        value={(currentValue as string) || ''}
+                        onChange={(e) => onChange(e.target.value)}
+                        className={compact ? 'h-8' : undefined}
+                    />
+                );
+
             case 'color':
                 return (
                     <div className="flex items-center gap-2">
@@ -189,10 +200,12 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                 );
 
             case 'multi_select':
+                // Ensure value is always an array
+                const multiSelectValue = Array.isArray(currentValue) ? currentValue : [];
                 return renderMultiSelectInput(
                     input_style || 'dropdown',
                     options || [],
-                    (currentValue as string[]) || [],
+                    multiSelectValue,
                     (vals) => onChange(vals),
                     placeholder,
                     compact,

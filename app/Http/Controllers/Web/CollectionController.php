@@ -75,17 +75,15 @@ class CollectionController extends Controller
     {
         $collection->load('contents');
 
-        $selectedEdition = $request->query('edition');
         $filterViewId = $request->query('filter_view');
+        $schema = $collection->schema ?? [];
 
-        // Get editions available for this collection
-        // First, get all editions - we'll filter by allowed_editions if configured
+        // Get editions for filter field options (used in filter builder)
         $allEditions = Edition::orderBy('is_system', 'desc')
             ->orderBy('name')
             ->get(['_id', 'slug', 'name', 'description', 'icon', 'is_system']);
 
         // Filter by collection's allowed editions if specified
-        $schema = $collection->schema ?? [];
         $allowedEditions = $schema['allowed_editions'] ?? null;
 
         if (is_array($allowedEditions) && count($allowedEditions) > 0) {
@@ -140,15 +138,6 @@ class CollectionController extends Controller
             $query->orderBy($defaultSortColumn, $defaultSortDirection);
         }
 
-        // Filter by edition if specified
-        if ($selectedEdition) {
-            $query->where(function ($q) use ($selectedEdition) {
-                $q->whereNull('editions')
-                    ->orWhere('editions', [])
-                    ->orWhere('editions', $selectedEdition);
-            });
-        }
-
         $contents = $query->paginate($perPage);
 
         // Manually add versions_count for each content (withCount not supported by MongoDB)
@@ -162,7 +151,6 @@ class CollectionController extends Controller
             'collection' => $collection,
             'contents' => $contents,
             'editions' => $editions,
-            'selectedEdition' => $selectedEdition,
             'filterViews' => $filterViews,
             'selectedFilterView' => $selectedFilterView,
             'availableFilterFields' => $availableFilterFields,

@@ -49,11 +49,8 @@ class ContentController extends Controller
         // Apply filter view if specified
         if ($filterViewId) {
             $filterView = FilterView::find($filterViewId);
-            if ($filterView) {
-                // Ensure filter view is available for this collection
-                if ($filterView->isGlobal() || (string) $filterView->collection_id === (string) $collection->_id) {
-                    $query = $this->filterService->applyFilterView($query, $filterView, $collection);
-                }
+            if ($filterView && $filterView->belongsToCollection((string) $collection->_id)) {
+                $query = $this->filterService->applyFilterView($query, $filterView, $collection);
             }
         }
 

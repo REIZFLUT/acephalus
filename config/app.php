@@ -132,8 +132,11 @@ return [
     | only be enabled during initial installation. Once setup is complete,
     | set SETUP_ENABLED=false in your .env file for security.
     |
+    | Accepted values: 1, "1", "true" (case insensitive) = enabled
+    | All other values (including "false", 0, empty) = disabled
+    |
     */
 
-    'setup_enabled' => (bool) env('SETUP_ENABLED', false),
+    'setup_enabled' => in_array(strtolower((string) env('SETUP_ENABLED', '')), ['1', 'true'], true),
 
 ];

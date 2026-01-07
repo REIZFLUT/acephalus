@@ -89,7 +89,7 @@ const blockLabels: Record<string, string> = {
     svg: 'SVG',
     katex: 'KaTeX Formula',
     wrapper: 'Wrapper',
-    reference: 'Internal Reference',
+    reference: 'Reference',
 };
 
 const blockColors: Record<string, string> = {

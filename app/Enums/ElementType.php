@@ -83,7 +83,7 @@ enum ElementType: string
             self::JSON => 'Custom JSON Data',
             self::XML => 'Custom XML Data',
             self::WRAPPER => 'Wrapper Container',
-            self::REFERENCE => 'Internal Reference',
+            self::REFERENCE => 'Reference',
         };
     }
 }

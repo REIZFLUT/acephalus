@@ -7,11 +7,17 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Mongodb\Collection;
 use App\Models\Mongodb\Content;
+use App\Models\Mongodb\FilterView;
+use App\Services\ContentFilterService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ReferenceController extends Controller
 {
+    public function __construct(
+        protected ContentFilterService $filterService,
+    ) {}
+
     /**
      * Get all collections for the reference picker.
      */
@@ -215,8 +221,9 @@ class ReferenceController extends Controller
 
     /**
      * Get collection preview with the 3 newest content items.
+     * Optionally apply a filter view if specified.
      */
-    public function previewCollection(string $collectionId): JsonResponse
+    public function previewCollection(Request $request, string $collectionId): JsonResponse
     {
         $collection = Collection::find($collectionId);
 
@@ -226,9 +233,26 @@ class ReferenceController extends Controller
             ], 404);
         }
 
-        // Get the 3 newest contents from this collection
-        $contents = Content::where('collection_id', $collectionId)
-            ->select(['_id', 'title', 'slug', 'status', 'created_at'])
+        $filterViewId = $request->input('filter_view');
+        $filterView = null;
+
+        // Start query for contents
+        $query = $collection->contents()
+            ->select(['_id', 'title', 'slug', 'status', 'created_at', 'metadata']);
+
+        // Apply filter view if specified
+        if ($filterViewId) {
+            $filterView = FilterView::find($filterViewId);
+            if ($filterView && $filterView->belongsToCollection($collectionId)) {
+                $query = $this->filterService->applyFilterView($query, $filterView, $collection);
+            }
+        }
+
+        // Get total count before limiting
+        $totalCount = (clone $query)->count();
+
+        // Get the 3 newest contents (or filtered results)
+        $contents = $query
             ->orderByDesc('created_at')
             ->limit(3)
             ->get()
@@ -242,10 +266,7 @@ class ReferenceController extends Controller
                 ];
             });
 
-        // Count total contents in collection
-        $totalCount = Content::where('collection_id', $collectionId)->count();
-
-        return response()->json([
+        $response = [
             'collection' => [
                 '_id' => (string) $collection->_id,
                 'name' => $collection->name,
@@ -254,7 +275,18 @@ class ReferenceController extends Controller
             ],
             'contents' => $contents,
             'total_count' => $totalCount,
-        ]);
+        ];
+
+        // Include filter view info if applied
+        if ($filterView) {
+            $response['filter_view'] = [
+                '_id' => (string) $filterView->_id,
+                'name' => $filterView->name,
+                'slug' => $filterView->slug,
+            ];
+        }
+
+        return response()->json($response);
     }
 
     /**
@@ -364,5 +396,37 @@ class ReferenceController extends Controller
         }
 
         return substr($text, 0, $maxLength - 3).'...';
+    }
+
+    /**
+     * Get filter views for a specific collection.
+     */
+    public function filterViews(string $collectionId): JsonResponse
+    {
+        $collection = Collection::find($collectionId);
+
+        if (! $collection) {
+            return response()->json([
+                'message' => 'Collection not found.',
+            ], 404);
+        }
+
+        $filterViews = FilterView::availableFor($collectionId)
+            ->orderBy('is_system', 'desc')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($filterView) {
+                return [
+                    '_id' => (string) $filterView->_id,
+                    'name' => $filterView->name,
+                    'slug' => $filterView->slug,
+                    'description' => $filterView->description,
+                    'is_system' => $filterView->is_system,
+                ];
+            });
+
+        return response()->json([
+            'data' => $filterViews,
+        ]);
     }
 }

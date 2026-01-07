@@ -5,6 +5,7 @@ import { WysiwygEditor } from '../WysiwygEditor';
 import { CodeEditor } from '../CodeEditor';
 import { BlockEditorProps } from '../BlockItem';
 import { useSchema } from '../SchemaContext';
+import { MetaFieldsEditor } from '../MetaFieldsEditor';
 import { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Eye, Code } from 'lucide-react';
@@ -33,7 +34,7 @@ const syntaxOptions = [
 ];
 
 export default function TextBlockEditor({ block, onUpdate }: BlockEditorProps) {
-    const { getTextFormats } = useSchema();
+    const { getTextFormats, schema } = useSchema();
     const allowedFormats = getTextFormats();
     
     const format = (block.data.format as string) || allowedFormats[0] || 'plain';
@@ -41,6 +42,14 @@ export default function TextBlockEditor({ block, onUpdate }: BlockEditorProps) {
     const syntax = (block.data.syntax as string) || 'text';
     
     const [mdViewMode, setMdViewMode] = useState<'code' | 'preview'>('code');
+    
+    // Get custom fields for text element from schema
+    const customFields = schema?.element_meta_fields?.text;
+    const hasCustomFields = Array.isArray(customFields) && customFields.length > 0;
+    
+    const handleMetaChange = (updates: Record<string, any>) => {
+        onUpdate({ ...block.data, ...updates });
+    };
 
     // If current format is not allowed, switch to the first allowed format
     useEffect(() => {
@@ -158,6 +167,15 @@ export default function TextBlockEditor({ block, onUpdate }: BlockEditorProps) {
                     language={syntax as any}
                     placeholder="Enter your text content..."
                     minHeight="200px"
+                />
+            )}
+
+            {/* Custom Meta Fields */}
+            {hasCustomFields && (
+                <MetaFieldsEditor 
+                    fields={customFields} 
+                    data={block.data as Record<string, any>} 
+                    onChange={handleMetaChange} 
                 />
             )}
         </div>

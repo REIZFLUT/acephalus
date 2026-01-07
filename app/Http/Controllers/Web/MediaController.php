@@ -44,8 +44,12 @@ class MediaController extends Controller
             $query->where('folder_id', $folderId);
         }
 
-        if ($type = $request->input('type')) {
-            $query->where('mime_type', 'like', "{$type}/%");
+        // Support filtering by media_type (image, video, audio, document)
+        // Can be a single type or an array of types
+        $types = $request->input('type');
+        if ($types) {
+            $typeArray = is_array($types) ? $types : [$types];
+            $query->whereIn('media_type', $typeArray);
         }
 
         // Allow configurable items per page (default 24 for Grid view)
@@ -139,7 +143,7 @@ class MediaController extends Controller
             'isGlobalSearch' => $isGlobalSearch,
             'filters' => [
                 'search' => $search,
-                'type' => $type,
+                'type' => $types,
                 'folder' => $originalFolderId,
                 'per_page' => $perPage,
             ],

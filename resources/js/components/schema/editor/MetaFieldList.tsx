@@ -2,6 +2,7 @@ import type { MetaFieldDefinition, MetaFieldType, SelectInputStyle } from '@/typ
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
     Select,
     SelectContent,
@@ -9,8 +10,14 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Plus, Trash2, GripVertical } from 'lucide-react';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { Plus, Trash2, GripVertical, ChevronDown, Info } from 'lucide-react';
 import { metaFieldTypes, selectInputStyles } from './constants';
+import { useState } from 'react';
 
 interface MetaFieldListProps {
     fields: MetaFieldDefinition[];
@@ -50,6 +57,27 @@ interface MetaFieldItemProps {
 }
 
 function MetaFieldItem({ field, index, onUpdate, onRemove }: MetaFieldItemProps) {
+    // Support legacy help_text field for backwards compatibility
+    const descriptionValue = field.description || (field as any).help_text;
+    const hasDescOrExpl = !!(descriptionValue || field.explanation);
+    const [showAdvanced, setShowAdvanced] = useState(hasDescOrExpl);
+
+    const getAdvancedLabel = () => {
+        const parts = [];
+        if (descriptionValue) parts.push('Description');
+        if (field.explanation) parts.push('Explanation');
+        
+        if (parts.length > 0) {
+            return (
+                <span className="flex items-center gap-1">
+                    <Info className="size-3" />
+                    {parts.join(' & ')} set
+                </span>
+            );
+        }
+        return 'Add description & explanation';
+    };
+
     return (
         <div className="flex items-start gap-2 p-3 border rounded-md bg-background">
             <GripVertical className="size-4 text-muted-foreground mt-2 cursor-move" />
@@ -65,6 +93,47 @@ function MetaFieldItem({ field, index, onUpdate, onRemove }: MetaFieldItemProps)
                 {(field.type === 'select' || field.type === 'multi_select') && (
                     <SelectOptions field={field} index={index} onUpdate={onUpdate} />
                 )}
+
+                {/* Advanced options (Description & Explanation) */}
+                <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+                    <CollapsibleTrigger asChild>
+                        <button 
+                            type="button" 
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                            <ChevronDown className={`size-3 transition-transform ${showAdvanced ? '' : '-rotate-90'}`} />
+                            {getAdvancedLabel()}
+                        </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-2">
+                        <div className="ml-6 space-y-4">
+                            <div className="space-y-1.5">
+                                <Label className="text-xs text-muted-foreground">
+                                    Description (shown below the input)
+                                </Label>
+                                <Textarea
+                                    placeholder="Help text shown below the field..."
+                                    value={descriptionValue || ''}
+                                    onChange={(e) => onUpdate(index, { description: e.target.value || undefined })}
+                                    rows={2}
+                                    className="text-sm"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label className="text-xs text-muted-foreground">
+                                    Explanation (shown via info icon tooltip)
+                                </Label>
+                                <Textarea
+                                    placeholder="Detailed explanation shown when hovering the info icon..."
+                                    value={field.explanation || ''}
+                                    onChange={(e) => onUpdate(index, { explanation: e.target.value || undefined })}
+                                    rows={2}
+                                    className="text-sm"
+                                />
+                            </div>
+                        </div>
+                    </CollapsibleContent>
+                </Collapsible>
             </div>
         </div>
     );

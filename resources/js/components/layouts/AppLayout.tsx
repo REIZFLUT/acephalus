@@ -11,6 +11,9 @@ import {
     ChevronDown,
     Menu,
     Shield,
+    Sun,
+    Moon,
+    Monitor,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -47,6 +50,7 @@ import {
     BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { Separator } from '@/components/ui/separator';
+import { useTheme } from '@/components/theme-provider';
 import type { PageProps } from '@/types';
 
 interface AppLayoutProps extends PropsWithChildren {
@@ -72,6 +76,86 @@ const navigationItems = [
         ],
     },
 ];
+
+const themeOptions = [
+    { value: 'light', label: 'Light', icon: Sun },
+    { value: 'dark', label: 'Dark', icon: Moon },
+    { value: 'system', label: 'System', icon: Monitor },
+] as const;
+
+interface UserMenuProps {
+    auth: PageProps['auth'];
+    getInitials: (name: string) => string;
+    handleLogout: () => void;
+}
+
+function UserMenu({ auth, getInitials, handleLogout }: UserMenuProps) {
+    const { theme, setTheme } = useTheme();
+
+    const currentTheme = themeOptions.find((t) => t.value === theme) ?? themeOptions[2];
+    const ThemeIcon = currentTheme.icon;
+
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <SidebarMenuButton size="lg" className="w-full justify-start gap-3">
+                    <Avatar className="size-8">
+                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                            {auth.user ? getInitials(auth.user.name) : '??'}
+                        </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col items-start text-left">
+                        <span className="text-sm font-medium">{auth.user?.name ?? 'Guest'}</span>
+                        <span className="text-xs text-muted-foreground truncate max-w-[140px]">
+                            {auth.user?.email ?? ''}
+                        </span>
+                    </div>
+                    <ChevronDown className="ml-auto size-4" />
+                </SidebarMenuButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="top" className="w-[--radix-dropdown-menu-trigger-width]">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                    <Link href="/profile">
+                        <Settings className="mr-2 size-4" />
+                        Profile Settings
+                    </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
+                    <ThemeIcon className="size-3" />
+                    Theme
+                </DropdownMenuLabel>
+                <div className="flex gap-1 px-2 pb-2">
+                    {themeOptions.map((option) => {
+                        const Icon = option.icon;
+                        return (
+                            <button
+                                key={option.value}
+                                onClick={() => setTheme(option.value)}
+                                className={cn(
+                                    'flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs transition-colors',
+                                    theme === option.value
+                                        ? 'bg-accent text-accent-foreground'
+                                        : 'hover:bg-accent/50'
+                                )}
+                            >
+                                <Icon className="size-3.5" />
+                                {option.label}
+                            </button>
+                        );
+                    })}
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                    <LogOut className="mr-2 size-4" />
+                    Log out
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+}
 
 export default function AppLayout({ children, title, breadcrumbs = [], actions }: AppLayoutProps) {
     const { auth } = usePage<PageProps>().props;
@@ -151,57 +235,17 @@ export default function AppLayout({ children, title, breadcrumbs = [], actions }
                     <SidebarFooter className="border-t border-sidebar-border">
                         <SidebarMenu>
                             <SidebarMenuItem>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <SidebarMenuButton
-                                            size="lg"
-                                            className="w-full justify-start gap-3"
-                                        >
-                                            <Avatar className="size-8">
-                                                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                                                    {auth.user ? getInitials(auth.user.name) : '??'}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex flex-col items-start text-left">
-                                                <span className="text-sm font-medium">
-                                                    {auth.user?.name ?? 'Guest'}
-                                                </span>
-                                                <span className="text-xs text-muted-foreground truncate max-w-[140px]">
-                                                    {auth.user?.email ?? ''}
-                                                </span>
-                                            </div>
-                                            <ChevronDown className="ml-auto size-4" />
-                                        </SidebarMenuButton>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent
-                                        align="end"
-                                        side="top"
-                                        className="w-[--radix-dropdown-menu-trigger-width]"
-                                    >
-                                        <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem asChild>
-                                            <Link href="/profile">
-                                                <Settings className="mr-2 size-4" />
-                                                Profile Settings
-                                            </Link>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem
-                                            onClick={handleLogout}
-                                            className="text-destructive focus:text-destructive"
-                                        >
-                                            <LogOut className="mr-2 size-4" />
-                                            Log out
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                                <UserMenu
+                                    auth={auth}
+                                    getInitials={getInitials}
+                                    handleLogout={handleLogout}
+                                />
                             </SidebarMenuItem>
                         </SidebarMenu>
                     </SidebarFooter>
                 </Sidebar>
 
-                <SidebarInset className="flex flex-col h-screen overflow-hidden">
+                <SidebarInset className="flex h-svh flex-col md:h-[calc(100svh-1rem)]">
                     {/* Header */}
                     <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border px-4">
                         <SidebarTrigger className="-ml-1" />
@@ -231,7 +275,7 @@ export default function AppLayout({ children, title, breadcrumbs = [], actions }
                     </header>
 
                     {/* Main Content */}
-                    <main className="flex-1 p-6 overflow-auto">
+                    <main className="flex-1 min-h-0 p-6 overflow-auto">
                         {children}
                     </main>
                 </SidebarInset>

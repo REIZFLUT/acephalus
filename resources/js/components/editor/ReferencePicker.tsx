@@ -42,6 +42,7 @@ export interface ReferenceValue {
     collection_id?: string;
     content_id?: string;
     element_id?: string;
+    filter_view_id?: string;
     display_title?: string;
 }
 
@@ -122,6 +123,11 @@ interface CollectionPreviewData {
         created_at: string | null;
     }>;
     total_count: number;
+    filter_view?: {
+        _id: string;
+        name: string;
+        slug: string;
+    } | null;
 }
 
 type PreviewData = ContentPreviewData | CollectionPreviewData;
@@ -393,8 +399,15 @@ export function ReferencePicker({
         setIsPreviewLoading(true);
         try {
             if (value.reference_type === 'collection' && value.collection_id) {
-                // Fetch collection preview
-                const response = await fetch(`/api/v1/references/preview/collection/${value.collection_id}`, {
+                // Fetch collection preview - include filter_view_id if set
+                const params = new URLSearchParams();
+                if (value.filter_view_id) {
+                    params.set('filter_view', value.filter_view_id);
+                }
+                const queryString = params.toString();
+                const url = `/api/v1/references/preview/collection/${value.collection_id}${queryString ? `?${queryString}` : ''}`;
+                
+                const response = await fetch(url, {
                     credentials: 'include',
                 });
 
@@ -409,6 +422,7 @@ export function ReferencePicker({
                     collection: data.collection,
                     contents: data.contents || [],
                     total_count: data.total_count || 0,
+                    filter_view: data.filter_view || null,
                 });
                 setIsPreviewOpen(true);
             } else if (value.content_id) {
@@ -694,18 +708,6 @@ export function ReferencePicker({
                 )}
             </div>
 
-            {/* Reference type badge */}
-            {value?.reference_type && (
-                <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">
-                        {value.reference_type === 'collection' && <Folder className="size-3 mr-1" />}
-                        {value.reference_type === 'content' && <FileText className="size-3 mr-1" />}
-                        {value.reference_type === 'element' && <Box className="size-3 mr-1" />}
-                        {value.reference_type}
-                    </Badge>
-                </div>
-            )}
-
             {/* Picker Dialog */}
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
                 <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
@@ -929,6 +931,11 @@ export function ReferencePicker({
                                 <div className="flex items-center gap-2 mb-1">
                                     <Folder className="size-5 text-amber-500" />
                                     <Badge variant="secondary" className="text-xs">Collection</Badge>
+                                    {previewData.filter_view && (
+                                        <Badge variant="outline" className="text-xs">
+                                            Filter: {previewData.filter_view.name}
+                                        </Badge>
+                                    )}
                                 </div>
                                 <DialogTitle className="text-lg">
                                     {previewData.collection.name}
@@ -946,10 +953,12 @@ export function ReferencePicker({
                                 <div className="p-4 space-y-4">
                                     <div className="flex items-center justify-between">
                                         <h4 className="text-sm font-medium text-muted-foreground">
-                                            Neueste Einträge
+                                            {previewData.filter_view 
+                                                ? 'Gefilterte Einträge' 
+                                                : 'Neueste Einträge'}
                                         </h4>
                                         <Badge variant="outline" className="text-xs">
-                                            {previewData.total_count} {previewData.total_count === 1 ? 'Eintrag' : 'Einträge'} gesamt
+                                            {previewData.total_count} {previewData.total_count === 1 ? 'Eintrag' : 'Einträge'} {previewData.filter_view ? 'gefiltert' : 'gesamt'}
                                         </Badge>
                                     </div>
                                     {previewData.contents.length > 0 ? (
@@ -980,7 +989,9 @@ export function ReferencePicker({
                                         </div>
                                     ) : (
                                         <div className="text-center py-8 text-muted-foreground">
-                                            Diese Collection hat keine Einträge.
+                                            {previewData.filter_view 
+                                                ? 'Keine Einträge entsprechen diesem Filter.'
+                                                : 'Diese Collection hat keine Einträge.'}
                                         </div>
                                     )}
                                     {previewData.total_count > 3 && (

@@ -195,16 +195,19 @@ export interface MetaFieldDefinition {
     label: string;
     type: MetaFieldType;
     required: boolean;
+    explanation?: string; // Optional explanation shown via info icon
     default_value?: unknown;
     options?: MetaFieldOption[]; // For select/multi-select
     placeholder?: string;
-    help_text?: string;
+    description?: string;
     // For textarea fields
     editor_type?: 'textarea' | 'tinymce' | 'codemirror';
     target_format?: 'plain' | 'html' | 'css' | 'javascript' | 'markdown' | 'json' | 'xml';
     // For select/multi-select fields
     input_style?: SelectInputStyle;
     allow_custom?: boolean; // For tags/combobox: allow custom values
+    // For media fields
+    media_config?: MediaMetaFieldConfig;
 }
 
 // Input styles for select/multi-select fields
@@ -221,6 +224,34 @@ export interface MetaFieldOption {
     label: string;
 }
 
+/**
+ * Value structure for media meta field type
+ */
+export interface MediaMetaFieldValue {
+    // Common fields
+    type: 'file' | 'folder';
+    id: string;
+    name: string;
+    path?: string;
+    // File-specific fields
+    media_type?: 'image' | 'video' | 'audio' | 'document';
+    mime_type?: string;
+    url?: string;
+    thumbnail_urls?: {
+        small?: string;
+        medium?: string;
+        large?: string;
+    };
+}
+
+/**
+ * Configuration options for media meta field
+ */
+export interface MediaMetaFieldConfig {
+    allowed_types?: ('image' | 'video' | 'audio' | 'document')[];
+    allow_folders?: boolean; // If true, can also select folders (default: true)
+}
+
 export type MetaFieldType = 
     | 'text'
     | 'textarea'
@@ -234,7 +265,8 @@ export type MetaFieldType =
     | 'url'
     | 'email'
     | 'color'
-    | 'json';
+    | 'json'
+    | 'media';
 
 // Legacy Schema interface (deprecated, use CollectionSchema)
 export interface Schema {
@@ -298,6 +330,9 @@ export interface MediaElementData {
     alt: string;
     caption: string;
     url?: string;
+    /** If a folder is selected instead of a file */
+    folder_id?: string;
+    folder_path?: string;
 }
 
 export interface SvgElementData {

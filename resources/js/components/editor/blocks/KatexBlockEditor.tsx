@@ -6,6 +6,8 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Code, Eye, AlertCircle } from 'lucide-react';
 import { BlockEditorProps } from '../BlockItem';
+import { useSchema } from '../SchemaContext';
+import { MetaFieldsEditor } from '../MetaFieldsEditor';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 
@@ -25,12 +27,21 @@ const commonFormulas = [
 ];
 
 export default function KatexBlockEditor({ block, onUpdate }: BlockEditorProps) {
+    const { schema } = useSchema();
     const katexData = block.data as KatexElementData;
     const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
     const [renderError, setRenderError] = useState<string | null>(null);
     const previewRef = useRef<HTMLDivElement>(null);
+
+    // Get custom fields for KaTeX element from schema
+    const customFields = schema?.element_meta_fields?.katex;
+    const hasCustomFields = Array.isArray(customFields) && customFields.length > 0;
     
     const handleChange = (updates: Partial<KatexElementData>) => {
+        onUpdate({ ...katexData, ...updates });
+    };
+
+    const handleMetaChange = (updates: Record<string, any>) => {
         onUpdate({ ...katexData, ...updates });
     };
     
@@ -149,6 +160,15 @@ export default function KatexBlockEditor({ block, onUpdate }: BlockEditorProps) 
                 Uses <a href="https://katex.org/docs/supported.html" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">KaTeX syntax</a>.
                 Display mode centers the formula on its own line with larger text.
             </p>
+
+            {/* Custom Meta Fields */}
+            {hasCustomFields && (
+                <MetaFieldsEditor 
+                    fields={customFields} 
+                    data={katexData as Record<string, any>} 
+                    onChange={handleMetaChange} 
+                />
+            )}
         </div>
     );
 }

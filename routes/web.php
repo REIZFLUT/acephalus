@@ -335,6 +335,7 @@ Route::middleware('auth')->group(function () {
         Route::prefix('references')->name('references.')->group(function () {
             Route::get('collections', [ReferenceController::class, 'collections'])->name('collections');
             Route::get('collections/{collectionId}/contents', [ReferenceController::class, 'contents'])->name('contents');
+            Route::get('collections/{collectionId}/filter-views', [ReferenceController::class, 'filterViews'])->name('filter-views');
             Route::get('contents/{contentId}/elements', [ReferenceController::class, 'elements'])->name('elements');
             Route::post('resolve', [ReferenceController::class, 'resolve'])->name('resolve');
             // Preview for content with elements

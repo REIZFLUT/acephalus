@@ -35,7 +35,15 @@ enum MediaType: string
             self::IMAGE => ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
             self::VIDEO => ['video/mp4', 'video/webm', 'video/ogg'],
             self::AUDIO => ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm'],
-            self::DOCUMENT => ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+            self::DOCUMENT => [
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation', // pptx
+                'application/vnd.ms-excel', // xls
+                'application/vnd.ms-powerpoint', // ppt
+            ],
         };
     }
 
@@ -53,5 +61,3 @@ enum MediaType: string
         return null;
     }
 }
-
-

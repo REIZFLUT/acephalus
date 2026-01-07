@@ -539,8 +539,8 @@ export function MediaDataTable({
     })
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center gap-4">
+        <div className="flex flex-col flex-1 min-h-0 gap-4">
+            <div className="flex items-center gap-4 shrink-0">
                 <Input
                     placeholder="Search in this folder..."
                     value={globalFilter}
@@ -549,73 +549,98 @@ export function MediaDataTable({
                 />
                 <DataTableViewOptions table={table} columnLabels={columnLabels} />
             </div>
-            <Card className="overflow-hidden">
-                <div className="overflow-auto max-h-[calc(100vh-26rem)]">
-                <Table>
-                    <TableHeader className="sticky top-0 bg-card z-10">
-                        {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => {
+            <Card className="overflow-hidden flex-1 min-h-0 flex flex-col">
+                {/* Fixed Header */}
+                <div className="shrink-0 border-b">
+                    <Table>
+                        <TableHeader>
+                            {table.getHeaderGroups().map((headerGroup) => (
+                                <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                                    {headerGroup.headers.map((header) => {
+                                        const widthClass = header.id === 'thumbnail' ? 'w-14' 
+                                            : header.id === 'actions' ? 'w-12'
+                                            : header.id === 'mime_type' ? 'w-20'
+                                            : header.id === 'size' ? 'w-24'
+                                            : header.id === 'tags' ? 'w-40'
+                                            : header.id.startsWith('meta_') ? 'w-40'
+                                            : ''
+                                        return (
+                                            <TableHead key={header.id} className={widthClass}>
+                                                {header.isPlaceholder
+                                                    ? null
+                                                    : flexRender(
+                                                          header.column.columnDef.header,
+                                                          header.getContext()
+                                                      )}
+                                            </TableHead>
+                                        )
+                                    })}
+                                </TableRow>
+                            ))}
+                        </TableHeader>
+                    </Table>
+                </div>
+                {/* Scrollable Body */}
+                <div className="overflow-auto flex-1">
+                    <Table>
+                        <TableBody>
+                            {table.getRowModel().rows?.length ? (
+                                table.getRowModel().rows.map((row) => {
+                                    const item = row.original
                                     return (
-                                        <TableHead key={header.id} className="bg-card">
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(
-                                                      header.column.columnDef.header,
-                                                      header.getContext()
-                                                  )}
-                                        </TableHead>
+                                        <TableRow
+                                            key={row.id}
+                                            data-state={row.getIsSelected() && "selected"}
+                                            className="cursor-pointer hover:bg-muted/50"
+                                            onDoubleClick={() => {
+                                                if (item._type === 'folder') {
+                                                    onFolderNavigate?.(item.id)
+                                                } else {
+                                                    onEdit(item)
+                                                }
+                                            }}
+                                        >
+                                        {row.getVisibleCells().map((cell) => {
+                                            const colId = cell.column.id
+                                            const widthClass = colId === 'thumbnail' ? 'w-14' 
+                                                : colId === 'actions' ? 'w-12'
+                                                : colId === 'mime_type' ? 'w-20'
+                                                : colId === 'size' ? 'w-24'
+                                                : colId === 'tags' ? 'w-40'
+                                                : colId.startsWith('meta_') ? 'w-40'
+                                                : ''
+                                            return (
+                                                <TableCell key={cell.id} className={widthClass}>
+                                                    {flexRender(
+                                                        cell.column.columnDef.cell,
+                                                        cell.getContext()
+                                                    )}
+                                                </TableCell>
+                                            )
+                                        })}
+                                        </TableRow>
                                     )
-                                })}
-                            </TableRow>
-                        ))}
-                    </TableHeader>
-                    <TableBody>
-                        {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => {
-                                const item = row.original
-                                return (
-                                    <TableRow
-                                        key={row.id}
-                                        data-state={row.getIsSelected() && "selected"}
-                                        className="cursor-pointer hover:bg-muted/50"
-                                        onDoubleClick={() => {
-                                            if (item._type === 'folder') {
-                                                onFolderNavigate?.(item.id)
-                                            } else {
-                                                onEdit(item)
-                                            }
-                                        }}
+                                })
+                            ) : (
+                                <TableRow>
+                                    <TableCell
+                                        colSpan={columns.length}
+                                        className="h-24 text-center"
                                     >
-                                        {row.getVisibleCells().map((cell) => (
-                                            <TableCell key={cell.id}>
-                                                {flexRender(
-                                                    cell.column.columnDef.cell,
-                                                    cell.getContext()
-                                                )}
-                                            </TableCell>
-                                        ))}
-                                    </TableRow>
-                                )
-                            })
-                        ) : (
-                            <TableRow>
-                                <TableCell
-                                    colSpan={columns.length}
-                                    className="h-24 text-center"
-                                >
-                                    This folder is empty.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
+                                        This folder is empty.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
                 </div>
             </Card>
-            <DataTablePagination 
-                table={table} 
-                pageSizeOptions={[10, 25, 50, 100]}
-            />
+            <div className="shrink-0">
+                <DataTablePagination 
+                    table={table} 
+                    pageSizeOptions={[10, 25, 50, 100]}
+                />
+            </div>
         </div>
     )
 }

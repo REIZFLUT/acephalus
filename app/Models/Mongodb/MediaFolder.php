@@ -162,8 +162,15 @@ class MediaFolder extends Model
      */
     public function canCreateSubfolders(): bool
     {
-        // Only allow custom subfolders in global root and its children
-        return $this->type === self::TYPE_ROOT_GLOBAL || $this->type === self::TYPE_CUSTOM;
+        // Allow custom subfolders in:
+        // 1. Global root and its children (custom folders)
+        // 2. Content folders (for organizing content-specific media)
+        // 3. Custom folders anywhere
+        return in_array($this->type, [
+            self::TYPE_ROOT_GLOBAL,
+            self::TYPE_CUSTOM,
+            self::TYPE_CONTENT,
+        ], true);
     }
 
     /**

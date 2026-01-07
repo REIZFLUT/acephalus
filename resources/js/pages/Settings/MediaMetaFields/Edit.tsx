@@ -28,6 +28,7 @@ interface MediaMetaField {
     slug: string;
     name: string;
     description: string | null;
+    explanation: string | null;
     field_type: string;
     options: FieldOption[] | null;
     is_system: boolean;
@@ -45,6 +46,7 @@ export default function MediaMetaFieldsEdit({ field, fieldTypes }: EditProps) {
         name: field.name,
         slug: field.slug,
         description: field.description || '',
+        explanation: field.explanation || '',
         field_type: field.field_type,
         options: field.options || [],
         required: field.required,
@@ -168,8 +170,28 @@ export default function MediaMetaFieldsEdit({ field, fieldTypes }: EditProps) {
                                     placeholder="Copyright information for the media file"
                                     rows={2}
                                 />
+                                <p className="text-xs text-muted-foreground">
+                                    Shown below the input field as help text.
+                                </p>
                                 {errors.description && (
                                     <p className="text-sm text-destructive">{errors.description}</p>
+                                )}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="explanation">Explanation</Label>
+                                <Textarea
+                                    id="explanation"
+                                    value={data.explanation}
+                                    onChange={(e) => setData('explanation', e.target.value)}
+                                    placeholder="Detailed explanation of how to use this field..."
+                                    rows={2}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Shown via info icon tooltip next to the label.
+                                </p>
+                                {errors.explanation && (
+                                    <p className="text-sm text-destructive">{errors.explanation}</p>
                                 )}
                             </div>
 

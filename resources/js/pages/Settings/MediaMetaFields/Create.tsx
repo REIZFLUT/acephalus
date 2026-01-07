@@ -31,6 +31,7 @@ export default function MediaMetaFieldsCreate({ fieldTypes }: CreateProps) {
         name: '',
         slug: '',
         description: '',
+        explanation: '',
         field_type: 'text',
         options: [] as FieldOption[],
         required: false,
@@ -153,8 +154,28 @@ export default function MediaMetaFieldsCreate({ fieldTypes }: CreateProps) {
                                     placeholder="Copyright information for the media file"
                                     rows={2}
                                 />
+                                <p className="text-xs text-muted-foreground">
+                                    Shown below the input field as help text.
+                                </p>
                                 {errors.description && (
                                     <p className="text-sm text-destructive">{errors.description}</p>
+                                )}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="explanation">Explanation</Label>
+                                <Textarea
+                                    id="explanation"
+                                    value={data.explanation}
+                                    onChange={(e) => setData('explanation', e.target.value)}
+                                    placeholder="Detailed explanation of how to use this field..."
+                                    rows={2}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Shown via info icon tooltip next to the label.
+                                </p>
+                                {errors.explanation && (
+                                    <p className="text-sm text-destructive">{errors.explanation}</p>
                                 )}
                             </div>
 

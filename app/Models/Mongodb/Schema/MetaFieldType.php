@@ -22,6 +22,7 @@ enum MetaFieldType: string
     case EMAIL = 'email';
     case COLOR = 'color';
     case JSON = 'json';
+    case MEDIA = 'media';
 
     /**
      * Get human-readable label.
@@ -42,6 +43,7 @@ enum MetaFieldType: string
             self::EMAIL => 'Email',
             self::COLOR => 'Color',
             self::JSON => 'JSON',
+            self::MEDIA => 'Attached Media',
         };
     }
 
@@ -69,6 +71,7 @@ enum MetaFieldType: string
             self::SELECT => null,
             self::MULTI_SELECT => [],
             self::JSON => [],
+            self::MEDIA => null,
         };
     }
 }

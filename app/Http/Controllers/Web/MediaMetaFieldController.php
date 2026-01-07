@@ -53,6 +53,7 @@ class MediaMetaFieldController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255', 'regex:/^[a-z0-9_]+$/', 'unique:mongodb.media_meta_fields,slug'],
             'description' => ['nullable', 'string', 'max:500'],
+            'explanation' => ['nullable', 'string', 'max:1000'],
             'field_type' => ['required', 'string', 'in:'.implode(',', MediaMetaField::FIELD_TYPES)],
             'options' => ['nullable', 'array'],
             'options.*.value' => ['required_with:options', 'string'],
@@ -75,6 +76,7 @@ class MediaMetaFieldController extends Controller
             'name' => $validated['name'],
             'slug' => $slug,
             'description' => $validated['description'] ?? null,
+            'explanation' => $validated['explanation'] ?? null,
             'field_type' => $validated['field_type'],
             'options' => $validated['options'] ?? null,
             'is_system' => false,
@@ -107,6 +109,7 @@ class MediaMetaFieldController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255', 'regex:/^[a-z0-9_]+$/'],
             'description' => ['nullable', 'string', 'max:500'],
+            'explanation' => ['nullable', 'string', 'max:1000'],
             'field_type' => ['required', 'string', 'in:'.implode(',', MediaMetaField::FIELD_TYPES)],
             'options' => ['nullable', 'array'],
             'options.*.value' => ['required_with:options', 'string'],
@@ -115,10 +118,11 @@ class MediaMetaFieldController extends Controller
             'placeholder' => ['nullable', 'string', 'max:255'],
         ]);
 
-        // System fields can only update description and placeholder
+        // System fields can only update description, explanation and placeholder
         if ($mediaMetaField->is_system) {
             $mediaMetaField->update([
                 'description' => $validated['description'] ?? $mediaMetaField->description,
+                'explanation' => $validated['explanation'] ?? $mediaMetaField->explanation,
                 'placeholder' => $validated['placeholder'] ?? $mediaMetaField->placeholder,
             ]);
         } else {
@@ -126,6 +130,7 @@ class MediaMetaFieldController extends Controller
                 'name' => $validated['name'],
                 'slug' => $validated['slug'] ?? $mediaMetaField->slug,
                 'description' => $validated['description'] ?? null,
+                'explanation' => $validated['explanation'] ?? null,
                 'field_type' => $validated['field_type'],
                 'options' => $validated['options'] ?? null,
                 'required' => $validated['required'] ?? false,
@@ -162,7 +167,7 @@ class MediaMetaFieldController extends Controller
     public function list(): JsonResponse
     {
         $fields = MediaMetaField::ordered()
-            ->get(['_id', 'slug', 'name', 'description', 'field_type', 'options', 'is_system', 'required', 'placeholder']);
+            ->get(['_id', 'slug', 'name', 'description', 'explanation', 'field_type', 'options', 'is_system', 'required', 'placeholder']);
 
         return response()->json($fields);
     }

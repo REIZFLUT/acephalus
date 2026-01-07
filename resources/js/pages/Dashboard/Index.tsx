@@ -73,7 +73,7 @@ const QuickAction = ({
     icon: React.ComponentType<{ className?: string }>;
     href: string;
 }) => (
-    <Link href={href}>
+    <Link href={href} className="block">
         <Card className="group hover:border-primary/50 hover:bg-accent/50 transition-all cursor-pointer">
             <CardContent className="flex items-center gap-4 p-4">
                 <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
@@ -141,8 +141,8 @@ export default function DashboardIndex({ stats, recentContents }: DashboardProps
                                 Get started with common tasks
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-3">
-                            <QuickAction
+<CardContent className="space-y-5">
+                                            <QuickAction
                                 title="Create Collection"
                                 description="Define a new content structure"
                                 icon={Plus}

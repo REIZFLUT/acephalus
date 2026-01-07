@@ -44,6 +44,7 @@ class MediaMetaField extends Model
         'slug',
         'name',
         'description',
+        'explanation',
         'field_type',
         'options',
         'is_system',
@@ -181,7 +182,8 @@ class MediaMetaField extends Model
             'type' => $this->field_type,
             'required' => $this->required ?? false,
             'placeholder' => $this->placeholder,
-            'help_text' => $this->description,
+            'description' => $this->description,
+            'explanation' => $this->explanation,
             'options' => $this->getFormattedOptions(),
         ];
     }

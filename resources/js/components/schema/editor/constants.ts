@@ -54,6 +54,7 @@ export const metaFieldTypes: { value: MetaFieldType; label: string }[] = [
     { value: 'email', label: 'Email' },
     { value: 'color', label: 'Color' },
     { value: 'json', label: 'JSON' },
+    { value: 'media', label: 'Attached Media' },
 ];
 
 export const selectInputStyles: { value: SelectInputStyle; label: string; singleSelect: boolean; multiSelect: boolean }[] = [

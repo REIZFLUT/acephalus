@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { MediaElementData, Media } from '@/types';
+import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     Select,
     SelectContent,
@@ -12,17 +12,16 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import {
     Collapsible,
     CollapsibleContent,
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { 
     Image, 
     Upload, 
@@ -32,17 +31,16 @@ import {
     FileText, 
     PenTool, 
     ChevronDown,
-    FolderOpen,
-    Loader2,
-    Check,
+    Folder,
     RefreshCw,
-    Search,
+    Eye,
 } from 'lucide-react';
 import { BlockEditorProps } from '../BlockItem';
 import { useSchema } from '../SchemaContext';
 import { MetaFieldsEditor } from '../MetaFieldsEditor';
 import { ThumbnailImage } from '@/components/ui/thumbnail-image';
 import { DocumentPreview, isDocumentMimeType } from '@/components/media/DocumentPreview';
+import { MediaPickerDialog } from '../MediaPickerInput';
 
 const mediaTypeLabels: Record<string, string> = {
     image: 'Image',
@@ -66,9 +64,51 @@ export default function MediaBlockEditor({ block, onUpdate }: BlockEditorProps) 
     
     const mediaData = block.data as MediaElementData;
     const [isPickerOpen, setIsPickerOpen] = useState(false);
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [showMetadata, setShowMetadata] = useState(false);
+    const [folderItems, setFolderItems] = useState<Media[]>([]);
+    const [loadingFolderItems, setLoadingFolderItems] = useState(false);
     
     const currentType = mediaData.media_type || allowedMediaTypes[0] || 'image';
+
+    // Fetch folder items when folder_id changes
+    const fetchFolderItems = useCallback(async () => {
+        if (!mediaData.folder_id) {
+            setFolderItems([]);
+            return;
+        }
+        
+        setLoadingFolderItems(true);
+        try {
+            const params = new URLSearchParams();
+            params.append('folder', mediaData.folder_id);
+            params.append('type', currentType);
+            params.append('per_page', '25');
+            
+            const response = await fetch(`/media?${params.toString()}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                setFolderItems(result.data || []);
+            } else {
+                setFolderItems([]);
+            }
+        } catch (error) {
+            console.error('Failed to fetch folder items:', error);
+            setFolderItems([]);
+        } finally {
+            setLoadingFolderItems(false);
+        }
+    }, [mediaData.folder_id, currentType]);
+
+    useEffect(() => {
+        fetchFolderItems();
+    }, [fetchFolderItems]);
     
     // Get custom fields for media element from schema
     const customFields = schema?.element_meta_fields?.media;
@@ -133,7 +173,79 @@ export default function MediaBlockEditor({ block, onUpdate }: BlockEditorProps) 
 
             {/* Media Preview / Upload */}
             <div className="border-2 border-dashed rounded-lg p-4">
-                {mediaData.file_id && mediaData.url ? (
+                {mediaData.folder_id ? (
+                    // Folder selected - show folder badge and item previews
+                    <div className="space-y-3">
+                        {/* Folder Badge - clickable to change */}
+                        <div className="flex items-center justify-between">
+                            <button
+                                type="button"
+                                onClick={() => setIsPickerOpen(true)}
+                                className="group"
+                            >
+                                <Badge 
+                                    variant="secondary" 
+                                    className="gap-1.5 hover:bg-secondary/80 cursor-pointer transition-colors"
+                                >
+                                    <Folder className="size-3" />
+                                    {mediaData.folder_path || 'Selected folder'}
+                                    <RefreshCw className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </Badge>
+                            </button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="size-7 text-muted-foreground hover:text-destructive"
+                                onClick={() => handleChange({ 
+                                    folder_id: undefined,
+                                    folder_path: undefined 
+                                })}
+                            >
+                                <X className="size-4" />
+                            </Button>
+                        </div>
+
+                        {/* Folder Items Preview */}
+                        {loadingFolderItems ? (
+                            <div className="flex items-center justify-center py-6">
+                                <div className="animate-spin size-6 border-2 border-primary border-t-transparent rounded-full" />
+                            </div>
+                        ) : folderItems.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                                <Folder className="size-10 mb-2 opacity-50" />
+                                <p className="text-sm">No {mediaTypeLabels[currentType]?.toLowerCase() || 'items'} in this folder</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-5 gap-1.5">
+                                {folderItems.slice(0, 25).map((item) => (
+                                    <div 
+                                        key={item._id}
+                                        className="aspect-square rounded overflow-hidden bg-muted flex items-center justify-center"
+                                        title={item.original_filename}
+                                    >
+                                        {currentType === 'image' && item.thumbnail_urls?.small ? (
+                                            <ThumbnailImage
+                                                thumbnailUrls={item.thumbnail_urls}
+                                                fallbackUrl={item.url}
+                                                alt={item.alt || item.original_filename}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <MediaIcon className="size-6 text-muted-foreground/50" />
+                                        )}
+                                    </div>
+                                ))}
+                                {folderItems.length > 25 && (
+                                    <div className="aspect-square rounded bg-muted/50 flex items-center justify-center">
+                                        <span className="text-xs text-muted-foreground">+{folderItems.length - 25}</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                ) : mediaData.file_id && mediaData.url ? (
+                    // File selected
                     <div className="relative">
                         {currentType === 'image' ? (
                             <img 
@@ -152,13 +264,23 @@ export default function MediaBlockEditor({ block, onUpdate }: BlockEditorProps) 
                                 <Music className="size-12 text-muted-foreground/50" />
                                 <audio src={mediaData.url} controls className="w-full max-w-md" />
                             </div>
-                        ) : currentType === 'document' && mediaData.mime_type && isDocumentMimeType(mediaData.mime_type) ? (
-                            <div className="min-h-[200px] max-h-[300px] w-full">
-                                <DocumentPreview
-                                    url={mediaData.url}
-                                    mimeType={mediaData.mime_type}
-                                    className="w-full h-full"
-                                />
+                        ) : currentType === 'document' ? (
+                            <div className="flex flex-col items-center justify-center py-6 gap-3">
+                                <FileText className="size-12 text-muted-foreground/50" />
+                                <p className="text-sm text-muted-foreground text-center max-w-[200px] truncate">
+                                    {mediaData.url?.split('/').pop() || 'Document'}
+                                </p>
+                                {mediaData.mime_type && isDocumentMimeType(mediaData.mime_type) && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setIsPreviewOpen(true)}
+                                    >
+                                        <Eye className="size-4 mr-2" />
+                                        Preview
+                                    </Button>
+                                )}
                             </div>
                         ) : (
                             <div className="flex items-center justify-center py-8">
@@ -190,6 +312,7 @@ export default function MediaBlockEditor({ block, onUpdate }: BlockEditorProps) 
                         </div>
                     </div>
                 ) : (
+                    // Nothing selected
                     <button 
                         type="button"
                         onClick={() => setIsPickerOpen(true)}
@@ -197,36 +320,62 @@ export default function MediaBlockEditor({ block, onUpdate }: BlockEditorProps) 
                     >
                         <Upload className="size-10 text-muted-foreground/50 mb-2" />
                         <span className="text-sm text-muted-foreground">
-                            Click to select media
+                            Click to select media or folder
                         </span>
                     </button>
                 )}
             </div>
 
             {/* Media Picker Dialog */}
-            <Dialog open={isPickerOpen} onOpenChange={setIsPickerOpen}>
-                <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
-                    <DialogHeader>
-                        <DialogTitle>Select {mediaTypeLabels[currentType] || 'Media'}</DialogTitle>
-                        <DialogDescription>
-                            Choose from your media library or upload a new file
-                        </DialogDescription>
-                    </DialogHeader>
-                    <MediaPicker 
-                        type={currentType}
-                        collectionId={collectionId}
-                        contentId={contentId}
-                        onSelect={(media) => {
-                            handleChange({
-                                file_id: media._id,
-                                url: media.url,
-                                mime_type: media.mime_type,
-                            });
-                            setIsPickerOpen(false);
-                        }}
-                    />
-                </DialogContent>
-            </Dialog>
+            <MediaPickerDialog
+                open={isPickerOpen}
+                onOpenChange={setIsPickerOpen}
+                onSelectMedia={(media) => {
+                    handleChange({
+                        file_id: media._id,
+                        url: media.url,
+                        mime_type: media.mime_type,
+                        folder_id: undefined,
+                        folder_path: undefined,
+                    });
+                    setIsPickerOpen(false);
+                }}
+                onSelectFolder={(folder) => {
+                    handleChange({
+                        file_id: null,
+                        url: undefined,
+                        mime_type: undefined,
+                        folder_id: folder.id,
+                        folder_path: folder.path,
+                    });
+                    setIsPickerOpen(false);
+                }}
+                allowedTypes={currentType !== 'canvas' ? [currentType as 'image' | 'video' | 'audio' | 'document'] : undefined}
+                allowFolders={true}
+                showUpload={true}
+                collectionId={collectionId}
+                contentId={contentId}
+                title={`Select ${mediaTypeLabels[currentType] || 'Media'}`}
+                description="Choose from your media library or upload a new file"
+            />
+
+            {/* Document Preview Modal */}
+            {currentType === 'document' && mediaData.url && mediaData.mime_type && isDocumentMimeType(mediaData.mime_type) && (
+                <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+                        <DialogHeader>
+                            <DialogTitle>Document Preview</DialogTitle>
+                        </DialogHeader>
+                        <div className="flex-1 min-h-0 overflow-auto">
+                            <DocumentPreview
+                                url={mediaData.url}
+                                mimeType={mediaData.mime_type}
+                                className="w-full h-full min-h-[60vh]"
+                            />
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            )}
 
             {/* Metadata (Custom or Standard) */}
             {mediaData.file_id && (
@@ -284,330 +433,3 @@ export default function MediaBlockEditor({ block, onUpdate }: BlockEditorProps) 
     );
 }
 
-// Media Picker with Library and Upload tabs
-function MediaPicker({ 
-    type, 
-    collectionId,
-    contentId,
-    onSelect 
-}: { 
-    type?: string; 
-    collectionId?: string | null;
-    contentId?: string | null;
-    onSelect: (media: Media) => void;
-}) {
-    const [activeTab, setActiveTab] = useState<'library' | 'upload'>('library');
-    const [mediaItems, setMediaItems] = useState<Media[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [uploading, setUploading] = useState(false);
-    const [selectedId, setSelectedId] = useState<string | null>(null);
-    const [dragOver, setDragOver] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
-
-    // Debounce search input
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearch(searchQuery);
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [searchQuery]);
-
-    // Fetch media from library
-    const fetchMedia = useCallback(async () => {
-        setLoading(true);
-        try {
-            const params = new URLSearchParams();
-            if (type && type !== 'canvas') {
-                params.append('type', type);
-            }
-            if (debouncedSearch) {
-                params.append('search', debouncedSearch);
-            }
-            const response = await fetch(`/media?${params.toString()}`, {
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-            });
-            if (response.ok) {
-                const result = await response.json();
-                setMediaItems(result.data || []);
-            } else {
-                console.error('Failed to fetch media:', response.status, response.statusText);
-                setMediaItems([]);
-            }
-        } catch (error) {
-            console.error('Failed to fetch media:', error);
-            setMediaItems([]);
-        } finally {
-            setLoading(false);
-        }
-    }, [type, debouncedSearch]);
-
-    useEffect(() => {
-        fetchMedia();
-    }, [fetchMedia]);
-
-    const getAcceptType = () => {
-        switch (type) {
-            case 'image': return 'image/*';
-            case 'video': return 'video/*';
-            case 'audio': return 'audio/*';
-            case 'canvas': return 'image/*';
-            default: return '*/*';
-        }
-    };
-
-    const [uploadError, setUploadError] = useState<string | null>(null);
-
-    const handleUpload = async (file: File) => {
-        setUploading(true);
-        setUploadError(null);
-        
-        try {
-            const formData = new FormData();
-            formData.append('file', file);
-            
-            // Pass collection and content context for automatic folder organization
-            if (collectionId) {
-                formData.append('collection_id', collectionId);
-            }
-            if (contentId) {
-                formData.append('content_id', contentId);
-            }
-
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            if (!csrfToken) {
-                throw new Error('CSRF token not found');
-            }
-
-            const response = await fetch('/media', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': csrfToken,
-                },
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                if (result.data && result.data._id && result.data.url) {
-                    onSelect(result.data);
-                } else {
-                    console.error('Invalid response format:', result);
-                    setUploadError('Upload succeeded but received invalid response format');
-                }
-            } else {
-                const errorText = await response.text();
-                console.error('Upload failed:', response.status, response.statusText, errorText);
-                
-                // Try to parse JSON error
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    setUploadError(errorJson.message || `Upload failed: ${response.statusText}`);
-                } catch {
-                    setUploadError(`Upload failed: ${response.statusText}`);
-                }
-            }
-        } catch (error) {
-            console.error('Upload failed:', error);
-            setUploadError(error instanceof Error ? error.message : 'Upload failed');
-        } finally {
-            setUploading(false);
-        }
-    };
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            handleUpload(file);
-        }
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        setDragOver(false);
-        const file = e.dataTransfer.files?.[0];
-        if (file) {
-            handleUpload(file);
-        }
-    };
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        setDragOver(true);
-    };
-
-    const handleDragLeave = () => {
-        setDragOver(false);
-    };
-
-    const handleSelect = () => {
-        const selected = mediaItems.find(m => m._id === selectedId);
-        if (selected) {
-            onSelect(selected);
-        }
-    };
-
-    const getMediaIcon = (mediaType: string) => {
-        const Icon = mediaTypeIcons[mediaType] || FileText;
-        return <Icon className="size-8 text-muted-foreground/50" />;
-    };
-
-    return (
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'library' | 'upload')} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="library" className="gap-2">
-                    <FolderOpen className="size-4" />
-                    Media Library
-                </TabsTrigger>
-                <TabsTrigger value="upload" className="gap-2">
-                    <Upload className="size-4" />
-                    Upload New
-                </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="library" className="flex-1 overflow-hidden flex flex-col mt-4">
-                {/* Search Bar */}
-                <div className="relative mb-4">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                    <Input
-                        type="search"
-                        placeholder="Search media by filename..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9"
-                    />
-                </div>
-
-                {loading ? (
-                    <div className="flex-1 flex items-center justify-center">
-                        <Loader2 className="size-8 animate-spin text-muted-foreground" />
-                    </div>
-                ) : mediaItems.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
-                        <FolderOpen className="size-16 text-muted-foreground/30 mb-4" />
-                        <p className="text-muted-foreground mb-2">
-                            {debouncedSearch ? 'No matching media found' : 'No media found'}
-                        </p>
-                        <p className="text-sm text-muted-foreground/70 mb-4">
-                            {debouncedSearch 
-                                ? 'Try a different search term or upload a new file'
-                                : `Upload your first ${type || 'file'} to get started`
-                            }
-                        </p>
-                        <Button type="button" variant="outline" onClick={() => setActiveTab('upload')}>
-                            <Upload className="size-4 mr-2" />
-                            Upload
-                        </Button>
-                    </div>
-                ) : (
-                    <>
-                        <div className="flex-1 overflow-y-auto">
-                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 p-1">
-                                {mediaItems.map((media) => (
-                                    <button
-                                        key={media._id}
-                                        type="button"
-                                        onClick={() => setSelectedId(media._id)}
-                                        onDoubleClick={() => onSelect(media)}
-                                        className={`
-                                            relative aspect-square rounded-lg overflow-hidden border-2 transition-all
-                                            hover:border-primary/50
-                                            ${selectedId === media._id ? 'border-primary ring-2 ring-primary/20' : 'border-transparent'}
-                                        `}
-                                    >
-                                        {media.media_type === 'image' ? (
-                                            <ThumbnailImage
-                                                thumbnailUrls={media.thumbnail_urls}
-                                                fallbackUrl={media.url}
-                                                alt={media.alt || media.original_filename}
-                                                sizes="(min-width: 640px) 80px, 60px"
-                                                className="w-full h-full object-cover"
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full bg-muted flex flex-col items-center justify-center gap-1 p-2">
-                                                {getMediaIcon(media.media_type)}
-                                                <span className="text-xs text-muted-foreground truncate w-full text-center">
-                                                    {media.original_filename}
-                                                </span>
-                                            </div>
-                                        )}
-                                        {selectedId === media._id && (
-                                            <div className="absolute top-1 right-1 bg-primary text-primary-foreground rounded-full p-0.5">
-                                                <Check className="size-3" />
-                                            </div>
-                                        )}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="flex justify-between items-center pt-4 border-t mt-4">
-                            <p className="text-sm text-muted-foreground">
-                                {selectedId ? 'Double-click or press Select' : `${mediaItems.length} items`}
-                            </p>
-                            <Button
-                                type="button"
-                                onClick={handleSelect}
-                                disabled={!selectedId}
-                            >
-                                Select
-                            </Button>
-                        </div>
-                    </>
-                )}
-            </TabsContent>
-
-            <TabsContent value="upload" className="flex-1 mt-4">
-                <div 
-                    className={`
-                        border-2 border-dashed rounded-lg p-12 text-center transition-colors
-                        ${dragOver ? 'border-primary bg-primary/5' : uploadError ? 'border-destructive/50' : 'border-muted-foreground/25'}
-                        ${uploading ? 'opacity-50 pointer-events-none' : ''}
-                    `}
-                    onDrop={handleDrop}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                >
-                    <input
-                        type="file"
-                        accept={getAcceptType()}
-                        onChange={handleFileChange}
-                        className="hidden"
-                        id="media-upload-input"
-                        disabled={uploading}
-                    />
-                    <label 
-                        htmlFor="media-upload-input" 
-                        className="cursor-pointer flex flex-col items-center"
-                    >
-                        {uploading ? (
-                            <Loader2 className="size-12 text-primary animate-spin mb-4" />
-                        ) : (
-                            <Upload className="size-12 text-muted-foreground/50 mb-4" />
-                        )}
-                        <span className="text-lg font-medium mb-1">
-                            {uploading ? 'Uploading...' : 'Drop file here'}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                            or <span className="text-primary hover:underline">browse</span> to select
-                        </span>
-                    </label>
-                </div>
-                {uploadError && (
-                    <p className="text-sm text-destructive text-center mt-2">
-                        {uploadError}
-                    </p>
-                )}
-                <p className="text-xs text-muted-foreground text-center mt-4">
-                    Supported formats: {type === 'image' ? 'JPG, PNG, GIF, WebP, SVG' : 
-                                        type === 'video' ? 'MP4, WebM, MOV' :
-                                        type === 'audio' ? 'MP3, WAV, OGG' : 'All file types'}
-                </p>
-            </TabsContent>
-        </Tabs>
-    );
-}

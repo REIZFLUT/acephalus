@@ -4,11 +4,18 @@ import { XmlCodeEditor } from '../CodeEditor';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { BlockEditorProps } from '../BlockItem';
+import { useSchema } from '../SchemaContext';
+import { MetaFieldsEditor } from '../MetaFieldsEditor';
 
 export default function XmlBlockEditor({ block, onUpdate }: BlockEditorProps) {
+    const { schema } = useSchema();
     const [activeTab, setActiveTab] = useState('code');
     const content = (block.data.content as string) || '';
     const schemaUrl = (block.data.schema_url as string) || '';
+
+    // Get custom fields for XML element from schema
+    const customFields = schema?.element_meta_fields?.xml;
+    const hasCustomFields = Array.isArray(customFields) && customFields.length > 0;
 
     const handleContentChange = (newContent: string) => {
         onUpdate({ ...block.data, content: newContent });
@@ -16,6 +23,10 @@ export default function XmlBlockEditor({ block, onUpdate }: BlockEditorProps) {
 
     const handleSchemaChange = (newSchema: string) => {
         onUpdate({ ...block.data, schema_url: newSchema });
+    };
+
+    const handleMetaChange = (updates: Record<string, any>) => {
+        onUpdate({ ...block.data, ...updates });
     };
 
     // Simple XML formatting for preview
@@ -77,6 +88,15 @@ export default function XmlBlockEditor({ block, onUpdate }: BlockEditorProps) {
                     </pre>
                 </TabsContent>
             </Tabs>
+
+            {/* Custom Meta Fields */}
+            {hasCustomFields && (
+                <MetaFieldsEditor 
+                    fields={customFields} 
+                    data={block.data as Record<string, any>} 
+                    onChange={handleMetaChange} 
+                />
+            )}
         </div>
     );
 }

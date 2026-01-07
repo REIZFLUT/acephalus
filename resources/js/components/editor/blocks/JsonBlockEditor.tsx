@@ -4,11 +4,22 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Check, Wand2 } from 'lucide-react';
 import { BlockEditorProps } from '../BlockItem';
+import { useSchema } from '../SchemaContext';
+import { MetaFieldsEditor } from '../MetaFieldsEditor';
 
 export default function JsonBlockEditor({ block, onUpdate }: BlockEditorProps) {
+    const { schema } = useSchema();
     const content = (block.data.content as string) || '{}';
     const [error, setError] = useState<string | null>(null);
     const [isValid, setIsValid] = useState(true);
+
+    // Get custom fields for JSON element from schema
+    const customFields = schema?.element_meta_fields?.json;
+    const hasCustomFields = Array.isArray(customFields) && customFields.length > 0;
+
+    const handleMetaChange = (updates: Record<string, any>) => {
+        onUpdate({ ...block.data, ...updates });
+    };
 
     useEffect(() => {
         validateJson(content);
@@ -100,6 +111,15 @@ export default function JsonBlockEditor({ block, onUpdate }: BlockEditorProps) {
                 <p className="text-xs text-destructive bg-destructive/10 rounded p-2">
                     {error}
                 </p>
+            )}
+
+            {/* Custom Meta Fields */}
+            {hasCustomFields && (
+                <MetaFieldsEditor 
+                    fields={customFields} 
+                    data={block.data as Record<string, any>} 
+                    onChange={handleMetaChange} 
+                />
             )}
         </div>
     );

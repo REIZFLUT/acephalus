@@ -1,4 +1,4 @@
-import type { MetaFieldDefinition, SelectInputStyle } from '@/types';
+import type { MetaFieldDefinition, SelectInputStyle, MediaMetaFieldValue } from '@/types';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,6 +10,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -18,6 +23,8 @@ import { Combobox, MultiCombobox } from '@/components/ui/combobox';
 import { TagInput } from '@/components/ui/tag-input';
 import { CodeEditor } from './CodeEditor';
 import { WysiwygEditor } from './WysiwygEditor';
+import { MediaPickerInput } from './MediaPickerInput';
+import { Info } from 'lucide-react';
 
 interface MetaFieldInputProps {
     field: MetaFieldDefinition;
@@ -27,7 +34,32 @@ interface MetaFieldInputProps {
 }
 
 export function MetaFieldInput({ field, value, onChange, compact = false }: MetaFieldInputProps) {
-    const { name, label, type, required, placeholder, help_text, options, default_value, editor_type, target_format, input_style, allow_custom } = field;
+    const { name, label, type, required, placeholder, description, explanation, options, default_value, editor_type, target_format, input_style, allow_custom } = field;
+    
+    // Support legacy help_text field for backwards compatibility
+    const descriptionText = description || (field as any).help_text;
+    
+    // Helper component to render label with optional info icon
+    const FieldLabel = ({ htmlFor, className }: { htmlFor?: string; className?: string }) => (
+        <span className={`flex items-center gap-1.5 ${className || ''}`}>
+            <Label htmlFor={htmlFor} className={compact ? 'text-xs text-muted-foreground' : undefined}>
+                {label}
+                {required && <span className="text-destructive ml-1">*</span>}
+            </Label>
+            {explanation && (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                            <Info className="size-3.5" />
+                        </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                        <p className="text-sm whitespace-pre-wrap">{explanation}</p>
+                    </TooltipContent>
+                </Tooltip>
+            )}
+        </span>
+    );
     
     // Use default value if no value is set
     const currentValue = value ?? default_value;
@@ -231,6 +263,17 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                         language="json"
                         placeholder="{}"
                         minHeight={compact ? '120px' : '180px'}
+                    />
+                );
+
+            case 'media':
+                return (
+                    <MediaPickerInput
+                        value={currentValue as MediaMetaFieldValue | null}
+                        onChange={onChange}
+                        config={field.media_config}
+                        compact={compact}
+                        placeholder={placeholder || 'Select media...'}
                     />
                 );
 
@@ -453,15 +496,20 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
         }
     };
 
+    // Helper to render description text (shown in both compact and normal mode)
+    const DescriptionText = () => descriptionText ? (
+        <p className="text-xs text-muted-foreground">{descriptionText}</p>
+    ) : null;
+
     // For boolean type in compact mode, render inline
     if (type === 'boolean' && compact) {
         return (
-            <div className="flex items-center justify-between">
-                <Label htmlFor={name} className="text-xs text-muted-foreground">
-                    {label}
-                    {required && <span className="text-destructive ml-1">*</span>}
-                </Label>
-                {renderInput()}
+            <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                    <FieldLabel htmlFor={name} />
+                    {renderInput()}
+                </div>
+                <DescriptionText />
             </div>
         );
     }
@@ -469,30 +517,23 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
     // Compact inline layout for simple fields
     if (compact && (type === 'text' || type === 'number' || type === 'select')) {
         return (
-            <div className="flex items-center gap-2">
-                <Label htmlFor={name} className="text-xs text-muted-foreground shrink-0">
-                    {label}
-                    {required && <span className="text-destructive ml-1">*</span>}
-                </Label>
-                <div className="flex-1">
-                    {renderInput()}
+            <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                    <FieldLabel htmlFor={name} className="shrink-0" />
+                    <div className="flex-1">
+                        {renderInput()}
+                    </div>
                 </div>
+                <DescriptionText />
             </div>
         );
     }
 
     return (
         <div className={compact ? 'space-y-1' : 'space-y-2'}>
-            <div className="flex items-center gap-2">
-                <Label htmlFor={name} className={compact ? 'text-xs text-muted-foreground' : undefined}>
-                    {label}
-                    {required && <span className="text-destructive ml-1">*</span>}
-                </Label>
-            </div>
+            <FieldLabel htmlFor={name} />
             {renderInput()}
-            {help_text && !compact && (
-                <p className="text-xs text-muted-foreground">{help_text}</p>
-            )}
+            <DescriptionText />
         </div>
     );
 }

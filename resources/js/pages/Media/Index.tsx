@@ -752,6 +752,15 @@ export default function MediaIndex({ media, filters, metaFields = [], subfolders
         folder_id: null,
     });
 
+    // Disable body scroll for this page to prevent double scrollbars
+    useEffect(() => {
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.body.style.overflow = originalOverflow;
+        };
+    }, []);
+
     // Fetch global folder on mount for default upload location
     useEffect(() => {
         fetch('/media-folders/global-root', {
@@ -975,10 +984,10 @@ export default function MediaIndex({ media, filters, metaFields = [], subfolders
                 </Dialog>
             }
         >
-            <div className="flex h-[calc(100vh-4rem)] -ml-6 -mt-6 -mr-6 -mb-6">
+            <div className="flex h-[90vh] -m-6">
                 {/* Sidebar with Folder Tree - docked to the left edge */}
                 <div className={`
-                    shrink-0 border-r bg-muted/30 transition-all duration-200
+                    shrink-0 h-full border-r bg-muted/30 transition-all duration-200
                     ${sidebarCollapsed ? 'w-10' : 'w-56'}
                 `}>
                     <div className="flex items-center justify-between p-2 border-b">
@@ -1007,9 +1016,8 @@ export default function MediaIndex({ media, filters, metaFields = [], subfolders
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 flex flex-col overflow-hidden">
-                    <ScrollArea className="flex-1">
-                        <div className="p-6">
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                    <div className="p-6 flex flex-col h-full overflow-auto">
                     {/* Header */}
                     <div className="mb-4">
                         <h1 className="text-2xl font-bold tracking-tight">Media Library</h1>
@@ -1125,7 +1133,7 @@ export default function MediaIndex({ media, filters, metaFields = [], subfolders
                     )}
 
                     {/* Content Grid - Folders and Files */}
-                    <div>
+                    <div className="flex-1 min-h-0 flex flex-col">
                         {subfolders.length === 0 && media.data.length === 0 ? (
                             <Card>
                                 <CardContent className="flex flex-col items-center justify-center py-16">
@@ -1167,8 +1175,8 @@ export default function MediaIndex({ media, filters, metaFields = [], subfolders
                         ) : (
                             <>
                                 {viewMode === 'grid' ? (
-                                    <div className="flex flex-col">
-                                        <div className="overflow-auto max-h-[calc(100vh-22rem)]">
+                                    <div className="flex flex-col flex-1 min-h-0">
+                                        <div className="overflow-auto flex-1">
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pb-4">
                                                 {/* Subfolders */}
                                                 {subfolders.map((folder) => (
@@ -1291,20 +1299,21 @@ export default function MediaIndex({ media, filters, metaFields = [], subfolders
                                     </div>
                                 ) : (
                                     /* Unified List View with folders and files */
-                                    <MediaDataTable
-                                        media={media.data}
-                                        metaFields={metaFields}
-                                        subfolders={subfolders}
-                                        onEdit={setEditingItem}
-                                        onDelete={handleDelete}
-                                        onFolderNavigate={handleFolderChange}
-                                    />
+                                    <div className="flex flex-col flex-1 min-h-0">
+                                        <MediaDataTable
+                                            media={media.data}
+                                            metaFields={metaFields}
+                                            subfolders={subfolders}
+                                            onEdit={setEditingItem}
+                                            onDelete={handleDelete}
+                                            onFolderNavigate={handleFolderChange}
+                                        />
+                                    </div>
                                 )}
                             </>
                         )}
                     </div>
-                        </div>
-                    </ScrollArea>
+                    </div>
                 </div>
             </div>
 

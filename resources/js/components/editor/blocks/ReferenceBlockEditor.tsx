@@ -1,8 +1,28 @@
+import { useState, useEffect, useCallback } from 'react';
+import type { MetaFieldDefinition } from '@/types';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { BlockEditorProps } from '../BlockItem';
 import { ReferencePicker, ReferenceValue, ReferenceType } from '../ReferencePicker';
-import { Folder, FileText, Box } from 'lucide-react';
+import { useSchema } from '../SchemaContext';
+import { MetaFieldInput } from '../MetaFieldInput';
+import { Folder, FileText, Box, Filter } from 'lucide-react';
+
+interface FilterViewOption {
+    _id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    is_system: boolean;
+}
 
 const referenceTypes: { value: ReferenceType; label: string; description: string; icon: React.ReactNode }[] = [
     {
@@ -26,15 +46,52 @@ const referenceTypes: { value: ReferenceType; label: string; description: string
 ];
 
 export default function ReferenceBlockEditor({ block, onUpdate }: BlockEditorProps) {
+    const { schema } = useSchema();
     const referenceType = (block.data.reference_type as ReferenceType) || 'content';
+    
+    // Get reference meta fields from schema
+    const referenceMetaFields = schema?.element_meta_fields?.reference || [];
+    
+    // Filter views state for collection references
+    const [filterViews, setFilterViews] = useState<FilterViewOption[]>([]);
+    const [isLoadingFilterViews, setIsLoadingFilterViews] = useState(false);
     
     const referenceValue: ReferenceValue | null = block.data.collection_id ? {
         reference_type: referenceType,
         collection_id: block.data.collection_id as string,
         content_id: block.data.content_id as string,
         element_id: block.data.element_id as string,
+        filter_view_id: block.data.filter_view_id as string,
         display_title: block.data.display_title as string,
     } : null;
+    
+    // Fetch filter views when collection is selected and type is 'collection'
+    const fetchFilterViews = useCallback(async (collectionId: string) => {
+        setIsLoadingFilterViews(true);
+        try {
+            const response = await fetch(`/api/v1/references/collections/${collectionId}/filter-views`, {
+                credentials: 'include',
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setFilterViews(data.data || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch filter views:', error);
+            setFilterViews([]);
+        } finally {
+            setIsLoadingFilterViews(false);
+        }
+    }, []);
+    
+    // Fetch filter views when collection changes
+    useEffect(() => {
+        if (referenceType === 'collection' && block.data.collection_id) {
+            fetchFilterViews(block.data.collection_id as string);
+        } else {
+            setFilterViews([]);
+        }
+    }, [referenceType, block.data.collection_id, fetchFilterViews]);
 
     const handleTypeChange = (newType: ReferenceType) => {
         // Reset selection when type changes
@@ -44,18 +101,24 @@ export default function ReferenceBlockEditor({ block, onUpdate }: BlockEditorPro
             collection_id: undefined,
             content_id: undefined,
             element_id: undefined,
+            filter_view_id: undefined,
             display_title: undefined,
         });
     };
 
     const handleReferenceChange = (value: ReferenceValue | null) => {
         if (value) {
+            // Keep filter_view_id if same collection is selected, otherwise reset it
+            const keepFilterView = value.reference_type === 'collection' && 
+                value.collection_id === block.data.collection_id;
+            
             onUpdate({
                 ...block.data,
                 reference_type: value.reference_type,
                 collection_id: value.collection_id,
                 content_id: value.content_id,
                 element_id: value.element_id,
+                filter_view_id: keepFilterView ? block.data.filter_view_id : undefined,
                 display_title: value.display_title,
             });
         } else {
@@ -64,9 +127,25 @@ export default function ReferenceBlockEditor({ block, onUpdate }: BlockEditorPro
                 collection_id: undefined,
                 content_id: undefined,
                 element_id: undefined,
+                filter_view_id: undefined,
                 display_title: undefined,
             });
         }
+    };
+    
+    const handleFilterViewChange = (filterViewId: string) => {
+        const selectedView = filterViews.find(v => v._id === filterViewId);
+        onUpdate({
+            ...block.data,
+            filter_view_id: filterViewId === 'none' ? undefined : filterViewId,
+        });
+    };
+
+    const handleMetaFieldChange = (name: string, value: unknown) => {
+        onUpdate({
+            ...block.data,
+            [name]: value,
+        });
     };
 
     // Determine min/max depth based on selected type
@@ -129,6 +208,45 @@ export default function ReferenceBlockEditor({ block, onUpdate }: BlockEditorPro
                 />
             </div>
 
+            {/* Filter View Selection - only for collection references */}
+            {referenceType === 'collection' && referenceValue?.collection_id && (
+                <div className="space-y-2">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                        <Filter className="size-4 text-muted-foreground" />
+                        Filter View (optional)
+                    </Label>
+                    <Select
+                        value={block.data.filter_view_id as string || 'none'}
+                        onValueChange={handleFilterViewChange}
+                        disabled={isLoadingFilterViews}
+                    >
+                        <SelectTrigger>
+                            <SelectValue placeholder={isLoadingFilterViews ? "Loading..." : "No filter"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="none">
+                                <span className="text-muted-foreground">No filter</span>
+                            </SelectItem>
+                            {filterViews.map((view) => (
+                                <SelectItem key={view._id} value={view._id}>
+                                    <div className="flex items-center gap-2">
+                                        {view.name}
+                                        {view.is_system && (
+                                            <Badge variant="outline" className="text-[10px] px-1">System</Badge>
+                                        )}
+                                    </div>
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    {block.data.filter_view_id && (
+                        <p className="text-xs text-muted-foreground">
+                            Contents will be filtered using this saved view when the reference is resolved.
+                        </p>
+                    )}
+                </div>
+            )}
+
             {/* Preview of current selection */}
             {referenceValue && referenceValue.display_title && (
                 <div className="p-3 bg-muted/50 rounded-lg">
@@ -138,6 +256,9 @@ export default function ReferenceBlockEditor({ block, onUpdate }: BlockEditorPro
                         {referenceValue.collection_id && (
                             <span>Collection: {referenceValue.collection_id}</span>
                         )}
+                        {referenceValue.filter_view_id && (
+                            <span>• Filter: {filterViews.find(v => v._id === referenceValue.filter_view_id)?.name || referenceValue.filter_view_id}</span>
+                        )}
                         {referenceValue.content_id && (
                             <span>• Content: {referenceValue.content_id}</span>
                         )}
@@ -145,6 +266,21 @@ export default function ReferenceBlockEditor({ block, onUpdate }: BlockEditorPro
                             <span>• Element: {referenceValue.element_id}</span>
                         )}
                     </div>
+                </div>
+            )}
+
+            {/* Render reference meta fields from schema if any */}
+            {referenceMetaFields.length > 0 && (
+                <div className="space-y-2 pt-2 border-t border-border/50">
+                    {referenceMetaFields.map((field: MetaFieldDefinition) => (
+                        <MetaFieldInput
+                            key={field.name}
+                            field={field}
+                            value={(block.data as Record<string, unknown>)[field.name]}
+                            onChange={(value) => handleMetaFieldChange(field.name, value)}
+                            compact
+                        />
+                    ))}
                 </div>
             )}
         </div>

@@ -10,7 +10,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Mongodb\Collection;
 use App\Models\Mongodb\Content;
 use App\Models\Mongodb\Edition;
+use App\Models\Mongodb\FilterView;
 use App\Models\Mongodb\WrapperPurpose;
+use App\Services\ContentFilterService;
 use App\Services\ContentService;
 use App\Services\LockService;
 use App\Services\VersionService;
@@ -26,17 +28,90 @@ class ContentController extends Controller
         private readonly ContentService $contentService,
         private readonly VersionService $versionService,
         private readonly LockService $lockService,
+        private readonly ContentFilterService $filterService,
     ) {}
 
     public function index(Request $request, Collection $collection): Response
     {
-        $contents = $collection->contents()
-            ->orderBy('updated_at', 'desc')
-            ->paginate(20);
+        $filterViewId = $request->query('filter_view');
+        $schema = $collection->schema ?? [];
+
+        // Get editions for filter field options (used in filter builder)
+        $allEditions = Edition::orderBy('is_system', 'desc')
+            ->orderBy('name')
+            ->get(['_id', 'slug', 'name', 'description', 'icon', 'is_system']);
+
+        // Filter by collection's allowed editions if specified
+        $allowedEditions = $schema['allowed_editions'] ?? null;
+
+        if (is_array($allowedEditions) && count($allowedEditions) > 0) {
+            $editions = $allEditions->filter(fn ($edition) => in_array($edition->slug, $allowedEditions, true))->values();
+        } else {
+            $editions = $allEditions;
+        }
+
+        // Get filter views available for this collection
+        $filterViews = FilterView::availableFor((string) $collection->_id)
+            ->orderBy('is_system', 'desc')
+            ->orderBy('name')
+            ->get();
+
+        // Get available fields for filtering
+        $availableFilterFields = $this->filterService->getAvailableFields($collection);
+
+        // Get the selected filter view
+        $selectedFilterView = null;
+        if ($filterViewId) {
+            $selectedFilterView = FilterView::find($filterViewId);
+            // Ensure filter view belongs to this collection
+            if ($selectedFilterView && ! $selectedFilterView->belongsToCollection((string) $collection->_id)) {
+                $selectedFilterView = null;
+            }
+        }
+
+        // Get list view settings from schema
+        $listViewSettings = $schema['list_view_settings'] ?? [];
+        $defaultPerPage = (int) ($listViewSettings['default_per_page'] ?? 20);
+        $defaultSortColumn = $listViewSettings['default_sort_column'] ?? 'updated_at';
+        $defaultSortDirection = $listViewSettings['default_sort_direction'] ?? 'desc';
+
+        // Get per_page from request or use default from list view settings
+        $perPage = $request->integer('per_page', $defaultPerPage);
+        // Validate per_page against allowed options if specified
+        $perPageOptions = $listViewSettings['per_page_options'] ?? [10, 20, 50, 100];
+        if (! empty($perPageOptions) && ! in_array($perPage, $perPageOptions, true)) {
+            $perPage = $defaultPerPage;
+        }
+
+        // Build query for all contents
+        $query = $collection->contents();
+
+        // Apply filter view if selected
+        if ($selectedFilterView) {
+            $query = $this->filterService->applyFilterView($query, $selectedFilterView, $collection);
+        }
+
+        // Apply default sorting only if filter view doesn't have sorting
+        if (! $selectedFilterView || ! $selectedFilterView->hasSort()) {
+            $query->orderBy($defaultSortColumn, $defaultSortDirection);
+        }
+
+        $contents = $query->paginate($perPage);
+
+        // Manually add versions_count for each content (withCount not supported by MongoDB)
+        $contents->getCollection()->transform(function ($content) {
+            $content->versions_count = $content->versions()->count();
+
+            return $content;
+        });
 
         return Inertia::render('Collections/Show', [
             'collection' => $collection,
             'contents' => $contents,
+            'editions' => $editions,
+            'filterViews' => $filterViews,
+            'selectedFilterView' => $selectedFilterView,
+            'availableFilterFields' => $availableFilterFields,
         ]);
     }
 

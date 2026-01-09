@@ -67,6 +67,7 @@ import {
     FolderPlus,
     ArrowUp,
     Plus,
+    Eye,
 } from 'lucide-react';
 import {
     ToggleGroup,
@@ -75,7 +76,7 @@ import {
 import { FolderTree } from '@/components/media/FolderTree';
 import { FolderSelectDialog } from '@/components/media/FolderSelectDialog';
 import { FocusAreaSelector, type FocusArea } from '@/components/media/FocusAreaSelector';
-import { DocumentPreview, isDocumentMimeType } from '@/components/media/DocumentPreview';
+import { DocumentPreview, isDocumentMimeType, getDocumentTypeLabel } from '@/components/media/DocumentPreview';
 import { MediaDataTable } from '@/components/data-table';
 import { ThumbnailImage } from '@/components/ui/thumbnail-image';
 import type { PageProps, Media, PaginatedData, MediaMetaField } from '@/types';
@@ -392,6 +393,7 @@ function MediaEditSheet({
     const [tagInput, setTagInput] = useState('');
     const [folderSelection, setFolderSelection] = useState<FolderSelection | null>(null);
     const [folderDialogOpen, setFolderDialogOpen] = useState(false);
+    const [documentPreviewOpen, setDocumentPreviewOpen] = useState(false);
 
     useEffect(() => {
         if (item) {
@@ -404,6 +406,7 @@ function MediaEditSheet({
             setFocusArea((metadata.focus_area as FocusArea) || null);
             setTags(item.tags || []);
             setTagInput('');
+            setDocumentPreviewOpen(false); // Reset preview modal when switching items
             // Initialize folder selection from item data
             if (item.folder_id && item.folder_path) {
                 setFolderSelection({ id: item.folder_id, path: item.folder_path });
@@ -502,9 +505,7 @@ function MediaEditSheet({
 
                 <div className="px-6 py-6 space-y-6">
                     {/* Preview */}
-                    <div className={`bg-muted rounded-lg overflow-hidden flex items-center justify-center ${
-                        isDocument ? 'min-h-[300px] max-h-[400px]' : 'aspect-video'
-                    }`}>
+                    <div className="bg-muted rounded-lg overflow-hidden flex items-center justify-center aspect-video">
                         {isImage && item.url ? (
                             <img
                                 src={item.url}
@@ -512,12 +513,20 @@ function MediaEditSheet({
                                 className="w-full h-full object-contain"
                             />
                         ) : isDocument && item.url ? (
-                            <DocumentPreview
-                                url={item.url}
-                                mimeType={item.mime_type}
-                                filename={item.original_filename}
-                                className="w-full h-full"
-                            />
+                            <div className="flex flex-col items-center gap-4 p-6">
+                                {(() => {
+                                    const Icon = getFileIcon(item.mime_type);
+                                    return <Icon className="size-16 text-muted-foreground" />;
+                                })()}
+                                <div className="text-center">
+                                    <p className="text-sm font-medium">{getDocumentTypeLabel(item.mime_type) || 'Dokument'}</p>
+                                    <p className="text-xs text-muted-foreground mt-1">{item.original_filename}</p>
+                                </div>
+                                <Button variant="secondary" onClick={() => setDocumentPreviewOpen(true)}>
+                                    <Eye className="size-4 mr-2" />
+                                    Preview
+                                </Button>
+                            </div>
                         ) : (
                             <div className="flex flex-col items-center gap-2">
                                 {(() => {
@@ -528,6 +537,34 @@ function MediaEditSheet({
                             </div>
                         )}
                     </div>
+
+                    {/* Document Preview Modal */}
+                    {isDocument && item.url && (
+                        <Dialog open={documentPreviewOpen} onOpenChange={setDocumentPreviewOpen}>
+                            <DialogContent className="max-w-4xl h-[80vh] p-0 flex flex-col">
+                                <DialogHeader className="px-6 py-4 border-b shrink-0">
+                                    <DialogTitle className="flex items-center gap-2">
+                                        {(() => {
+                                            const Icon = getFileIcon(item.mime_type);
+                                            return <Icon className="size-5" />;
+                                        })()}
+                                        {item.original_filename}
+                                    </DialogTitle>
+                                    <DialogDescription>
+                                        {getDocumentTypeLabel(item.mime_type)} • {formatFileSize(item.size)}
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="flex-1 overflow-hidden">
+                                    <DocumentPreview
+                                        url={item.url}
+                                        mimeType={item.mime_type}
+                                        filename={item.original_filename}
+                                        className="w-full h-full"
+                                    />
+                                </div>
+                            </DialogContent>
+                        </Dialog>
+                    )}
 
                     {/* File Info */}
                     <div className="text-sm text-muted-foreground space-y-1">

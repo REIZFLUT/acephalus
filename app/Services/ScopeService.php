@@ -18,10 +18,16 @@ class ScopeService
         'contents:write' => 'Create and update contents',
         'contents:delete' => 'Delete contents',
         'contents:publish' => 'Publish and unpublish contents',
+        'contents:lock' => 'Lock contents',
+        'contents:unlock' => 'Unlock contents',
         'collections:read' => 'View collections',
         'collections:write' => 'Create and update collections',
         'collections:delete' => 'Delete collections',
         'collections:schema' => 'Manage collection schemas',
+        'collections:lock' => 'Lock collections',
+        'collections:unlock' => 'Unlock collections',
+        'elements:lock' => 'Lock elements',
+        'elements:unlock' => 'Unlock elements',
         'media:read' => 'View media',
         'media:write' => 'Upload and update media',
         'media:delete' => 'Delete media',
@@ -47,6 +53,8 @@ class ScopeService
         'contents.update' => 'contents:write',
         'contents.delete' => 'contents:delete',
         'contents.publish' => 'contents:publish',
+        'contents.lock' => 'contents:lock',
+        'contents.unlock' => 'contents:unlock',
 
         // Collections
         'collections.view' => 'collections:read',
@@ -55,6 +63,12 @@ class ScopeService
         'collections.delete' => 'collections:delete',
         'collections.schema.view' => 'collections:schema',
         'collections.schema.update' => 'collections:schema',
+        'collections.lock' => 'collections:lock',
+        'collections.unlock' => 'collections:unlock',
+
+        // Elements
+        'elements.lock' => 'elements:lock',
+        'elements.unlock' => 'elements:unlock',
 
         // Media
         'media.view' => 'media:read',

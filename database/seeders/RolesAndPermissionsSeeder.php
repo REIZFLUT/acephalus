@@ -79,6 +79,14 @@ class RolesAndPermissionsSeeder extends Seeder
         'settings' => [
             'settings.view',
         ],
+        'locking' => [
+            'collections.lock',
+            'collections.unlock',
+            'contents.lock',
+            'contents.unlock',
+            'elements.lock',
+            'elements.unlock',
+        ],
     ];
 
     /**
@@ -134,6 +142,13 @@ class RolesAndPermissionsSeeder extends Seeder
             'roles.create',
             'roles.update',
             'roles.delete',
+            // Locking
+            'collections.lock',
+            'collections.unlock',
+            'contents.lock',
+            'contents.unlock',
+            'elements.lock',
+            'elements.unlock',
         ],
         // Editor: Contents erstellen/bearbeiten/veröffentlichen, Media verwalten
         'editor' => [

@@ -6,6 +6,7 @@ namespace App\Models\Mongodb;
 
 use App\Enums\ContentStatus;
 use App\Models\Mongodb\Concerns\HasMongoArrays;
+use App\Models\Mongodb\Concerns\Lockable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,6 +16,7 @@ class Content extends Model
 {
     use HasFactory;
     use HasMongoArrays;
+    use Lockable;
 
     protected $connection = 'mongodb';
 
@@ -54,6 +56,8 @@ class Content extends Model
         return [
             'status' => ContentStatus::class,
             'current_version' => 'integer',
+            'is_locked' => 'boolean',
+            'locked_at' => 'datetime',
             // Note: 'elements' and 'metadata' are handled by HasMongoArrays trait
             // to preserve native MongoDB array/object storage
         ];
@@ -200,5 +204,70 @@ class Content extends Model
         }
 
         return $array;
+    }
+
+    /**
+     * Get the parent collection model (ensuring we get the model, not the ID).
+     */
+    public function getParentCollection(): ?Collection
+    {
+        // If collection is already loaded as a model, use it
+        if ($this->relationLoaded('collection')) {
+            return $this->getRelation('collection');
+        }
+
+        // Otherwise, load the collection by ID
+        if ($this->collection_id) {
+            return Collection::find($this->collection_id);
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if this content is effectively locked.
+     * Content is effectively locked if:
+     * - The content itself is locked, OR
+     * - The parent collection is locked
+     */
+    public function isEffectivelyLocked(): bool
+    {
+        // Check own lock first
+        if ($this->isDirectlyLocked()) {
+            return true;
+        }
+
+        // Check parent collection lock
+        $collection = $this->getParentCollection();
+        if ($collection && $collection->isDirectlyLocked()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Get effective lock information including parent hierarchy.
+     *
+     * @return array{is_locked: bool, locked_by: int|null, locked_at: string|null, lock_reason: string|null, locked_by_name: string|null, source: string}|null
+     */
+    public function getEffectiveLockInfo(): ?array
+    {
+        // Check own lock first
+        $ownLockInfo = $this->getLockInfo();
+        if ($ownLockInfo) {
+            return array_merge($ownLockInfo, ['source' => 'self']);
+        }
+
+        // Check parent collection lock
+        $collection = $this->getParentCollection();
+        if ($collection) {
+            $collectionLockInfo = $collection->getLockInfo();
+            if ($collectionLockInfo) {
+                return array_merge($collectionLockInfo, ['source' => 'collection']);
+            }
+        }
+
+        return null;
     }
 }

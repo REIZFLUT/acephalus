@@ -12,6 +12,7 @@ use App\Models\Mongodb\Content;
 use App\Models\Mongodb\Edition;
 use App\Models\Mongodb\WrapperPurpose;
 use App\Services\ContentService;
+use App\Services\LockService;
 use App\Services\VersionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,6 +25,7 @@ class ContentController extends Controller
     public function __construct(
         private readonly ContentService $contentService,
         private readonly VersionService $versionService,
+        private readonly LockService $lockService,
     ) {}
 
     public function index(Request $request, Collection $collection): Response
@@ -175,6 +177,9 @@ class ContentController extends Controller
 
     public function update(Request $request, Content $content): RedirectResponse
     {
+        // Check if content is locked
+        $this->lockService->ensureContentCanBeModified($content);
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'slug' => [
@@ -229,6 +234,9 @@ class ContentController extends Controller
 
     public function publish(Content $content): RedirectResponse
     {
+        // Check if content is locked
+        $this->lockService->ensureContentCanBeModified($content);
+
         $this->contentService->publish($content);
 
         return redirect()
@@ -247,6 +255,9 @@ class ContentController extends Controller
 
     public function restoreVersion(Request $request, Content $content, int $version): RedirectResponse
     {
+        // Check if content is locked
+        $this->lockService->ensureContentCanBeModified($content);
+
         $versionExists = $this->versionService->getVersion($content, $version);
 
         if (! $versionExists) {
@@ -310,5 +321,37 @@ class ContentController extends Controller
         return redirect()
             ->route('contents.edit', $duplicatedContent->_id)
             ->with('success', 'Content duplicated successfully.');
+    }
+
+    /**
+     * Lock a content.
+     */
+    public function lock(Request $request, Content $content): RedirectResponse
+    {
+        $validated = $request->validate([
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $this->lockService->lockContent(
+            $content,
+            $request->user(),
+            $validated['reason'] ?? null
+        );
+
+        return redirect()
+            ->back()
+            ->with('success', 'Content locked successfully.');
+    }
+
+    /**
+     * Unlock a content.
+     */
+    public function unlock(Content $content): RedirectResponse
+    {
+        $this->lockService->unlockContent($content);
+
+        return redirect()
+            ->back()
+            ->with('success', 'Content unlocked successfully.');
     }
 }

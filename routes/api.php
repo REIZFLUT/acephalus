@@ -62,6 +62,15 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::delete('collections/{collection}', [CollectionController::class, 'destroy'])->name('collections.destroy');
         });
 
+        // Collections - Lock/Unlock
+        Route::middleware('api.permission:collections:lock')->group(function () {
+            Route::post('collections/{collection}/lock', [CollectionController::class, 'lock'])->name('collections.lock');
+        });
+
+        Route::middleware('api.permission:collections:unlock')->group(function () {
+            Route::delete('collections/{collection}/lock', [CollectionController::class, 'unlock'])->name('collections.unlock');
+        });
+
         // Contents - Read
         Route::middleware('api.permission:contents:read')->group(function () {
             Route::get('collections/{collection}/contents', [ContentController::class, 'index'])
@@ -110,6 +119,24 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 ->name('contents.unpublish');
             Route::post('contents/{content}/archive', [ContentController::class, 'archive'])
                 ->name('contents.archive');
+        });
+
+        // Contents - Lock/Unlock
+        Route::middleware('api.permission:contents:lock')->group(function () {
+            Route::post('contents/{content}/lock', [ContentController::class, 'lock'])->name('contents.lock');
+        });
+
+        Route::middleware('api.permission:contents:unlock')->group(function () {
+            Route::delete('contents/{content}/lock', [ContentController::class, 'unlock'])->name('contents.unlock');
+        });
+
+        // Elements - Lock/Unlock
+        Route::middleware('api.permission:elements:lock')->group(function () {
+            Route::post('elements/{element}/lock', [ElementController::class, 'lock'])->name('elements.lock');
+        });
+
+        Route::middleware('api.permission:elements:unlock')->group(function () {
+            Route::delete('elements/{element}/lock', [ElementController::class, 'unlock'])->name('elements.unlock');
         });
 
         // Media - Read

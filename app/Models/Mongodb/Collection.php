@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models\Mongodb;
 
 use App\Models\Mongodb\Concerns\HasMongoArrays;
+use App\Models\Mongodb\Concerns\Lockable;
 use App\Models\Mongodb\Schema\CollectionSchema;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,6 +15,7 @@ class Collection extends Model
 {
     use HasFactory;
     use HasMongoArrays;
+    use Lockable;
 
     protected $connection = 'mongodb';
 
@@ -44,6 +46,8 @@ class Collection extends Model
     {
         return [
             // Note: 'schema' and 'settings' are handled by HasMongoArrays trait
+            'is_locked' => 'boolean',
+            'locked_at' => 'datetime',
         ];
     }
 

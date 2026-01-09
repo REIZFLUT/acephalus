@@ -26,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'scope' => \Laravel\Passport\Http\Middleware\CheckTokenForAnyScope::class,
             'api.permission' => \App\Http\Middleware\CheckApiPermission::class,
             'setup.required' => \App\Http\Middleware\RedirectIfSetupRequired::class,
+            'check.not.locked' => \App\Http\Middleware\CheckNotLocked::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

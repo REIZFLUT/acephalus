@@ -13,15 +13,18 @@ use App\Http\Resources\ElementResource;
 use App\Models\Mongodb\Content;
 use App\Models\Mongodb\Element;
 use App\Services\ContentService;
+use App\Services\LockService;
 use App\Services\SchemaService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 class ElementController extends Controller
 {
     public function __construct(
         protected ContentService $contentService,
-        protected SchemaService $schemaService
+        protected SchemaService $schemaService,
+        protected LockService $lockService,
     ) {}
 
     /**
@@ -29,6 +32,9 @@ class ElementController extends Controller
      */
     public function store(StoreElementRequest $request, Content $content): JsonResponse
     {
+        // Check if content is locked (we can't add elements to locked content)
+        $this->lockService->ensureContentCanBeModified($content);
+
         $data = $request->validated();
 
         $elementType = ElementType::from($data['type']);
@@ -60,6 +66,9 @@ class ElementController extends Controller
      */
     public function update(UpdateElementRequest $request, Element $element): JsonResponse
     {
+        // Check if element is locked
+        $this->lockService->ensureElementCanBeModified($element);
+
         $data = $request->validated();
 
         $elementType = isset($data['type'])
@@ -95,6 +104,9 @@ class ElementController extends Controller
      */
     public function destroy(Element $element): JsonResponse
     {
+        // Check if element is locked
+        $this->lockService->ensureElementCanBeModified($element);
+
         $this->contentService->deleteElement($element, request()->user());
 
         return response()->json([
@@ -107,6 +119,9 @@ class ElementController extends Controller
      */
     public function move(MoveElementRequest $request, Element $element): JsonResponse
     {
+        // Check if element is locked
+        $this->lockService->ensureElementCanBeModified($element);
+
         $data = $request->validated();
 
         // Validate that the new parent is a wrapper (if specified)
@@ -159,6 +174,38 @@ class ElementController extends Controller
 
         return false;
     }
+
+    /**
+     * Lock an element.
+     */
+    public function lock(Request $request, Element $element): JsonResponse
+    {
+        $validated = $request->validate([
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $this->lockService->lockElement(
+            $element,
+            $request->user(),
+            $validated['reason'] ?? null
+        );
+
+        return response()->json([
+            'message' => 'Element locked successfully',
+            'data' => new ElementResource($element->fresh()),
+        ]);
+    }
+
+    /**
+     * Unlock an element.
+     */
+    public function unlock(Element $element): JsonResponse
+    {
+        $this->lockService->unlockElement($element);
+
+        return response()->json([
+            'message' => 'Element unlocked successfully',
+            'data' => new ElementResource($element->fresh()),
+        ]);
+    }
 }
-
-

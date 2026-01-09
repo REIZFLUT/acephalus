@@ -95,6 +95,15 @@ Route::middleware('auth')->group(function () {
         Route::delete('collections/{collection}', [CollectionController::class, 'destroy'])->name('collections.destroy');
     });
 
+    // Collections - Lock/Unlock
+    Route::middleware('permission:collections.lock')->group(function () {
+        Route::post('collections/{collection}/lock', [CollectionController::class, 'lock'])->name('collections.lock');
+    });
+
+    Route::middleware('permission:collections.unlock')->group(function () {
+        Route::delete('collections/{collection}/lock', [CollectionController::class, 'unlock'])->name('collections.unlock');
+    });
+
     // Contents - View
     Route::middleware('permission:contents.view')->group(function () {
         Route::get('collections/{collection}/contents', [ContentController::class, 'index'])
@@ -134,6 +143,15 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:contents.publish')->group(function () {
         Route::post('contents/{content}/publish', [ContentController::class, 'publish'])->name('contents.publish');
         Route::post('contents/{content}/unpublish', [ContentController::class, 'unpublish'])->name('contents.unpublish');
+    });
+
+    // Contents - Lock/Unlock
+    Route::middleware('permission:contents.lock')->group(function () {
+        Route::post('contents/{content}/lock', [ContentController::class, 'lock'])->name('contents.lock');
+    });
+
+    Route::middleware('permission:contents.unlock')->group(function () {
+        Route::delete('contents/{content}/lock', [ContentController::class, 'unlock'])->name('contents.unlock');
     });
 
     // Media - View

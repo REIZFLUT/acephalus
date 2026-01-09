@@ -6,6 +6,9 @@ import { Plus, FileText, Settings } from 'lucide-react';
 import type { PageProps, Collection, Content, PaginatedData, Edition, ListViewSettings, CollectionSchema, FilterView, FilterField } from '@/types';
 import { ContentDataTable } from '@/components/data-table';
 import { FilterViewSelector } from '@/components/filters';
+import { LockBadge } from '@/components/ui/lock-badge';
+import { LockButton } from '@/components/ui/lock-button';
+import { usePermission } from '@/hooks/use-permission';
 
 interface CollectionsShowProps extends PageProps {
     collection: Collection;
@@ -41,9 +44,13 @@ export default function CollectionsShow({
     selectedFilterView = null,
     availableFilterFields = [],
 }: CollectionsShowProps) {
+    const { can } = usePermission();
+    
     // Get list view settings from collection schema or use defaults
     const schema = collection.schema as CollectionSchema | null;
     const listViewSettings: ListViewSettings = schema?.list_view_settings || defaultListViewSettings;
+    
+    const isLocked = collection.is_locked ?? false;
 
     const handleFilterViewSelect = (filterView: FilterView | null) => {
         const params: Record<string, string> = {};
@@ -118,13 +125,22 @@ export default function CollectionsShow({
             ]}
             actions={
                 <div className="flex gap-2">
-                    <Button variant="outline" asChild>
+                    <LockButton
+                        isLocked={isLocked}
+                        lockRoute={`/collections/${collection.slug}/lock`}
+                        unlockRoute={`/collections/${collection.slug}/lock`}
+                        resourceType="collection"
+                        resourceName={collection.name}
+                        canLock={can('collections.lock')}
+                        canUnlock={can('collections.unlock')}
+                    />
+                    <Button variant="outline" asChild disabled={isLocked}>
                         <Link href={`/collections/${collection.slug}/edit`}>
                             <Settings className="size-4 mr-2" />
                             Settings
                         </Link>
                     </Button>
-                    <Button asChild>
+                    <Button asChild disabled={isLocked}>
                         <Link href={`/collections/${collection.slug}/contents/create`}>
                             <Plus className="size-4 mr-2" />
                             New Content
@@ -136,7 +152,16 @@ export default function CollectionsShow({
             <div className="space-y-6">
                 {/* Collection Header */}
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">{collection.name}</h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-3xl font-bold tracking-tight">{collection.name}</h1>
+                        <LockBadge
+                            isLocked={isLocked}
+                            lockedBy={undefined}
+                            lockedAt={collection.locked_at}
+                            lockReason={collection.lock_reason}
+                            source="self"
+                        />
+                    </div>
                     {collection.description && (
                         <p className="text-muted-foreground mt-1">{collection.description}</p>
                     )}

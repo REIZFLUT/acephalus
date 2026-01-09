@@ -10,6 +10,7 @@ use App\Models\Mongodb\Edition;
 use App\Models\Mongodb\FilterView;
 use App\Models\Mongodb\WrapperPurpose;
 use App\Services\ContentFilterService;
+use App\Services\LockService;
 use App\Services\SchemaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,6 +24,7 @@ class CollectionController extends Controller
     public function __construct(
         private readonly SchemaService $schemaService,
         private readonly ContentFilterService $filterService,
+        private readonly LockService $lockService,
     ) {}
 
     public function index(): Response
@@ -190,6 +192,9 @@ class CollectionController extends Controller
 
     public function update(Request $request, Collection $collection): RedirectResponse
     {
+        // Check if collection is locked
+        $this->lockService->ensureCollectionCanBeModified($collection);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'slug' => [
@@ -267,6 +272,9 @@ class CollectionController extends Controller
 
     public function destroy(Collection $collection): RedirectResponse
     {
+        // Check if collection is locked
+        $this->lockService->ensureCollectionCanBeModified($collection);
+
         $collection->delete();
 
         return redirect()
@@ -320,5 +328,37 @@ class CollectionController extends Controller
         return response()->json([
             'options' => $options,
         ]);
+    }
+
+    /**
+     * Lock a collection.
+     */
+    public function lock(Request $request, Collection $collection): RedirectResponse
+    {
+        $validated = $request->validate([
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $this->lockService->lockCollection(
+            $collection,
+            $request->user(),
+            $validated['reason'] ?? null
+        );
+
+        return redirect()
+            ->back()
+            ->with('success', 'Collection locked successfully.');
+    }
+
+    /**
+     * Unlock a collection.
+     */
+    public function unlock(Collection $collection): RedirectResponse
+    {
+        $this->lockService->unlockCollection($collection);
+
+        return redirect()
+            ->back()
+            ->with('success', 'Collection unlocked successfully.');
     }
 }

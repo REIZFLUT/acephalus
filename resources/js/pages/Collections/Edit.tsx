@@ -18,9 +18,11 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, ArrowLeft, Trash2, Settings, Layers, FolderCog, FileStack, Blocks, BookCopy, TableProperties } from 'lucide-react';
 import { SchemaEditorMeta, SchemaEditorContents, SchemaEditorElements, SchemaEditorWrappers, SchemaEditorEditions, SchemaEditorListView } from '@/components/schema/SchemaEditor';
 import { MetaFieldInput } from '@/components/editor/MetaFieldInput';
+import { LockBadge } from '@/components/ui/lock-badge';
 import type { PageProps, Collection, CollectionSchema, WrapperPurpose, Edition, MetaFieldDefinition, FilterView } from '@/types';
 
 interface CollectionsEditProps extends PageProps {
@@ -33,6 +35,8 @@ interface CollectionsEditProps extends PageProps {
 
 export default function CollectionsEdit({ collection, wrapperPurposes, editions, allCollections, filterViews }: CollectionsEditProps) {
     const [activeTab, setActiveTab] = useState('general');
+    
+    const isLocked = collection.is_locked ?? false;
     
     const { data, setData, put, processing, errors, isDirty } = useForm({
         name: collection.name,
@@ -76,12 +80,18 @@ export default function CollectionsEdit({ collection, wrapperPurposes, editions,
             ]}
             actions={
                 <div className="flex items-center gap-2">
+                    <LockBadge
+                        isLocked={isLocked}
+                        lockedAt={collection.locked_at}
+                        lockReason={collection.lock_reason}
+                        source="self"
+                    />
                     {isDirty && (
                         <span className="text-sm text-muted-foreground">Unsaved changes</span>
                     )}
                     <Button 
                         onClick={handleSubmit} 
-                        disabled={processing || !isDirty}
+                        disabled={processing || !isDirty || isLocked}
                     >
                         {processing && <Loader2 className="size-4 mr-2 animate-spin" />}
                         Save Changes
@@ -97,6 +107,19 @@ export default function CollectionsEdit({ collection, wrapperPurposes, editions,
                     </Link>
                 </Button>
             </div>
+
+            {isLocked && (
+                <Alert variant="destructive" className="mb-6">
+                    <AlertDescription>
+                        This collection is locked and cannot be edited.
+                        {collection.lock_reason && (
+                            <span className="block mt-1 text-sm opacity-80">
+                                Reason: {collection.lock_reason}
+                            </span>
+                        )}
+                    </AlertDescription>
+                </Alert>
+            )}
 
             <form onSubmit={handleSubmit}>
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

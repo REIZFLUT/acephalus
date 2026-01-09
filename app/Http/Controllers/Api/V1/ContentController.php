@@ -13,6 +13,7 @@ use App\Models\Mongodb\Content;
 use App\Models\Mongodb\FilterView;
 use App\Services\ContentFilterService;
 use App\Services\ContentService;
+use App\Services\LockService;
 use App\Services\SchemaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,6 +26,7 @@ class ContentController extends Controller
         protected ContentService $contentService,
         protected SchemaService $schemaService,
         protected ContentFilterService $filterService,
+        protected LockService $lockService,
     ) {}
 
     /**
@@ -158,6 +160,9 @@ class ContentController extends Controller
      */
     public function update(UpdateContentRequest $request, Content $content): JsonResponse
     {
+        // Check if content is locked
+        $this->lockService->ensureContentCanBeModified($content);
+
         $data = $request->validated();
 
         $content = $this->contentService->update(
@@ -190,6 +195,9 @@ class ContentController extends Controller
      */
     public function destroy(Content $content): JsonResponse
     {
+        // Check if content is locked
+        $this->lockService->ensureContentCanBeModified($content);
+
         $this->contentService->delete($content);
 
         return response()->json([
@@ -202,6 +210,9 @@ class ContentController extends Controller
      */
     public function publish(Request $request, Content $content): JsonResponse
     {
+        // Check if content is locked
+        $this->lockService->ensureContentCanBeModified($content);
+
         // Validate against schema before publishing
         try {
             $this->schemaService->validateContent($content->collection, $content);
@@ -225,6 +236,9 @@ class ContentController extends Controller
      */
     public function unpublish(Request $request, Content $content): JsonResponse
     {
+        // Check if content is locked
+        $this->lockService->ensureContentCanBeModified($content);
+
         $content = $this->contentService->unpublish($content, $request->user());
 
         return response()->json([
@@ -238,6 +252,9 @@ class ContentController extends Controller
      */
     public function archive(Request $request, Content $content): JsonResponse
     {
+        // Check if content is locked
+        $this->lockService->ensureContentCanBeModified($content);
+
         $content = $this->contentService->archive($content, $request->user());
 
         return response()->json([
@@ -311,5 +328,39 @@ class ContentController extends Controller
             }, $elements),
             fn ($element) => $element !== null
         ));
+    }
+
+    /**
+     * Lock a content.
+     */
+    public function lock(Request $request, Content $content): JsonResponse
+    {
+        $validated = $request->validate([
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $this->lockService->lockContent(
+            $content,
+            $request->user(),
+            $validated['reason'] ?? null
+        );
+
+        return response()->json([
+            'message' => 'Content locked successfully',
+            'data' => new ContentResource($content->fresh()),
+        ]);
+    }
+
+    /**
+     * Unlock a content.
+     */
+    public function unlock(Content $content): JsonResponse
+    {
+        $this->lockService->unlockContent($content);
+
+        return response()->json([
+            'message' => 'Content unlocked successfully',
+            'data' => new ContentResource($content->fresh()),
+        ]);
     }
 }

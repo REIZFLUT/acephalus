@@ -41,7 +41,8 @@ export type PermissionCategory =
     | 'wrapper_purposes'
     | 'users'
     | 'roles'
-    | 'settings';
+    | 'settings'
+    | 'locking';
 
 /**
  * All available permission names
@@ -96,7 +97,26 @@ export type PermissionName =
     | 'roles.update'
     | 'roles.delete'
     // Settings
-    | 'settings.view';
+    | 'settings.view'
+    // Locking
+    | 'collections.lock'
+    | 'collections.unlock'
+    | 'contents.lock'
+    | 'contents.unlock'
+    | 'elements.lock'
+    | 'elements.unlock';
+
+/**
+ * Lock information for a resource
+ */
+export interface LockInfo {
+    is_locked: boolean;
+    locked_by: number | null;
+    locked_at: string | null;
+    lock_reason: string | null;
+    locked_by_name?: string;
+    source?: 'self' | 'collection' | 'content';
+}
 
 export interface Collection {
     _id: string;
@@ -110,6 +130,11 @@ export interface Collection {
     created_at: string;
     updated_at: string;
     contents_count?: number;
+    // Lock fields
+    is_locked?: boolean;
+    locked_by?: number | null;
+    locked_at?: string | null;
+    lock_reason?: string | null;
 }
 
 // Collection Schema - defines what's allowed in a collection
@@ -306,6 +331,14 @@ export interface Content {
     updated_at: string;
     collection?: Collection;
     versions_count?: number;
+    // Lock fields
+    is_locked?: boolean;
+    locked_by?: number | null;
+    locked_at?: string | null;
+    lock_reason?: string | null;
+    // Effective lock info (includes parent hierarchy)
+    is_effectively_locked?: boolean;
+    effective_lock_source?: 'self' | 'collection' | null;
 }
 
 export type ContentStatus = 'draft' | 'published' | 'archived';
@@ -319,6 +352,11 @@ export interface BlockElement {
     data: ElementData;
     editions?: string[]; // Array of Edition slugs (empty/undefined = all editions)
     children?: BlockElement[]; // For wrapper elements
+    // Lock fields
+    is_locked?: boolean;
+    locked_by?: number | null;
+    locked_at?: string | null;
+    lock_reason?: string | null;
 }
 
 export type ElementType = 

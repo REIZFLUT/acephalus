@@ -9,6 +9,7 @@ use App\Http\Requests\Api\V1\StoreCollectionRequest;
 use App\Http\Requests\Api\V1\UpdateCollectionRequest;
 use App\Http\Resources\CollectionResource;
 use App\Models\Mongodb\Collection;
+use App\Services\LockService;
 use App\Services\SchemaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,8 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 class CollectionController extends Controller
 {
     public function __construct(
-        protected SchemaService $schemaService
+        protected SchemaService $schemaService,
+        protected LockService $lockService,
     ) {}
 
     /**
@@ -73,6 +75,9 @@ class CollectionController extends Controller
      */
     public function update(UpdateCollectionRequest $request, Collection $collection): JsonResponse
     {
+        // Check if collection is locked
+        $this->lockService->ensureCollectionCanBeModified($collection);
+
         $data = $request->validated();
 
         $collection->update(array_filter([
@@ -94,6 +99,9 @@ class CollectionController extends Controller
      */
     public function destroy(Collection $collection): JsonResponse
     {
+        // Check if collection is locked
+        $this->lockService->ensureCollectionCanBeModified($collection);
+
         // Check if collection has contents
         if ($collection->contents()->count() > 0) {
             return response()->json([
@@ -107,6 +115,38 @@ class CollectionController extends Controller
             'message' => 'Collection deleted successfully',
         ]);
     }
+
+    /**
+     * Lock a collection.
+     */
+    public function lock(Request $request, Collection $collection): JsonResponse
+    {
+        $validated = $request->validate([
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $this->lockService->lockCollection(
+            $collection,
+            $request->user(),
+            $validated['reason'] ?? null
+        );
+
+        return response()->json([
+            'message' => 'Collection locked successfully',
+            'data' => new CollectionResource($collection->fresh()),
+        ]);
+    }
+
+    /**
+     * Unlock a collection.
+     */
+    public function unlock(Collection $collection): JsonResponse
+    {
+        $this->lockService->unlockCollection($collection);
+
+        return response()->json([
+            'message' => 'Collection unlocked successfully',
+            'data' => new CollectionResource($collection->fresh()),
+        ]);
+    }
 }
-
-

@@ -16,7 +16,7 @@ import {
     Eye,
     Copy,
 } from 'lucide-react';
-import type { PageProps, Content, ContentVersion, BlockElement, CollectionSchema, WrapperPurpose, Edition } from '@/types';
+import type { PageProps, Content, ContentVersion, BlockElement, CollectionSchema, WrapperPurpose, Edition, Collection } from '@/types';
 import { BlockEditor } from '@/components/editor/BlockEditor';
 import { MetadataEditor } from '@/components/editor/MetadataEditor';
 import { MetaFieldInput } from '@/components/editor/MetaFieldInput';
@@ -28,6 +28,10 @@ import { Sidebar } from './edit/Sidebar';
 import { SettingsTab } from './edit/SettingsTab';
 import { VersionsTab } from './edit/VersionsTab';
 import { DuplicateDialog } from './edit/DuplicateDialog';
+import { LockBadge } from '@/components/ui/lock-badge';
+import { LockButton } from '@/components/ui/lock-button';
+import { usePermission } from '@/hooks/use-permission';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ContentsEditProps extends PageProps {
     content: Content & { 
@@ -35,6 +39,9 @@ interface ContentsEditProps extends PageProps {
             name: string; 
             slug: string;
             schema?: CollectionSchema | null;
+            is_locked?: boolean;
+            locked_at?: string | null;
+            lock_reason?: string | null;
         }; 
         versions: ContentVersion[] 
     };
@@ -44,11 +51,19 @@ interface ContentsEditProps extends PageProps {
 }
 
 export default function ContentsEdit({ content, elementTypes, wrapperPurposes, editions }: ContentsEditProps) {
+    const { can } = usePermission();
+    
     // Initialize elements with IDs
     const initialElements = useMemo(() => 
         ensureElementIds(content.elements || []),
         [content.elements]
     );
+
+    // Lock state
+    const isContentLocked = content.is_locked ?? false;
+    const isCollectionLocked = content.collection?.is_locked ?? false;
+    const isEffectivelyLocked = isContentLocked || isCollectionLocked;
+    const effectiveLockSource = isContentLocked ? 'self' : isCollectionLocked ? 'collection' : null;
 
     const { data, setData, put, processing, errors, isDirty } = useForm({
         title: content.title,
@@ -177,31 +192,47 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
             actions={
                 <div className="flex items-center gap-2">
                     {getStatusBadge()}
+                    <LockBadge
+                        isLocked={isEffectivelyLocked}
+                        lockedAt={isContentLocked ? content.locked_at : content.collection?.locked_at}
+                        lockReason={isContentLocked ? content.lock_reason : content.collection?.lock_reason}
+                        source={effectiveLockSource}
+                    />
                     {editions.length > 0 && (
                         <EditionSelector
                             editions={editions}
                             selectedEditions={data.editions}
                             onChange={(editions) => setData('editions', editions)}
                             compact
+                            disabled={isEffectivelyLocked}
                         />
                     )}
                     <div className="flex gap-2">
+                        <LockButton
+                            isLocked={isContentLocked}
+                            lockRoute={`/contents/${content._id}/lock`}
+                            unlockRoute={`/contents/${content._id}/lock`}
+                            resourceType="content"
+                            resourceName={content.title}
+                            canLock={can('contents.lock') && !isCollectionLocked}
+                            canUnlock={can('contents.unlock')}
+                        />
                         <Button onClick={() => setIsDuplicateDialogOpen(true)} variant="outline" size="sm">
                             <Copy className="size-4 mr-2" />
                             Duplicate
                         </Button>
                         {content.status === 'draft' ? (
-                            <Button onClick={handlePublish} variant="outline" size="sm">
+                            <Button onClick={handlePublish} variant="outline" size="sm" disabled={isEffectivelyLocked}>
                                 <Send className="size-4 mr-2" />
                                 Publish
                             </Button>
                         ) : content.status === 'published' ? (
-                            <Button onClick={handleUnpublish} variant="outline" size="sm">
+                            <Button onClick={handleUnpublish} variant="outline" size="sm" disabled={isEffectivelyLocked}>
                                 <Archive className="size-4 mr-2" />
                                 Unpublish
                             </Button>
                         ) : null}
-                        <Button onClick={handleSubmit} disabled={processing || !isDirty} size="sm">
+                        <Button onClick={handleSubmit} disabled={processing || !isDirty || isEffectivelyLocked} size="sm">
                             {processing ? (
                                 <Loader2 className="size-4 mr-2 animate-spin" />
                             ) : (
@@ -224,6 +255,23 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
                             </Link>
                         </Button>
                     </div>
+
+                    {isEffectivelyLocked && (
+                        <Alert variant="destructive" className="mb-4">
+                            <AlertDescription>
+                                {effectiveLockSource === 'collection' ? (
+                                    <>This content cannot be edited because the collection "{content.collection.name}" is locked.</>
+                                ) : (
+                                    <>This content is locked and cannot be edited.</>
+                                )}
+                                {(isContentLocked ? content.lock_reason : content.collection?.lock_reason) && (
+                                    <span className="block mt-1 text-sm opacity-80">
+                                        Reason: {isContentLocked ? content.lock_reason : content.collection?.lock_reason}
+                                    </span>
+                                )}
+                            </AlertDescription>
+                        </Alert>
+                    )}
 
                     <Tabs defaultValue="content" className="space-y-6">
                         <div className="flex items-center justify-between gap-4">

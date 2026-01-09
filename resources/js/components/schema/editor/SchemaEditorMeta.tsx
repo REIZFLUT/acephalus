@@ -6,7 +6,7 @@ import { MetaFieldList } from './MetaFieldList';
 import { buildCurrentSchema } from './constants';
 import type { SchemaEditorBaseProps } from './types';
 
-export function SchemaEditorMeta({ schema, onChange }: SchemaEditorBaseProps) {
+export function SchemaEditorMeta({ schema, onChange, collections, filterViews }: SchemaEditorBaseProps) {
     const currentSchema = buildCurrentSchema(schema);
 
     const addMetaField = () => {
@@ -38,6 +38,16 @@ export function SchemaEditorMeta({ schema, onChange }: SchemaEditorBaseProps) {
         });
     };
 
+    const reorderMetaField = (fromIndex: number, toIndex: number) => {
+        const fields = [...currentSchema.collection_meta_fields];
+        const [removed] = fields.splice(fromIndex, 1);
+        fields.splice(toIndex, 0, removed);
+        onChange({
+            ...currentSchema,
+            collection_meta_fields: fields,
+        });
+    };
+
     return (
         <Card>
             <CardHeader>
@@ -55,6 +65,9 @@ export function SchemaEditorMeta({ schema, onChange }: SchemaEditorBaseProps) {
                     fields={currentSchema.collection_meta_fields}
                     onUpdate={updateMetaField}
                     onRemove={removeMetaField}
+                    onReorder={reorderMetaField}
+                    collections={collections}
+                    filterViews={filterViews}
                 />
                 <Button
                     type="button"

@@ -21,15 +21,17 @@ import {
 import { Loader2, ArrowLeft, Trash2, Settings, Layers, FolderCog, FileStack, Blocks, BookCopy, TableProperties } from 'lucide-react';
 import { SchemaEditorMeta, SchemaEditorContents, SchemaEditorElements, SchemaEditorWrappers, SchemaEditorEditions, SchemaEditorListView } from '@/components/schema/SchemaEditor';
 import { MetaFieldInput } from '@/components/editor/MetaFieldInput';
-import type { PageProps, Collection, CollectionSchema, WrapperPurpose, Edition, MetaFieldDefinition } from '@/types';
+import type { PageProps, Collection, CollectionSchema, WrapperPurpose, Edition, MetaFieldDefinition, FilterView } from '@/types';
 
 interface CollectionsEditProps extends PageProps {
     collection: Collection;
     wrapperPurposes: WrapperPurpose[];
     editions: Edition[];
+    allCollections: Collection[];
+    filterViews: FilterView[];
 }
 
-export default function CollectionsEdit({ collection, wrapperPurposes, editions }: CollectionsEditProps) {
+export default function CollectionsEdit({ collection, wrapperPurposes, editions, allCollections, filterViews }: CollectionsEditProps) {
     const [activeTab, setActiveTab] = useState('general');
     
     const { data, setData, put, processing, errors, isDirty } = useForm({
@@ -251,6 +253,8 @@ export default function CollectionsEdit({ collection, wrapperPurposes, editions 
                         <SchemaEditorMeta
                             schema={data.schema}
                             onChange={handleSchemaChange}
+                            collections={allCollections}
+                            filterViews={filterViews}
                         />
                     </TabsContent>
 
@@ -259,6 +263,8 @@ export default function CollectionsEdit({ collection, wrapperPurposes, editions 
                         <SchemaEditorContents
                             schema={data.schema}
                             onChange={handleSchemaChange}
+                            collections={allCollections}
+                            filterViews={filterViews}
                         />
                     </TabsContent>
 
@@ -267,6 +273,8 @@ export default function CollectionsEdit({ collection, wrapperPurposes, editions 
                         <SchemaEditorElements
                             schema={data.schema}
                             onChange={handleSchemaChange}
+                            collections={allCollections}
+                            filterViews={filterViews}
                         />
                     </TabsContent>
 

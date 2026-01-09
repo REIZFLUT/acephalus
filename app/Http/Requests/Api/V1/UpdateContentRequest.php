@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Models\Mongodb\Content;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateContentRequest extends FormRequest
@@ -19,13 +20,31 @@ class UpdateContentRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, array<string>>
+     * @return array<string, array<mixed>>
      */
     public function rules(): array
     {
+        $content = $this->route('content');
+
         return [
             'title' => ['sometimes', 'string', 'max:255'],
-            'slug' => ['sometimes', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/'],
+            'slug' => [
+                'sometimes',
+                'string',
+                'max:255',
+                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+                function (string $attribute, mixed $value, \Closure $fail) use ($content) {
+                    // Check if slug already exists in the same collection (excluding current content)
+                    $exists = Content::where('collection_id', $content->collection_id)
+                        ->where('slug', $value)
+                        ->where('_id', '!=', $content->_id)
+                        ->exists();
+
+                    if ($exists) {
+                        $fail('This slug is already used in this collection.');
+                    }
+                },
+            ],
             'metadata' => ['nullable', 'array'],
             'elements' => ['nullable', 'array'],
             'change_note' => ['nullable', 'string', 'max:500'],
@@ -44,5 +63,3 @@ class UpdateContentRequest extends FormRequest
         ];
     }
 }
-
-

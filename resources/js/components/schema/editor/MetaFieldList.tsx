@@ -1,4 +1,4 @@
-import type { MetaFieldDefinition, MetaFieldType, SelectInputStyle } from '@/types';
+import type { MetaFieldDefinition, MetaFieldType, SelectInputStyle, Collection, FilterView } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,17 +15,24 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { Plus, Trash2, GripVertical, ChevronDown, Info } from 'lucide-react';
+import { Plus, Trash2, GripVertical, ChevronDown, Info, Database, List } from 'lucide-react';
 import { metaFieldTypes, selectInputStyles } from './constants';
 import { useState } from 'react';
+import { cn } from '@/lib/utils';
 
 interface MetaFieldListProps {
     fields: MetaFieldDefinition[];
     onUpdate: (index: number, updates: Partial<MetaFieldDefinition>) => void;
     onRemove: (index: number) => void;
+    onReorder: (fromIndex: number, toIndex: number) => void;
+    collections?: Collection[];
+    filterViews?: FilterView[];
 }
 
-export function MetaFieldList({ fields, onUpdate, onRemove }: MetaFieldListProps) {
+export function MetaFieldList({ fields, onUpdate, onRemove, onReorder, collections, filterViews }: MetaFieldListProps) {
+    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+    const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
     if (fields.length === 0) {
         return (
             <p className="text-sm text-muted-foreground italic">
@@ -34,15 +41,46 @@ export function MetaFieldList({ fields, onUpdate, onRemove }: MetaFieldListProps
         );
     }
 
+    const handleDragStart = (index: number) => {
+        setDraggedIndex(index);
+    };
+
+    const handleDragEnd = () => {
+        if (draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {
+            onReorder(draggedIndex, dragOverIndex);
+        }
+        setDraggedIndex(null);
+        setDragOverIndex(null);
+    };
+
+    const handleDragOver = (e: React.DragEvent, index: number) => {
+        e.preventDefault();
+        if (draggedIndex !== null && draggedIndex !== index) {
+            setDragOverIndex(index);
+        }
+    };
+
+    const handleDragLeave = () => {
+        setDragOverIndex(null);
+    };
+
     return (
         <div className="space-y-3">
             {fields.map((field, index) => (
                 <MetaFieldItem
-                    key={index}
+                    key={`${field.name}-${index}`}
                     field={field}
                     index={index}
                     onUpdate={onUpdate}
                     onRemove={onRemove}
+                    collections={collections}
+                    filterViews={filterViews}
+                    isDragging={draggedIndex === index}
+                    isDragOver={dragOverIndex === index}
+                    onDragStart={() => handleDragStart(index)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDragLeave={handleDragLeave}
                 />
             ))}
         </div>
@@ -54,9 +92,30 @@ interface MetaFieldItemProps {
     index: number;
     onUpdate: (index: number, updates: Partial<MetaFieldDefinition>) => void;
     onRemove: (index: number) => void;
+    collections?: Collection[];
+    filterViews?: FilterView[];
+    isDragging: boolean;
+    isDragOver: boolean;
+    onDragStart: () => void;
+    onDragEnd: () => void;
+    onDragOver: (e: React.DragEvent) => void;
+    onDragLeave: () => void;
 }
 
-function MetaFieldItem({ field, index, onUpdate, onRemove }: MetaFieldItemProps) {
+function MetaFieldItem({ 
+    field, 
+    index, 
+    onUpdate, 
+    onRemove, 
+    collections, 
+    filterViews,
+    isDragging,
+    isDragOver,
+    onDragStart,
+    onDragEnd,
+    onDragOver,
+    onDragLeave,
+}: MetaFieldItemProps) {
     // Support legacy help_text field for backwards compatibility
     const descriptionValue = field.description || (field as any).help_text;
     const hasDescOrExpl = !!(descriptionValue || field.explanation);
@@ -78,9 +137,35 @@ function MetaFieldItem({ field, index, onUpdate, onRemove }: MetaFieldItemProps)
         return 'Add description & explanation';
     };
 
+    const handleDragStart = (e: React.DragEvent) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(index));
+        onDragStart();
+    };
+
+    const handleDragEnd = (e: React.DragEvent) => {
+        e.preventDefault();
+        onDragEnd();
+    };
+
     return (
-        <div className="flex items-start gap-2 p-3 border rounded-md bg-background">
-            <GripVertical className="size-4 text-muted-foreground mt-2 cursor-move" />
+        <div 
+            className={cn(
+                "flex items-start gap-2 p-3 border rounded-md bg-background transition-all duration-200",
+                isDragging && "opacity-50 scale-[0.98]",
+                isDragOver && "border-primary border-2"
+            )}
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+        >
+            <div
+                draggable="true"
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                className="cursor-grab active:cursor-grabbing mt-2"
+            >
+                <GripVertical className="size-4 text-muted-foreground" />
+            </div>
             <div className="flex-1 space-y-3">
                 <MetaFieldBasicFields field={field} index={index} onUpdate={onUpdate} onRemove={onRemove} />
                 
@@ -91,7 +176,13 @@ function MetaFieldItem({ field, index, onUpdate, onRemove }: MetaFieldItemProps)
 
                 {/* Select/MultiSelect options */}
                 {(field.type === 'select' || field.type === 'multi_select') && (
-                    <SelectOptions field={field} index={index} onUpdate={onUpdate} />
+                    <SelectOptions 
+                        field={field} 
+                        index={index} 
+                        onUpdate={onUpdate} 
+                        collections={collections}
+                        filterViews={filterViews}
+                    />
                 )}
 
                 {/* Advanced options (Description & Explanation) */}
@@ -301,9 +392,82 @@ interface SelectOptionsProps {
     field: MetaFieldDefinition;
     index: number;
     onUpdate: (index: number, updates: Partial<MetaFieldDefinition>) => void;
+    collections?: Collection[];
+    filterViews?: FilterView[];
 }
 
-function SelectOptions({ field, index, onUpdate }: SelectOptionsProps) {
+function SelectOptions({ field, index, onUpdate, collections, filterViews }: SelectOptionsProps) {
+    const optionsSource = field.options_source || 'static';
+    const selectedCollectionId = field.collection_config?.collection_id;
+    
+    // Filter views for the selected collection
+    const collectionFilterViews = filterViews?.filter(
+        fv => fv.collection_id === selectedCollectionId
+    ) || [];
+
+    const handleSourceChange = (source: 'static' | 'collection') => {
+        const updates: Partial<MetaFieldDefinition> = { 
+            options_source: source 
+        };
+        
+        if (source === 'static') {
+            // Clear collection config when switching to static
+            updates.collection_config = undefined;
+            if (!field.options) {
+                updates.options = [];
+            }
+        } else {
+            // Clear static options when switching to collection
+            updates.options = undefined;
+            // Disable allow_custom when using collection (values are UUIDs)
+            updates.allow_custom = false;
+        }
+        
+        onUpdate(index, updates);
+    };
+    
+    const handleAllowCustomChange = (checked: boolean) => {
+        const updates: Partial<MetaFieldDefinition> = { 
+            allow_custom: checked 
+        };
+        
+        // If enabling custom values and currently using collection, switch to static
+        if (checked && optionsSource === 'collection') {
+            updates.options_source = 'static';
+            updates.collection_config = undefined;
+            if (!field.options) {
+                updates.options = [];
+            }
+        }
+        
+        onUpdate(index, updates);
+    };
+
+    const handleCollectionChange = (collectionId: string) => {
+        if (collectionId === '__none__' || !collectionId) {
+            onUpdate(index, {
+                collection_config: undefined,
+            });
+        } else {
+            onUpdate(index, {
+                collection_config: {
+                    collection_id: collectionId,
+                    filter_view_id: undefined, // Reset filter view when collection changes
+                }
+            });
+        }
+    };
+
+    const handleFilterViewChange = (filterViewId: string) => {
+        onUpdate(index, {
+            collection_config: {
+                ...field.collection_config,
+                collection_id: field.collection_config?.collection_id || '',
+                filter_view_id: filterViewId === 'none' ? undefined : filterViewId,
+            }
+        });
+    };
+
     return (
         <div className="ml-6 p-3 bg-muted/30 rounded-md space-y-4">
             {/* Input Style and Allow Custom */}
@@ -336,7 +500,7 @@ function SelectOptions({ field, index, onUpdate }: SelectOptionsProps) {
                             <input
                                 type="checkbox"
                                 checked={field.allow_custom ?? false}
-                                onChange={(e) => onUpdate(index, { allow_custom: e.target.checked })}
+                                onChange={(e) => handleAllowCustomChange(e.target.checked)}
                                 className="rounded"
                             />
                             Allow custom values
@@ -345,69 +509,168 @@ function SelectOptions({ field, index, onUpdate }: SelectOptionsProps) {
                 )}
             </div>
 
-            {/* Options */}
-            <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                    <Label className="text-xs">Options</Label>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                            const currentOptions = field.options || [];
-                            onUpdate(index, {
-                                options: [...currentOptions, { value: '', label: '' }]
-                            });
-                        }}
-                        className="h-7 text-xs"
-                    >
-                        <Plus className="size-3 mr-1" />
-                        Add Option
-                    </Button>
+            {/* Options Source */}
+            <div className="space-y-3">
+                <div className="space-y-1.5">
+                    <Label className="text-xs">Options Source</Label>
+                    <div className="flex gap-2">
+                        <Button
+                            type="button"
+                            variant={optionsSource === 'static' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => handleSourceChange('static')}
+                            className="h-8 text-xs flex-1"
+                        >
+                            <List className="size-3 mr-1.5" />
+                            Static Options
+                        </Button>
+                        <Button
+                            type="button"
+                            variant={optionsSource === 'collection' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => handleSourceChange('collection')}
+                            className="h-8 text-xs flex-1"
+                            disabled={!collections || collections.length === 0 || field.allow_custom}
+                            title={field.allow_custom ? 'Disable "Allow custom values" to use collection options' : undefined}
+                        >
+                            <Database className="size-3 mr-1.5" />
+                            From Collection
+                        </Button>
+                    </div>
                 </div>
-                <div className="space-y-2">
-                    {(field.options || []).map((option, optIndex) => (
-                        <div key={optIndex} className="flex items-center gap-2">
-                            <Input
-                                placeholder="Value"
-                                value={option.value}
-                                onChange={(e) => {
-                                    const options = [...(field.options || [])];
-                                    options[optIndex] = { ...option, value: e.target.value };
-                                    onUpdate(index, { options });
-                                }}
-                                className="h-8 text-xs"
-                            />
-                            <Input
-                                placeholder="Label"
-                                value={option.label}
-                                onChange={(e) => {
-                                    const options = [...(field.options || [])];
-                                    options[optIndex] = { ...option, label: e.target.value };
-                                    onUpdate(index, { options });
-                                }}
-                                className="h-8 text-xs"
-                            />
+
+                {/* Static Options */}
+                {optionsSource === 'static' && (
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <Label className="text-xs">Options</Label>
                             <Button
                                 type="button"
                                 variant="ghost"
-                                size="icon"
+                                size="sm"
                                 onClick={() => {
-                                    const options = (field.options || []).filter((_, i) => i !== optIndex);
-                                    onUpdate(index, { options });
+                                    const currentOptions = field.options || [];
+                                    onUpdate(index, {
+                                        options: [...currentOptions, { value: '', label: '' }]
+                                    });
                                 }}
-                                className="size-8 text-destructive hover:text-destructive"
+                                className="h-7 text-xs"
                             >
-                                <Trash2 className="size-3" />
+                                <Plus className="size-3 mr-1" />
+                                Add Option
                             </Button>
                         </div>
-                    ))}
-                    {(!field.options || field.options.length === 0) && (
-                        <p className="text-xs text-muted-foreground italic">
-                            No options defined. Add at least one option.
-                        </p>
-                    )}
-                </div>
+                        <div className="space-y-2">
+                            {(field.options || []).map((option, optIndex) => (
+                                <div key={optIndex} className="flex items-center gap-2">
+                                    <Input
+                                        placeholder="Value"
+                                        value={option.value}
+                                        onChange={(e) => {
+                                            const options = [...(field.options || [])];
+                                            options[optIndex] = { ...option, value: e.target.value };
+                                            onUpdate(index, { options });
+                                        }}
+                                        className="h-8 text-xs"
+                                    />
+                                    <Input
+                                        placeholder="Label"
+                                        value={option.label}
+                                        onChange={(e) => {
+                                            const options = [...(field.options || [])];
+                                            options[optIndex] = { ...option, label: e.target.value };
+                                            onUpdate(index, { options });
+                                        }}
+                                        className="h-8 text-xs"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => {
+                                            const options = (field.options || []).filter((_, i) => i !== optIndex);
+                                            onUpdate(index, { options });
+                                        }}
+                                        className="size-8 text-destructive hover:text-destructive"
+                                    >
+                                        <Trash2 className="size-3" />
+                                    </Button>
+                                </div>
+                            ))}
+                            {(!field.options || field.options.length === 0) && (
+                                <p className="text-xs text-muted-foreground italic">
+                                    No options defined. Add at least one option.
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Collection Options */}
+                {optionsSource === 'collection' && (
+                    <div className="space-y-3">
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="space-y-1.5">
+                                <Label className="text-xs">Collection</Label>
+                                <Select
+                                    value={selectedCollectionId || '__none__'}
+                                    onValueChange={handleCollectionChange}
+                                >
+                                    <SelectTrigger className="h-8">
+                                        <SelectValue placeholder="Select collection..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__none__">Select collection...</SelectItem>
+                                        {(collections || []).map((collection) => {
+                                            // Use _id or id (MongoDB serializes _id as id in JSON)
+                                            const collectionId = String(collection._id || collection.id || '');
+                                            if (!collectionId) {
+                                                return null;
+                                            }
+                                            return (
+                                                <SelectItem key={collectionId} value={collectionId}>
+                                                    {collection.name}
+                                                </SelectItem>
+                                            );
+                                        })}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            {selectedCollectionId && (
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs">Filter View (optional)</Label>
+                                    <Select
+                                        value={field.collection_config?.filter_view_id || 'none'}
+                                        onValueChange={handleFilterViewChange}
+                                    >
+                                        <SelectTrigger className="h-8">
+                                            <SelectValue placeholder="No filter" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none">No filter</SelectItem>
+                                            {collectionFilterViews.map((fv) => (
+                                                <SelectItem key={fv._id} value={fv._id}>
+                                                    {fv.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+                        </div>
+                        {selectedCollectionId && (
+                            <p className="text-xs text-muted-foreground">
+                                Options will be loaded from contents in this collection. 
+                                Value: content UUID, Label: content title.
+                            </p>
+                        )}
+                        {!selectedCollectionId && (
+                            <p className="text-xs text-muted-foreground italic">
+                                Select a collection to use its contents as options.
+                            </p>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );

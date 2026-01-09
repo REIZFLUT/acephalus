@@ -14,6 +14,7 @@ use App\Services\SchemaService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -50,17 +51,20 @@ class CollectionController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // Generate slug from name if not provided (before validation)
+        if ($request->filled('name') && ! $request->filled('slug')) {
+            $request->merge(['slug' => Str::slug($request->input('name'))]);
+        }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', 'max:255', 'regex:/^[a-z0-9-]+$/'],
+            'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9-]+$/', 'unique:mongodb.collections,slug'],
             'description' => ['nullable', 'string'],
         ]);
 
-        $slug = $validated['slug'] ?? Str::slug($validated['name']);
-
         $collection = Collection::create([
             'name' => $validated['name'],
-            'slug' => $slug,
+            'slug' => $validated['slug'],
             'description' => $validated['description'] ?? null,
             'schema' => $this->schemaService->createDefaultSchema(),
             'settings' => [],
@@ -167,10 +171,20 @@ class CollectionController extends Controller
             ->orderBy('name')
             ->get(['_id', 'slug', 'name', 'description', 'icon', 'is_system']);
 
+        // Get all collections for select field options
+        $allCollections = Collection::orderBy('name')
+            ->get(['_id', 'name', 'slug', 'description']);
+
+        // Get all filter views for select field options
+        $filterViews = FilterView::orderBy('name')
+            ->get(['_id', 'name', 'slug', 'collection_id']);
+
         return Inertia::render('Collections/Edit', [
             'collection' => $collection,
             'wrapperPurposes' => $wrapperPurposes,
             'editions' => $editions,
+            'allCollections' => $allCollections,
+            'filterViews' => $filterViews,
         ]);
     }
 
@@ -178,7 +192,13 @@ class CollectionController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9-]+$/'],
+            'slug' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[a-z0-9-]+$/',
+                Rule::unique('mongodb.collections', 'slug')->ignore($collection->_id, '_id'),
+            ],
             'description' => ['nullable', 'string'],
             'schema' => ['nullable', 'array'],
             'collection_meta' => ['nullable', 'array'],
@@ -252,5 +272,53 @@ class CollectionController extends Controller
         return redirect()
             ->route('collections.index')
             ->with('success', 'Collection deleted successfully.');
+    }
+
+    /**
+     * Get select options from a collection.
+     * Returns contents as options with UUID as value and title as label.
+     */
+    public function selectOptions(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $validated = $request->validate([
+            'collection_id' => ['required', 'string'],
+            'filter_view_id' => ['nullable', 'string'],
+        ]);
+
+        $collection = Collection::find($validated['collection_id']);
+
+        if (! $collection) {
+            return response()->json([
+                'error' => 'Collection not found',
+                'options' => [],
+            ], 404);
+        }
+
+        $query = $collection->contents();
+
+        // Apply filter view if specified
+        if (! empty($validated['filter_view_id'])) {
+            $filterView = FilterView::find($validated['filter_view_id']);
+            if ($filterView && $filterView->belongsToCollection((string) $collection->_id)) {
+                $query = $this->filterService->applyFilterView($query, $filterView, $collection);
+            }
+        }
+
+        // Order by title for better UX
+        $query->orderBy('title');
+
+        // Limit to reasonable number of options
+        $contents = $query->limit(500)->get(['_id', 'title']);
+
+        $options = $contents->map(function ($content) {
+            return [
+                'value' => (string) $content->_id,
+                'label' => $content->title,
+            ];
+        })->values()->all();
+
+        return response()->json([
+            'options' => $options,
+        ]);
     }
 }

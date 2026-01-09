@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Models\Mongodb\Content;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 
@@ -32,13 +33,30 @@ class StoreContentRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, array<string>>
+     * @return array<string, array<mixed>>
      */
     public function rules(): array
     {
+        $collection = $this->route('collection');
+
         return [
             'title' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/'],
+            'slug' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+                function (string $attribute, mixed $value, \Closure $fail) use ($collection) {
+                    // Check if slug already exists in the same collection
+                    $exists = Content::where('collection_id', $collection->_id)
+                        ->where('slug', $value)
+                        ->exists();
+
+                    if ($exists) {
+                        $fail('This slug is already used in this collection.');
+                    }
+                },
+            ],
             'metadata' => ['nullable', 'array'],
         ];
     }
@@ -55,5 +73,3 @@ class StoreContentRequest extends FormRequest
         ];
     }
 }
-
-

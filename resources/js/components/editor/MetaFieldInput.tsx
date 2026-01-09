@@ -1,4 +1,4 @@
-import type { MetaFieldDefinition, SelectInputStyle, MediaMetaFieldValue } from '@/types';
+import type { MetaFieldDefinition, SelectInputStyle, MediaMetaFieldValue, MetaFieldOption } from '@/types';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,7 +24,8 @@ import { TagInput } from '@/components/ui/tag-input';
 import { CodeEditor } from './CodeEditor';
 import { WysiwygEditor } from './WysiwygEditor';
 import { MediaPickerInput } from './MediaPickerInput';
-import { Info } from 'lucide-react';
+import { Info, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 interface MetaFieldInputProps {
     field: MetaFieldDefinition;
@@ -34,10 +35,53 @@ interface MetaFieldInputProps {
 }
 
 export function MetaFieldInput({ field, value, onChange, compact = false }: MetaFieldInputProps) {
-    const { name, label, type, required, placeholder, description, explanation, options, default_value, editor_type, target_format, input_style, allow_custom } = field;
+    const { name, label, type, required, placeholder, description, explanation, options, default_value, editor_type, target_format, input_style, allow_custom, options_source, collection_config } = field;
     
     // Support legacy help_text field for backwards compatibility
     const descriptionText = description || (field as any).help_text;
+
+    // State for dynamically loaded collection options
+    const [collectionOptions, setCollectionOptions] = useState<MetaFieldOption[]>([]);
+    const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+    const [optionsError, setOptionsError] = useState<string | null>(null);
+
+    // Load options from collection when options_source is 'collection'
+    useEffect(() => {
+        if (options_source === 'collection' && collection_config?.collection_id) {
+            setIsLoadingOptions(true);
+            setOptionsError(null);
+
+            const params = new URLSearchParams({
+                collection_id: collection_config.collection_id,
+            });
+            if (collection_config.filter_view_id) {
+                params.set('filter_view_id', collection_config.filter_view_id);
+            }
+
+            fetch(`/api/select-options?${params.toString()}`)
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error('Failed to load options');
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    setCollectionOptions(data.options || []);
+                })
+                .catch(err => {
+                    setOptionsError(err.message);
+                    setCollectionOptions([]);
+                })
+                .finally(() => {
+                    setIsLoadingOptions(false);
+                });
+        } else {
+            setCollectionOptions([]);
+        }
+    }, [options_source, collection_config?.collection_id, collection_config?.filter_view_id]);
+
+    // Determine which options to use
+    const effectiveOptions = options_source === 'collection' ? collectionOptions : (options || []);
     
     // Helper component to render label with optional info icon
     const FieldLabel = ({ htmlFor, className }: { htmlFor?: string; className?: string }) => (
@@ -221,9 +265,24 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                 );
 
             case 'select':
+                if (isLoadingOptions) {
+                    return (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Loader2 className="size-4 animate-spin" />
+                            Loading options...
+                        </div>
+                    );
+                }
+                if (optionsError) {
+                    return (
+                        <div className="text-sm text-destructive">
+                            Error loading options: {optionsError}
+                        </div>
+                    );
+                }
                 return renderSelectInput(
                     input_style || 'dropdown',
-                    options || [],
+                    effectiveOptions,
                     (currentValue as string) || '',
                     (val) => onChange(val),
                     placeholder,
@@ -234,9 +293,24 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
             case 'multi_select':
                 // Ensure value is always an array
                 const multiSelectValue = Array.isArray(currentValue) ? currentValue : [];
+                if (isLoadingOptions) {
+                    return (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Loader2 className="size-4 animate-spin" />
+                            Loading options...
+                        </div>
+                    );
+                }
+                if (optionsError) {
+                    return (
+                        <div className="text-sm text-destructive">
+                            Error loading options: {optionsError}
+                        </div>
+                    );
+                }
                 return renderMultiSelectInput(
                     input_style || 'dropdown',
-                    options || [],
+                    effectiveOptions,
                     multiSelectValue,
                     (vals) => onChange(vals),
                     placeholder,

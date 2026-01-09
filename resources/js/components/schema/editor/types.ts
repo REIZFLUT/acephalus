@@ -1,8 +1,10 @@
-import type { CollectionSchema, WrapperPurpose, Edition } from '@/types';
+import type { CollectionSchema, WrapperPurpose, Edition, Collection, FilterView } from '@/types';
 
 export interface SchemaEditorBaseProps {
     schema: CollectionSchema | null;
     onChange: (schema: CollectionSchema) => void;
+    collections?: Collection[];
+    filterViews?: FilterView[];
 }
 
 export interface SchemaEditorWrappersProps extends SchemaEditorBaseProps {

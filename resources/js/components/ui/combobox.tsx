@@ -113,8 +113,9 @@ export function Combobox({
                             {options.map((option) => (
                                 <CommandItem
                                     key={option.value}
-                                    value={option.value}
-                                    onSelect={handleSelect}
+                                    value={option.label}
+                                    keywords={[option.value]}
+                                    onSelect={() => handleSelect(option.value)}
                                 >
                                     <Check
                                         className={cn(
@@ -231,8 +232,9 @@ export function MultiCombobox({
                             {options.map((option) => (
                                 <CommandItem
                                     key={option.value}
-                                    value={option.value}
-                                    onSelect={handleSelect}
+                                    value={option.label}
+                                    keywords={[option.value]}
+                                    onSelect={() => handleSelect(option.value)}
                                 >
                                     <Check
                                         className={cn(

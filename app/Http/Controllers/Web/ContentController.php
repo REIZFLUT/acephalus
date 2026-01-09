@@ -51,19 +51,37 @@ class ContentController extends Controller
 
     public function store(Request $request, Collection $collection): RedirectResponse
     {
+        // Generate slug from title if not provided (before validation)
+        if ($request->filled('title') && ! $request->filled('slug')) {
+            $request->merge(['slug' => Str::slug($request->input('title'))]);
+        }
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', 'max:255', 'regex:/^[a-z0-9-]+$/'],
+            'slug' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[a-z0-9-]+$/',
+                function (string $attribute, mixed $value, \Closure $fail) use ($collection) {
+                    // Check if slug already exists in the same collection
+                    $exists = Content::where('collection_id', $collection->_id)
+                        ->where('slug', $value)
+                        ->exists();
+
+                    if ($exists) {
+                        $fail('This slug is already used in this collection.');
+                    }
+                },
+            ],
             'elements' => ['nullable', 'array'],
             'metadata' => ['nullable', 'array'],
         ]);
 
-        $slug = $validated['slug'] ?? Str::slug($validated['title']);
-
         $content = Content::create([
             'collection_id' => $collection->_id,
             'title' => $validated['title'],
-            'slug' => $slug,
+            'slug' => $validated['slug'],
             'status' => ContentStatus::DRAFT,
             'current_version' => 1,
             'elements' => $validated['elements'] ?? [],
@@ -159,7 +177,23 @@ class ContentController extends Controller
     {
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9-]+$/'],
+            'slug' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[a-z0-9-]+$/',
+                function (string $attribute, mixed $value, \Closure $fail) use ($content) {
+                    // Check if slug already exists in the same collection (excluding current content)
+                    $exists = Content::where('collection_id', $content->collection_id)
+                        ->where('slug', $value)
+                        ->where('_id', '!=', $content->_id)
+                        ->exists();
+
+                    if ($exists) {
+                        $fail('This slug is already used in this collection.');
+                    }
+                },
+            ],
             'elements' => ['nullable', 'array'],
             'metadata' => ['nullable', 'array'],
             'editions' => ['nullable', 'array'],

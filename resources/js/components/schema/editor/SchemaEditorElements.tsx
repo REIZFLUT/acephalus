@@ -12,7 +12,7 @@ import { buildCurrentSchema, builtInElementTypes, type ElementTypeInfo } from '.
 import { getLucideIcon } from './utils';
 import type { SchemaEditorBaseProps } from './types';
 
-export function SchemaEditorElements({ schema, onChange }: SchemaEditorBaseProps) {
+export function SchemaEditorElements({ schema, onChange, collections, filterViews }: SchemaEditorBaseProps) {
     const currentSchema = buildCurrentSchema(schema);
     const textConfig = currentSchema.element_configs.text as TextElementConfig | undefined;
     const mediaConfig = currentSchema.element_configs.media as MediaElementConfig | undefined;
@@ -193,6 +193,8 @@ export function SchemaEditorElements({ schema, onChange }: SchemaEditorBaseProps
                                                     fields={metaFields}
                                                     onUpdate={(index, updates) => updateMetaField(type as ElementType, index, updates)}
                                                     onRemove={(index) => removeMetaField(type as ElementType, index)}
+                                                    collections={collections}
+                                                    filterViews={filterViews}
                                                 />
                                                 <Button
                                                     type="button"

@@ -8,7 +8,7 @@ import { MetaFieldList } from './MetaFieldList';
 import { buildCurrentSchema } from './constants';
 import type { SchemaEditorBaseProps } from './types';
 
-export function SchemaEditorContents({ schema, onChange }: SchemaEditorBaseProps) {
+export function SchemaEditorContents({ schema, onChange, collections, filterViews }: SchemaEditorBaseProps) {
     const currentSchema = buildCurrentSchema(schema);
 
     const addMetaField = () => {
@@ -109,6 +109,16 @@ export function SchemaEditorContents({ schema, onChange }: SchemaEditorBaseProps
         });
     };
 
+    const reorderMetaField = (fromIndex: number, toIndex: number) => {
+        const fields = [...currentSchema.content_meta_fields];
+        const [removed] = fields.splice(fromIndex, 1);
+        fields.splice(toIndex, 0, removed);
+        onChange({
+            ...currentSchema,
+            content_meta_fields: fields,
+        });
+    };
+
     const toggleMetaOnlyContent = (enabled: boolean) => {
         onChange({
             ...currentSchema,
@@ -168,6 +178,9 @@ export function SchemaEditorContents({ schema, onChange }: SchemaEditorBaseProps
                         fields={currentSchema.content_meta_fields}
                         onUpdate={updateMetaField}
                         onRemove={removeMetaField}
+                        onReorder={reorderMetaField}
+                        collections={collections}
+                        filterViews={filterViews}
                     />
                     <Button
                         type="button"

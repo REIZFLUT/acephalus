@@ -25,15 +25,26 @@
 - **Version Control** - Full content versioning with diff comparison and restore
 - **Media Management** - GridFS-based media storage with folders and metadata
 - **Multi-Edition Support** - Serve different content variants to different audiences
+- **Resource Locking** - Prevent concurrent editing conflicts on Collections, Contents, and Elements
 
 ### Content Management
 
 - **Collections** - Define custom content types with flexible schemas
 - **Dynamic Schemas** - JSON-based schema definitions for meta fields
+- **Content Status Workflow** - Draft, Published, and Archived states
+- **Content Duplication** - Clone existing contents with all elements
 - **Element Types** - Support for Text, Media, HTML, SVG, KaTeX, JSON, XML, References, and Wrappers
 - **Custom Elements** - JSON-defined custom elements with configurable fields
 - **Wrapper Elements** - Nestable containers with semantic purposes (Infobox, Quote, Accordion, etc.)
-- **Internal References** - Link to other content, collections, or specific elements
+- **Internal References** - Link to other content, collections, filter views, or specific elements
+
+### Advanced Filtering
+
+- **Filter Views** - Save and reuse complex content filters
+- **Filter Builder** - Visual condition builder with AND/OR groups
+- **Rich Operators** - 17+ filter operators (equals, contains, regex, comparisons, etc.)
+- **Custom Sorting** - Multi-field sort configuration
+- **Raw MongoDB Queries** - Advanced users can write raw MongoDB queries
 
 ### Media Library
 
@@ -41,6 +52,9 @@
 - **Folder Organization** - Hierarchical folder structure with collection-specific folders
 - **Custom Meta Fields** - Configurable metadata fields (Alt, Caption, Copyright, Photographer, etc.)
 - **Media Types** - Support for Images, Videos, Audio, and Documents
+- **Thumbnail Generation** - Automatic thumbnail creation with configurable sizes
+- **Focus Area Selector** - Define image crop focus points
+- **Document Preview** - In-browser preview for PDF, DOCX, PPTX, and XLSX files
 
 ### User & Permission System
 
@@ -48,13 +62,24 @@
 - **Predefined Roles** - Super Admin, Admin, Editor, Author, and Viewer
 - **Granular Permissions** - Fine-grained permissions for all CMS operations
 - **API Scopes** - Separate permissions for API access (read/write/delete)
+- **Lock Permissions** - Control who can lock/unlock resources
 
 ### Administration
 
-- **Modern Admin Panel** - React-based UI with Inertia.js
-- **Tailwind CSS 4** - Beautiful, responsive design
-- **Settings Management** - Configure Roles, Editions, Wrapper Purposes, and Media Meta Fields
+- **Modern Admin Panel** - React 19 UI with Inertia.js
+- **Tailwind CSS 4** - Beautiful, responsive design with dark mode support
+- **Internationalization** - Multi-language support (English, German)
+- **Pinned Navigation** - Customize sidebar with shortcuts to collections with filters
+- **Settings Management** - Configure Roles, Editions, Wrapper Purposes, Media Meta Fields, and more
 - **User Management** - Create and manage CMS users
+
+### Content Editing
+
+- **TipTap Rich Text Editor** - WYSIWYG editing with tables, images, links, and code blocks
+- **CodeMirror Integration** - Syntax highlighting for HTML, JSON, XML, CSS, JavaScript, PHP
+- **KaTeX Support** - Beautiful mathematical formula rendering
+- **Media Picker** - Inline media selection and upload
+- **Reference Picker** - Browse and link to related content
 
 ### API
 
@@ -62,6 +87,7 @@
 - **OAuth2 Authentication** - Laravel Passport for API authentication
 - **OpenAPI Documentation** - Swagger UI for API exploration
 - **Content Versioning API** - Compare and restore content versions
+- **Permission-Based Scopes** - API endpoints respect user permissions
 
 ---
 
@@ -76,6 +102,7 @@
 
 - `mongodb` (PHP MongoDB driver)
 - `mysql/sqlite` (for user authentication storage)
+- `gd` or `imagick` (for thumbnail generation)
 - Standard Laravel extensions
 
 ---
@@ -239,15 +266,32 @@ curl -X GET https://acephalus.test/api/v1/collections \
 | `/api/v1/auth/login` | POST | Authenticate user |
 | `/api/v1/auth/register` | POST | Register new user |
 | `/api/v1/auth/logout` | POST | Revoke token |
+| `/api/v1/auth/user` | GET | Get authenticated user |
 | `/api/v1/collections` | GET, POST | List/Create collections |
 | `/api/v1/collections/{slug}` | GET, PUT, DELETE | Manage collection |
+| `/api/v1/collections/{slug}/lock` | POST, DELETE | Lock/Unlock collection |
 | `/api/v1/collections/{slug}/contents` | GET, POST | List/Create contents |
+| `/api/v1/collections/{slug}/filter-views` | GET | Get collection filter views |
+| `/api/v1/collections/{slug}/filter-fields` | GET | Get available filter fields |
+| `/api/v1/filter-views/operators` | GET | Get available filter operators |
+| `/api/v1/filter-views/{id}` | GET | Get specific filter view |
 | `/api/v1/contents/{id}` | GET, PUT, DELETE | Manage content |
 | `/api/v1/contents/{id}/publish` | POST | Publish content |
+| `/api/v1/contents/{id}/unpublish` | POST | Unpublish content |
+| `/api/v1/contents/{id}/archive` | POST | Archive content |
+| `/api/v1/contents/{id}/lock` | POST, DELETE | Lock/Unlock content |
 | `/api/v1/contents/{id}/versions` | GET | List versions |
+| `/api/v1/contents/{id}/versions/{version}` | GET | Get specific version |
+| `/api/v1/contents/{id}/versions/{from}/compare/{to}` | GET | Compare versions |
+| `/api/v1/contents/{id}/versions/{version}/restore` | POST | Restore version |
+| `/api/v1/contents/{id}/elements` | POST | Create element |
 | `/api/v1/elements/{id}` | PUT, DELETE | Manage elements |
+| `/api/v1/elements/{id}/move` | POST | Move element position |
+| `/api/v1/elements/{id}/lock` | POST, DELETE | Lock/Unlock element |
 | `/api/v1/media` | GET, POST | List/Upload media |
 | `/api/v1/media/{id}` | GET, DELETE | Manage media |
+| `/api/v1/users` | GET, POST | List/Create users |
+| `/api/v1/users/{id}` | GET, PUT, DELETE | Manage users |
 
 ### Swagger UI
 
@@ -278,11 +322,14 @@ This separation provides:
 | `collections` | Content type definitions with schemas |
 | `contents` | Actual content documents |
 | `content_versions` | Version history for contents |
+| `elements` | Content block elements |
 | `media` | Media file metadata |
 | `media_folders` | Folder hierarchy for media |
 | `media_meta_fields` | Custom metadata field definitions |
 | `editions` | Edition configurations |
 | `wrapper_purposes` | Semantic wrapper types |
+| `filter_views` | Saved filter configurations |
+| `pinned_navigation_items` | Sidebar navigation shortcuts |
 | `fs.files` / `fs.chunks` | GridFS binary storage |
 
 ### Element Types
@@ -299,7 +346,7 @@ Built-in element types:
 | `json` | Structured data | `data` |
 | `xml` | XML content | `content`, `schema` |
 | `wrapper` | Container element | `children`, `layout`, `style`, `purpose` |
-| `reference` | Internal link | `reference_type`, `collection_id`, `content_id`, `element_id` |
+| `reference` | Internal link | `reference_type`, `collection_id`, `content_id`, `element_id`, `filter_view_id` |
 
 ### Custom Elements
 
@@ -341,6 +388,16 @@ Included custom elements:
 - **Related Content** - Links to related articles
 - **Embed** - External content embeds
 
+### Filter Views
+
+Filter views allow saving complex content filters with:
+
+- **Condition Groups** - AND/OR logic for combining conditions
+- **17+ Operators** - equals, not_equals, contains, starts_with, ends_with, in, not_in, gt, gte, lt, lte, exists, not_exists, regex, is_empty, is_not_empty
+- **Field Support** - Filter by meta fields, title, status, dates, and more
+- **Custom Sorting** - Multi-field ascending/descending sort
+- **Raw Queries** - Advanced MongoDB query syntax for power users
+
 ---
 
 ## 👥 Roles & Permissions
@@ -357,8 +414,9 @@ Included custom elements:
 
 ### Permission Categories
 
-- **Contents** - `view`, `create`, `update`, `delete`, `publish`
-- **Collections** - `view`, `create`, `update`, `delete`, `schema.view`, `schema.update`
+- **Contents** - `view`, `create`, `update`, `delete`, `publish`, `lock`, `unlock`
+- **Collections** - `view`, `create`, `update`, `delete`, `schema.view`, `schema.update`, `lock`, `unlock`
+- **Elements** - `lock`, `unlock`
 - **Media** - `view`, `create`, `update`, `delete`
 - **Users** - `view`, `create`, `update`, `delete`
 - **Roles** - `view`, `create`, `update`, `delete`
@@ -366,6 +424,24 @@ Included custom elements:
 - **Editions** - `view`, `create`, `update`, `delete`
 - **Wrapper Purposes** - `view`, `create`, `update`, `delete`
 - **Media Meta Fields** - `view`, `create`, `update`, `delete`
+- **Pinned Navigation** - `view`, `create`, `update`, `delete`
+
+---
+
+## 🌐 Internationalization
+
+acephalus supports multiple languages in the admin panel:
+
+- **English** (default)
+- **German**
+
+Language files are located in `lang/` directory. Users can switch languages via their profile settings.
+
+### Adding a New Language
+
+1. Create a new JSON file in `lang/` (e.g., `lang/fr.json`)
+2. Copy the structure from `lang/en.json`
+3. Translate all keys to the target language
 
 ---
 
@@ -392,6 +468,9 @@ php artisan test
 # Run specific test file
 php artisan test tests/Feature/Api/ContentTest.php
 
+# Run with filter
+php artisan test --filter=testName
+
 # Run with coverage
 php artisan test --coverage
 ```
@@ -406,6 +485,19 @@ vendor/bin/pint
 vendor/bin/pint --dirty
 ```
 
+### Artisan Commands
+
+```bash
+# Refresh custom elements cache
+php artisan custom-elements:refresh
+
+# Generate media thumbnails
+php artisan media:thumbnails
+
+# Migrate MongoDB arrays to native format
+php artisan mongo:migrate-arrays
+```
+
 ---
 
 ## 📂 Project Structure
@@ -413,35 +505,72 @@ vendor/bin/pint --dirty
 ```
 acephalus/
 ├── app/
-│   ├── Enums/              # PHP Enums (ContentStatus, ElementType, MediaType)
+│   ├── Console/Commands/    # Artisan commands
+│   ├── Enums/               # PHP Enums (ContentStatus, ElementType, MediaType, FilterOperator)
 │   ├── Http/
 │   │   ├── Controllers/
-│   │   │   ├── Api/V1/     # API Controllers
-│   │   │   └── Web/        # Admin Panel Controllers
-│   │   ├── Middleware/     # Custom Middleware
-│   │   ├── Requests/       # Form Request Validation
-│   │   └── Resources/      # API Resources
+│   │   │   ├── Api/V1/      # API Controllers
+│   │   │   └── Web/         # Admin Panel Controllers
+│   │   ├── Middleware/      # Custom Middleware
+│   │   ├── Requests/        # Form Request Validation
+│   │   └── Resources/       # API Resources
 │   ├── Models/
-│   │   └── Mongodb/        # MongoDB Eloquent Models
-│   ├── Policies/           # Authorization Policies
-│   └── Services/           # Business Logic Services
+│   │   └── Mongodb/         # MongoDB Eloquent Models
+│   ├── Policies/            # Authorization Policies
+│   └── Services/            # Business Logic Services
 ├── database/
-│   ├── migrations/         # SQLite Migrations
-│   └── seeders/            # Database Seeders
+│   ├── migrations/          # SQLite Migrations
+│   └── seeders/             # Database Seeders
+├── lang/                    # Translation files (en.json, de.json)
 ├── resources/
-│   ├── custom-elements/    # Custom Element JSON Definitions
+│   ├── custom-elements/     # Custom Element JSON Definitions
 │   ├── js/
-│   │   ├── components/     # React Components
-│   │   └── pages/          # Inertia Page Components
-│   ├── swagger/            # OpenAPI Specification
-│   └── views/              # Blade Templates
+│   │   ├── components/      # React Components
+│   │   │   ├── data-table/  # DataTable components
+│   │   │   ├── editor/      # Block editor components
+│   │   │   ├── filters/     # Filter builder components
+│   │   │   ├── media/       # Media management components
+│   │   │   ├── schema/      # Schema editor components
+│   │   │   ├── ui/          # UI components (shadcn/ui)
+│   │   │   └── versions/    # Version comparison components
+│   │   ├── hooks/           # React hooks
+│   │   ├── pages/           # Inertia Page Components
+│   │   └── types/           # TypeScript type definitions
+│   ├── swagger/             # OpenAPI Specification
+│   └── views/               # Blade Templates
 ├── routes/
-│   ├── api.php             # API Routes
-│   └── web.php             # Web Routes
+│   ├── api.php              # API Routes
+│   ├── console.php          # Console Routes
+│   └── web.php              # Web Routes
 └── tests/
-    ├── Feature/            # Feature Tests
-    └── Unit/               # Unit Tests
+    ├── Feature/             # Feature Tests
+    │   ├── Api/V1/          # API Tests
+    │   └── Web/             # Web Tests
+    └── Unit/                # Unit Tests
 ```
+
+---
+
+## 🔧 Tech Stack
+
+### Backend
+- **Laravel 12** - PHP Framework
+- **MongoDB** (via laravel-mongodb) - Document Database
+- **Laravel Passport** - OAuth2 Authentication
+- **Spatie Laravel Permission** - Role & Permission Management
+- **Intervention Image** - Image Processing
+
+### Frontend
+- **React 19** - UI Library
+- **Inertia.js** - SPA without an API
+- **TypeScript** - Type Safety
+- **Tailwind CSS 4** - Utility-first CSS
+- **TipTap** - Rich Text Editor
+- **CodeMirror** - Code Editor
+- **Radix UI** - Accessible Components
+- **TanStack Table** - Data Tables
+- **React Hook Form** - Form Handling
+- **Zod** - Schema Validation
 
 ---
 
@@ -452,6 +581,8 @@ acephalus/
 - CSRF protection on all web forms
 - Rate limiting on authentication endpoints
 - OAuth2 tokens with configurable expiration
+- Resource locking prevents concurrent editing conflicts
+- Permission-based access control at route and resource level
 
 ---
 

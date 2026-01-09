@@ -166,7 +166,7 @@ class ContentController extends Controller
         ]);
 
         // Create initial version (don't increment since this is the first version)
-        $this->versionService->createVersion($content, null, null, false);
+        $this->versionService->createVersion($content, $request->user(), null, false);
 
         return redirect()
             ->route('contents.edit', $content->_id)
@@ -278,6 +278,7 @@ class ContentController extends Controller
             'metadata' => ['nullable', 'array'],
             'editions' => ['nullable', 'array'],
             'editions.*' => ['string'],
+            'change_note' => ['nullable', 'string', 'max:500'],
         ]);
 
         $content->update([
@@ -288,8 +289,12 @@ class ContentController extends Controller
             'editions' => $validated['editions'] ?? [],
         ]);
 
-        // Create new version
-        $this->versionService->createVersion($content);
+        // Create new version with user and optional change note
+        $this->versionService->createVersion(
+            $content,
+            $request->user(),
+            $validated['change_note'] ?? null
+        );
 
         return redirect()
             ->back()

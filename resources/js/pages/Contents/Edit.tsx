@@ -6,6 +6,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
     Loader2,
     ArrowLeft,
     Save,
@@ -15,6 +31,8 @@ import {
     ChevronsDownUp,
     Eye,
     Copy,
+    ChevronDown,
+    MessageSquare,
 } from 'lucide-react';
 import type { PageProps, Content, ContentVersion, BlockElement, CollectionSchema, WrapperPurpose, Edition, Collection } from '@/types';
 import { BlockEditor } from '@/components/editor/BlockEditor';
@@ -65,7 +83,7 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
     const isEffectivelyLocked = isContentLocked || isCollectionLocked;
     const effectiveLockSource = isContentLocked ? 'self' : isCollectionLocked ? 'collection' : null;
 
-    const { data, setData, put, processing, errors, isDirty } = useForm({
+    const { data, setData, errors, isDirty } = useForm({
         title: content.title,
         slug: content.slug,
         elements: initialElements,
@@ -73,8 +91,15 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
         editions: content.editions || [],
     });
 
+    // Saving state (since we use router.put instead of useForm's put)
+    const [isSaving, setIsSaving] = useState(false);
+
     // Collapse state for block editor
     const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(new Set());
+    
+    // Change note dialog state
+    const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
+    const [pendingNote, setPendingNote] = useState('');
     
     // Edition preview filter state
     const [previewEdition, setPreviewEdition] = useState<string | null>(null);
@@ -126,9 +151,38 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
         });
     }, []);
 
-    const handleSubmit = (e: FormEvent) => {
-        e.preventDefault();
-        put(`/contents/${content._id}`);
+    const handleSubmit = (e?: FormEvent) => {
+        e?.preventDefault();
+        setIsSaving(true);
+        // Ensure change_note is empty for regular save
+        router.put(`/contents/${content._id}`, {
+            ...data,
+            change_note: '',
+        }, {
+            preserveScroll: true,
+            onFinish: () => setIsSaving(false),
+        });
+    };
+
+    const handleSaveWithNote = () => {
+        setIsNoteDialogOpen(true);
+        setPendingNote('');
+    };
+
+    const handleConfirmSaveWithNote = () => {
+        setIsNoteDialogOpen(false);
+        setIsSaving(true);
+        // Use router.put directly with the note included
+        router.put(`/contents/${content._id}`, {
+            ...data,
+            change_note: pendingNote,
+        }, {
+            preserveScroll: true,
+            onFinish: () => {
+                setIsSaving(false);
+                setPendingNote('');
+            },
+        });
     };
 
     const handlePublish = () => {
@@ -260,14 +314,38 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
                                 Unpublish
                             </Button>
                         ) : null}
-                        <Button onClick={handleSubmit} disabled={processing || !isDirty || isEffectivelyLocked} size="sm">
-                            {processing ? (
-                                <Loader2 className="size-4 mr-2 animate-spin" />
-                            ) : (
-                                <Save className="size-4 mr-2" />
-                            )}
-                            Save Changes
-                        </Button>
+                        <div className="flex items-center">
+                            <Button 
+                                onClick={handleSubmit} 
+                                disabled={isSaving || !isDirty || isEffectivelyLocked} 
+                                size="sm"
+                                className="rounded-r-none"
+                            >
+                                {isSaving ? (
+                                    <Loader2 className="size-4 mr-2 animate-spin" />
+                                ) : (
+                                    <Save className="size-4 mr-2" />
+                                )}
+                                Save Changes
+                            </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button 
+                                        size="sm" 
+                                        className="rounded-l-none border-l border-primary-foreground/20 px-2"
+                                        disabled={isSaving || !isDirty || isEffectivelyLocked}
+                                    >
+                                        <ChevronDown className="size-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={handleSaveWithNote}>
+                                        <MessageSquare className="size-4 mr-2" />
+                                        Save with Note
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
                 </div>
             }
@@ -496,6 +574,43 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
                 content={content}
                 initialSlug={`${content.slug}-copy`}
             />
+
+            {/* Save with Note Dialog */}
+            <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Save with Note</DialogTitle>
+                        <DialogDescription>
+                            Add a note to describe the changes you made. This will be visible in the version history.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="change-note">Change Note</Label>
+                            <Textarea
+                                id="change-note"
+                                placeholder="e.g., Fixed typo in introduction, Updated pricing information..."
+                                value={pendingNote}
+                                onChange={(e) => setPendingNote(e.target.value)}
+                                rows={3}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsNoteDialogOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleConfirmSaveWithNote} disabled={isSaving}>
+                            {isSaving ? (
+                                <Loader2 className="size-4 mr-2 animate-spin" />
+                            ) : (
+                                <Save className="size-4 mr-2" />
+                            )}
+                            Save Changes
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

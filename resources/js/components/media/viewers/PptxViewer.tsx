@@ -227,6 +227,7 @@ export function PptxViewer({ url, className = '' }: PptxViewerProps) {
                         maxWidth: '600px',
                         aspectRatio: `${slideWidth} / ${slideHeight}`,
                         backgroundColor: getBgColor(),
+                        color: '#000000', // Force black text for proper contrast on slide background
                     }}
                 >
                     {slide.elements.map((element, index) => renderElement(element, index))}

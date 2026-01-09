@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, router } from '@inertiajs/react';
+import { useLaravelReactI18n } from 'laravel-react-i18n';
 import AppLayout from '@/components/layouts/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,6 +42,7 @@ interface CollectionsIndexProps extends PageProps {
 }
 
 export default function CollectionsIndex({ collections }: CollectionsIndexProps) {
+    const { t } = useLaravelReactI18n();
     const { can } = usePermission();
     const [lockDialogOpen, setLockDialogOpen] = useState(false);
     const [lockDialogCollection, setLockDialogCollection] = useState<Collection | null>(null);
@@ -78,22 +80,22 @@ export default function CollectionsIndex({ collections }: CollectionsIndexProps)
 
     return (
         <AppLayout
-            title="Collections"
-            breadcrumbs={[{ label: 'Collections' }]}
+            title={t('Collections')}
+            breadcrumbs={[{ label: t('Collections') }]}
             actions={
                 <Button asChild>
                     <Link href="/collections/create">
                         <Plus className="size-4 mr-2" />
-                        New Collection
+                        {t('New Collection')}
                     </Link>
                 </Button>
             }
         >
             <div className="space-y-6">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Collections</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('Collections')}</h1>
                     <p className="text-muted-foreground mt-1">
-                        Manage your content collections and their schemas
+                        {t('Manage your content collections and their schemas')}
                     </p>
                 </div>
 
@@ -101,14 +103,14 @@ export default function CollectionsIndex({ collections }: CollectionsIndexProps)
                     <Card>
                         <CardContent className="flex flex-col items-center justify-center py-16">
                             <FolderOpen className="size-16 text-muted-foreground/50 mb-4" />
-                            <h3 className="text-lg font-semibold mb-2">No collections yet</h3>
+                            <h3 className="text-lg font-semibold mb-2">{t('No collections yet')}</h3>
                             <p className="text-muted-foreground text-center mb-6 max-w-md">
-                                Collections define the structure of your content. Create your first collection to start managing content.
+                                {t('Collections define the structure of your content. Create your first collection to start managing content.')}
                             </p>
                             <Button asChild>
                                 <Link href="/collections/create">
                                     <Plus className="size-4 mr-2" />
-                                    Create your first collection
+                                    {t('Create your first collection')}
                                 </Link>
                             </Button>
                         </CardContent>
@@ -118,11 +120,11 @@ export default function CollectionsIndex({ collections }: CollectionsIndexProps)
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Slug</TableHead>
-                                    <TableHead>Lock</TableHead>
-                                    <TableHead>Contents</TableHead>
-                                    <TableHead>Description</TableHead>
+                                    <TableHead>{t('Name')}</TableHead>
+                                    <TableHead>{t('Slug')}</TableHead>
+                                    <TableHead>{t('Lock')}</TableHead>
+                                    <TableHead>{t('Contents')}</TableHead>
+                                    <TableHead>{t('Description')}</TableHead>
                                     <TableHead className="w-[70px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -153,7 +155,7 @@ export default function CollectionsIndex({ collections }: CollectionsIndexProps)
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant="secondary">
-                                                {collection.contents_count} items
+                                                {t(':count items', { count: collection.contents_count })}
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-muted-foreground max-w-xs truncate">
@@ -171,13 +173,13 @@ export default function CollectionsIndex({ collections }: CollectionsIndexProps)
                                                         <DropdownMenuItem asChild>
                                                             <Link href={`/collections/${collection.slug}`}>
                                                                 <Eye className="size-4 mr-2" />
-                                                                View Contents
+                                                                {t('View Contents')}
                                                             </Link>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem asChild disabled={collection.is_locked}>
                                                             <Link href={`/collections/${collection.slug}/edit`}>
                                                                 <Edit className="size-4 mr-2" />
-                                                                Edit Collection
+                                                                {t('Edit Collection')}
                                                             </Link>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
@@ -185,14 +187,14 @@ export default function CollectionsIndex({ collections }: CollectionsIndexProps)
                                                             can('collections.unlock') && (
                                                                 <DropdownMenuItem onClick={() => openLockDialog(collection, false)}>
                                                                     <Unlock className="size-4 mr-2" />
-                                                                    Unlock Collection
+                                                                    {t('Unlock Collection')}
                                                                 </DropdownMenuItem>
                                                             )
                                                         ) : (
                                                             can('collections.lock') && (
                                                                 <DropdownMenuItem onClick={() => openLockDialog(collection, true)}>
                                                                     <LockIcon className="size-4 mr-2" />
-                                                                    Lock Collection
+                                                                    {t('Lock Collection')}
                                                                 </DropdownMenuItem>
                                                             )
                                                         )}
@@ -202,25 +204,25 @@ export default function CollectionsIndex({ collections }: CollectionsIndexProps)
                                                                 disabled={collection.is_locked}
                                                             >
                                                                 <Trash2 className="size-4 mr-2" />
-                                                                Delete Collection
+                                                                {t('Delete Collection')}
                                                             </DropdownMenuItem>
                                                         </AlertDialogTrigger>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                                 <AlertDialogContent>
                                                     <AlertDialogHeader>
-                                                        <AlertDialogTitle>Delete Collection</AlertDialogTitle>
+                                                        <AlertDialogTitle>{t('Delete Collection')}</AlertDialogTitle>
                                                         <AlertDialogDescription>
-                                                            Are you sure you want to delete "{collection.name}"? This will also delete all {collection.contents_count} content items. This action cannot be undone.
+                                                            {t('Are you sure you want to delete ":collection"? This will also delete all :count content items. This action cannot be undone.', { collection: collection.name, count: collection.contents_count })}
                                                         </AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
                                                         <AlertDialogAction
                                                             onClick={() => handleDelete(collection)}
                                                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                                         >
-                                                            Delete
+                                                            {t('Delete')}
                                                         </AlertDialogAction>
                                                     </AlertDialogFooter>
                                                 </AlertDialogContent>

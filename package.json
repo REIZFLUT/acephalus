@@ -1,10 +1,16 @@
 {
     "$schema": "https://www.schemastore.org/package.json",
+    "name": "acephalus",
     "private": true,
     "type": "module",
     "scripts": {
         "build": "vite build",
         "dev": "vite"
+    },
+    "overrides": {
+        "laravel-react-i18n": {
+            "react": "$react"
+        }
     },
     "devDependencies": {
         "@tailwindcss/typography": "^0.5.19",
@@ -69,6 +75,7 @@
         "clsx": "^2.1.1",
         "cmdk": "^1.1.1",
         "katex": "^0.16.27",
+        "laravel-react-i18n": "^2.0.5",
         "lowlight": "^3.3.0",
         "lucide-react": "^0.562.0",
         "mammoth": "^1.11.0",

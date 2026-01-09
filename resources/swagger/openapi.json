@@ -1,11 +1,11 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Continy CMS API",
-    "description": "RESTful API for Continy - A headless CMS with MongoDB backend",
+    "title": "acephalus CMS API",
+    "description": "RESTful API for acephalus - A headless CMS with MongoDB backend",
     "version": "1.0.0",
     "contact": {
-      "name": "Continy Support"
+      "name": "acephalus Support"
     }
   },
   "servers": [],

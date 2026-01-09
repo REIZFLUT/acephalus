@@ -66,20 +66,23 @@ class GridFsMediaService
 
         // Upload to GridFS
         $stream = fopen($file->getPathname(), 'rb');
-        $gridFsId = $this->getBucket()->uploadFromStream(
-            $filename,
-            $stream,
-            [
-                'metadata' => [
-                    'original_filename' => $file->getClientOriginalName(),
-                    'mime_type' => $mimeType,
-                    'uploaded_by' => $user?->id,
-                    'folder_id' => $folderId,
-                    ...$metadata,
-                ],
-            ]
-        );
-        fclose($stream);
+        try {
+            $gridFsId = $this->getBucket()->uploadFromStream(
+                $filename,
+                $stream,
+                [
+                    'metadata' => [
+                        'original_filename' => $file->getClientOriginalName(),
+                        'mime_type' => $mimeType,
+                        'uploaded_by' => $user?->id,
+                        'folder_id' => $folderId,
+                        ...$metadata,
+                    ],
+                ]
+            );
+        } finally {
+            fclose($stream);
+        }
 
         // Generate thumbnails for images
         $thumbnails = [];

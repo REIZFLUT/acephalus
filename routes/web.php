@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\Route;
 | Web Routes
 |--------------------------------------------------------------------------
 |
-| Admin Panel Routes for Continy CMS
+| Admin Panel Routes for acephalus CMS
 |
 */
 
@@ -383,6 +383,9 @@ Route::middleware('auth')->group(function () {
     Route::prefix('api')->group(function () {
         // Select Options API (for schema editor select fields)
         Route::get('select-options', [CollectionController::class, 'selectOptions'])->name('api.select-options');
+
+        // Locale API (for language switching)
+        Route::put('locale', [ProfileController::class, 'updateLocale'])->name('api.locale.update');
     });
 
     Route::prefix('api/v1')->name('api.v1.')->group(function () {

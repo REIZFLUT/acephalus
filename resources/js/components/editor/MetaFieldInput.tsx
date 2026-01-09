@@ -1,4 +1,4 @@
-import type { MetaFieldDefinition, SelectInputStyle, MediaMetaFieldValue, MetaFieldOption } from '@/types';
+import type { MetaFieldDefinition, SelectInputStyle, MediaMetaFieldValue, MetaFieldOption, LocalizableString } from '@/types';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,6 +26,7 @@ import { WysiwygEditor } from './WysiwygEditor';
 import { MediaPickerInput } from './MediaPickerInput';
 import { Info, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useTranslation } from '@/hooks/use-translation';
 
 interface MetaFieldInputProps {
     field: MetaFieldDefinition;
@@ -36,9 +37,21 @@ interface MetaFieldInputProps {
 
 export function MetaFieldInput({ field, value, onChange, compact = false }: MetaFieldInputProps) {
     const { name, label, type, required, placeholder, description, explanation, options, default_value, editor_type, target_format, input_style, allow_custom, options_source, collection_config } = field;
+    const { resolveTranslation } = useTranslation();
+    
+    // Resolve translatable strings
+    const labelText = resolveTranslation(label);
+    const placeholderText = resolveTranslation(placeholder);
+    const explanationText = resolveTranslation(explanation);
     
     // Support legacy help_text field for backwards compatibility
-    const descriptionText = description || (field as any).help_text;
+    const descriptionValue = description || (field as any).help_text;
+    const descriptionText = resolveTranslation(descriptionValue);
+    
+    // Helper to resolve option labels
+    const resolveOptionLabel = (optionLabel: LocalizableString): string => {
+        return resolveTranslation(optionLabel);
+    };
 
     // State for dynamically loaded collection options
     const [collectionOptions, setCollectionOptions] = useState<MetaFieldOption[]>([]);
@@ -87,10 +100,10 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
     const FieldLabel = ({ htmlFor, className }: { htmlFor?: string; className?: string }) => (
         <span className={`flex items-center gap-1.5 ${className || ''}`}>
             <Label htmlFor={htmlFor} className={compact ? 'text-xs text-muted-foreground' : undefined}>
-                {label}
+                {labelText}
                 {required && <span className="text-destructive ml-1">*</span>}
             </Label>
-            {explanation && (
+            {explanationText && (
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -98,7 +111,7 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                         </button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-xs">
-                        <p className="text-sm whitespace-pre-wrap">{explanation}</p>
+                        <p className="text-sm whitespace-pre-wrap">{explanationText}</p>
                     </TooltipContent>
                 </Tooltip>
             )}
@@ -119,7 +132,7 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                         type={type === 'url' ? 'url' : type === 'email' ? 'email' : 'text'}
                         value={(currentValue as string) || ''}
                         onChange={(e) => onChange(e.target.value)}
-                        placeholder={placeholder}
+                        placeholder={placeholderText}
                         className={compact ? 'h-8' : undefined}
                     />
                 );
@@ -135,7 +148,7 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                             id={name}
                             value={(currentValue as string) || ''}
                             onChange={(e) => onChange(e.target.value)}
-                            placeholder={placeholder}
+                            placeholder={placeholderText}
                             rows={compact ? 2 : 3}
                         />
                     );
@@ -148,7 +161,7 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                             <WysiwygEditor
                                 content={(currentValue as string) || ''}
                                 onChange={(content) => onChange(content)}
-                                placeholder={placeholder || 'Start writing...'}
+                                placeholder={placeholderText || 'Start writing...'}
                             />
                         </div>
                     );
@@ -174,7 +187,7 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                             value={(currentValue as string) || ''}
                             onChange={(content) => onChange(content)}
                             language={language}
-                            placeholder={placeholder}
+                            placeholder={placeholderText}
                             minHeight={compact ? '150px' : '200px'}
                         />
                     );
@@ -186,7 +199,7 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                         id={name}
                         value={(currentValue as string) || ''}
                         onChange={(e) => onChange(e.target.value)}
-                        placeholder={placeholder}
+                        placeholder={placeholderText}
                         rows={compact ? 2 : 3}
                     />
                 );
@@ -198,7 +211,7 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                         type="number"
                         value={currentValue !== undefined ? String(currentValue) : ''}
                         onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
-                        placeholder={placeholder}
+                        placeholder={placeholderText}
                         className={compact ? 'h-8' : undefined}
                     />
                 );
@@ -285,7 +298,7 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                     effectiveOptions,
                     (currentValue as string) || '',
                     (val) => onChange(val),
-                    placeholder,
+                    placeholderText,
                     compact,
                     allow_custom
                 );
@@ -313,7 +326,7 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                     effectiveOptions,
                     multiSelectValue,
                     (vals) => onChange(vals),
-                    placeholder,
+                    placeholderText,
                     compact,
                     allow_custom
                 );
@@ -347,7 +360,7 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                         onChange={onChange}
                         config={field.media_config}
                         compact={compact}
-                        placeholder={placeholder || 'Select media...'}
+                        placeholder={placeholderText || 'Select media...'}
                     />
                 );
 
@@ -357,7 +370,7 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                         id={name}
                         value={(currentValue as string) || ''}
                         onChange={(e) => onChange(e.target.value)}
-                        placeholder={placeholder}
+                        placeholder={placeholderText}
                         className={compact ? 'h-8' : undefined}
                     />
                 );
@@ -367,21 +380,27 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
     // Render single select input based on input_style
     const renderSelectInput = (
         style: SelectInputStyle,
-        fieldOptions: { value: string; label: string }[],
+        fieldOptions: MetaFieldOption[],
         currentVal: string,
         onChangeVal: (val: string) => void,
-        placeholderText?: string,
+        inputPlaceholder?: string,
         isCompact?: boolean,
         allowCustom?: boolean
     ) => {
+        // Resolve option labels for display
+        const resolvedOptions = fieldOptions.map(opt => ({
+            value: opt.value,
+            label: resolveOptionLabel(opt.label),
+        }));
+
         switch (style) {
             case 'combobox':
                 return (
                     <Combobox
-                        options={fieldOptions}
+                        options={resolvedOptions}
                         value={currentVal}
                         onValueChange={onChangeVal}
-                        placeholder={placeholderText || 'Select...'}
+                        placeholder={inputPlaceholder || 'Select...'}
                         allowCustom={allowCustom}
                         className={isCompact ? 'h-8' : undefined}
                     />
@@ -394,7 +413,7 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                         onValueChange={onChangeVal}
                         className="flex flex-wrap gap-4"
                     >
-                        {fieldOptions.map((option) => (
+                        {resolvedOptions.map((option) => (
                             <div key={option.value} className="flex items-center space-x-2">
                                 <RadioGroupItem value={option.value} id={`${name}-${option.value}`} />
                                 <Label htmlFor={`${name}-${option.value}`} className="text-sm font-normal cursor-pointer">
@@ -413,7 +432,7 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                         onValueChange={(val) => val && onChangeVal(val)}
                         className="justify-start"
                     >
-                        {fieldOptions.map((option) => (
+                        {resolvedOptions.map((option) => (
                             <ToggleGroupItem
                                 key={option.value}
                                 value={option.value}
@@ -431,10 +450,10 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                 return (
                     <Select value={currentVal} onValueChange={onChangeVal}>
                         <SelectTrigger className={isCompact ? 'h-8' : undefined}>
-                            <SelectValue placeholder={placeholderText || 'Select...'} />
+                            <SelectValue placeholder={inputPlaceholder || 'Select...'} />
                         </SelectTrigger>
                         <SelectContent>
-                            {fieldOptions.map((option) => (
+                            {resolvedOptions.map((option) => (
                                 <SelectItem key={option.value} value={option.value}>
                                     {option.label}
                                 </SelectItem>
@@ -448,21 +467,27 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
     // Render multi select input based on input_style
     const renderMultiSelectInput = (
         style: SelectInputStyle,
-        fieldOptions: { value: string; label: string }[],
+        fieldOptions: MetaFieldOption[],
         selectedVals: string[],
         onChangeVals: (vals: string[]) => void,
-        placeholderText?: string,
+        inputPlaceholder?: string,
         isCompact?: boolean,
         allowCustom?: boolean
     ) => {
+        // Resolve option labels for display
+        const resolvedOptions = fieldOptions.map(opt => ({
+            value: opt.value,
+            label: resolveOptionLabel(opt.label),
+        }));
+
         switch (style) {
             case 'combobox':
                 return (
                     <MultiCombobox
-                        options={fieldOptions}
+                        options={resolvedOptions}
                         value={selectedVals}
                         onValueChange={onChangeVals}
-                        placeholder={placeholderText || 'Select...'}
+                        placeholder={inputPlaceholder || 'Select...'}
                         allowCustom={allowCustom}
                         className={isCompact ? 'min-h-8' : undefined}
                     />
@@ -471,10 +496,10 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
             case 'tags':
                 return (
                     <TagInput
-                        options={fieldOptions}
+                        options={resolvedOptions}
                         value={selectedVals}
                         onValueChange={onChangeVals}
-                        placeholder={placeholderText || 'Add tag...'}
+                        placeholder={inputPlaceholder || 'Add tag...'}
                         allowCustom={allowCustom ?? true}
                     />
                 );
@@ -482,7 +507,7 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
             case 'checkbox':
                 return (
                     <div className="flex flex-wrap gap-4">
-                        {fieldOptions.map((option) => (
+                        {resolvedOptions.map((option) => (
                             <div key={option.value} className="flex items-center space-x-2">
                                 <Checkbox
                                     id={`${name}-${option.value}`}
@@ -511,7 +536,7 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                         onValueChange={onChangeVals}
                         className="justify-start flex-wrap"
                     >
-                        {fieldOptions.map((option) => (
+                        {resolvedOptions.map((option) => (
                             <ToggleGroupItem
                                 key={option.value}
                                 value={option.value}
@@ -530,7 +555,7 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                     <div className="space-y-2">
                         <div className="flex flex-wrap gap-1">
                             {selectedVals.map((val) => {
-                                const option = fieldOptions.find((o) => o.value === val);
+                                const option = resolvedOptions.find((o) => o.value === val);
                                 return (
                                     <Badge
                                         key={val}
@@ -556,7 +581,7 @@ export function MetaFieldInput({ field, value, onChange, compact = false }: Meta
                                 <SelectValue placeholder="Add..." />
                             </SelectTrigger>
                             <SelectContent>
-                                {fieldOptions
+                                {resolvedOptions
                                     .filter((o) => !selectedVals.includes(o.value))
                                     .map((option) => (
                                         <SelectItem key={option.value} value={option.value}>

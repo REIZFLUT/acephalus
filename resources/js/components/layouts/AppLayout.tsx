@@ -1,5 +1,6 @@
 import { PropsWithChildren, ReactNode } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useLaravelReactI18n } from 'laravel-react-i18n';
 import {
     LayoutDashboard,
     FolderOpen,
@@ -14,6 +15,7 @@ import {
     Sun,
     Moon,
     Monitor,
+    ScanFace,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -52,6 +54,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { useTheme } from '@/components/theme-provider';
 import { DynamicIcon } from '@/components/DynamicIcon';
+import { LanguageSelector } from '@/components/LanguageSelector';
 import type { PageProps, PinnedNavigationItemShared } from '@/types';
 
 interface AppLayoutProps extends PropsWithChildren {
@@ -62,26 +65,26 @@ interface AppLayoutProps extends PropsWithChildren {
 
 const navigationItems = [
     {
-        label: 'Main',
+        labelKey: 'Main',
         items: [
-            { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-            { name: 'Collections', href: '/collections', icon: FolderOpen },
-            { name: 'Media', href: '/media', icon: Image },
+            { nameKey: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+            { nameKey: 'Collections', href: '/collections', icon: FolderOpen },
+            { nameKey: 'Media', href: '/media', icon: Image },
         ],
     },
     {
-        label: 'Administration',
+        labelKey: 'Administration',
         items: [
-            { name: 'Users', href: '/users', icon: Users },
-            { name: 'Settings', href: '/settings', icon: Settings },
+            { nameKey: 'Users', href: '/users', icon: Users },
+            { nameKey: 'Settings', href: '/settings', icon: Settings },
         ],
     },
 ];
 
 const themeOptions = [
-    { value: 'light', label: 'Light', icon: Sun },
-    { value: 'dark', label: 'Dark', icon: Moon },
-    { value: 'system', label: 'System', icon: Monitor },
+    { value: 'light', labelKey: 'Light', icon: Sun },
+    { value: 'dark', labelKey: 'Dark', icon: Moon },
+    { value: 'system', labelKey: 'System', icon: Monitor },
 ] as const;
 
 interface UserMenuProps {
@@ -91,9 +94,10 @@ interface UserMenuProps {
 }
 
 function UserMenu({ auth, getInitials, handleLogout }: UserMenuProps) {
+    const { t } = useLaravelReactI18n();
     const { theme, setTheme } = useTheme();
 
-    const currentTheme = themeOptions.find((t) => t.value === theme) ?? themeOptions[2];
+    const currentTheme = themeOptions.find((opt) => opt.value === theme) ?? themeOptions[2];
     const ThemeIcon = currentTheme.icon;
 
     return (
@@ -106,7 +110,7 @@ function UserMenu({ auth, getInitials, handleLogout }: UserMenuProps) {
                         </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col items-start text-left">
-                        <span className="text-sm font-medium">{auth.user?.name ?? 'Guest'}</span>
+                        <span className="text-sm font-medium">{auth.user?.name ?? t('Guest')}</span>
                         <span className="text-xs text-muted-foreground truncate max-w-[140px]">
                             {auth.user?.email ?? ''}
                         </span>
@@ -115,18 +119,18 @@ function UserMenu({ auth, getInitials, handleLogout }: UserMenuProps) {
                 </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="top" className="w-[--radix-dropdown-menu-trigger-width]">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('My Account')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                     <Link href="/profile">
                         <Settings className="mr-2 size-4" />
-                        Profile Settings
+                        {t('Profile Settings')}
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
                     <ThemeIcon className="size-3" />
-                    Theme
+                    {t('Theme')}
                 </DropdownMenuLabel>
                 <div className="flex gap-1 px-2 pb-2">
                     {themeOptions.map((option) => {
@@ -143,15 +147,22 @@ function UserMenu({ auth, getInitials, handleLogout }: UserMenuProps) {
                                 )}
                             >
                                 <Icon className="size-3.5" />
-                                {option.label}
+                                {t(option.labelKey)}
                             </button>
                         );
                     })}
                 </div>
                 <DropdownMenuSeparator />
+                <DropdownMenuLabel className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
+                    {t('Language')}
+                </DropdownMenuLabel>
+                <div className="px-2 pb-2">
+                    <LanguageSelector showLabel={true} />
+                </div>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
                     <LogOut className="mr-2 size-4" />
-                    Log out
+                    {t('Log out')}
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
@@ -159,6 +170,7 @@ function UserMenu({ auth, getInitials, handleLogout }: UserMenuProps) {
 }
 
 export default function AppLayout({ children, title, breadcrumbs = [], actions }: AppLayoutProps) {
+    const { t } = useLaravelReactI18n();
     const { auth, pinnedNavigation = [] } = usePage<PageProps>().props;
     const currentPath = window.location.pathname;
     const currentSearch = window.location.search;
@@ -207,22 +219,10 @@ export default function AppLayout({ children, title, breadcrumbs = [], actions }
                             <SidebarMenuItem>
                                 <Link href="/dashboard" className="flex items-center gap-3 px-2 py-3">
                                     <div className="size-9 rounded-lg bg-primary flex items-center justify-center">
-                                        <svg
-                                            className="size-5 text-primary-foreground"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                                            />
-                                        </svg>
+                                        <ScanFace className="size-5 text-primary-foreground" />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="font-semibold text-sidebar-foreground">Continy</span>
+                                        <span className="font-semibold text-sidebar-foreground">acephalus</span>
                                         <span className="text-xs text-muted-foreground">Headless CMS</span>
                                     </div>
                                 </Link>
@@ -234,7 +234,7 @@ export default function AppLayout({ children, title, breadcrumbs = [], actions }
                         {/* Pinned Navigation Items */}
                         {pinnedNavigation.length > 0 && (
                             <SidebarGroup>
-                                <SidebarGroupLabel>Pinned</SidebarGroupLabel>
+                                <SidebarGroupLabel>{t('Pinned')}</SidebarGroupLabel>
                                 <SidebarGroupContent>
                                     <SidebarMenu>
                                         {pinnedNavigation.map((item) => (
@@ -257,19 +257,19 @@ export default function AppLayout({ children, title, breadcrumbs = [], actions }
 
                         {/* Main Navigation Groups */}
                         {navigationItems.map((group) => (
-                            <SidebarGroup key={group.label}>
-                                <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+                            <SidebarGroup key={group.labelKey}>
+                                <SidebarGroupLabel>{t(group.labelKey)}</SidebarGroupLabel>
                                 <SidebarGroupContent>
                                     <SidebarMenu>
                                         {group.items.map((item) => (
-                                            <SidebarMenuItem key={item.name}>
+                                            <SidebarMenuItem key={item.nameKey}>
                                                 <SidebarMenuButton
                                                     asChild
                                                     isActive={currentPath.startsWith(item.href)}
                                                 >
                                                     <Link href={item.href}>
                                                         <item.icon className="size-4" />
-                                                        <span>{item.name}</span>
+                                                        <span>{t(item.nameKey)}</span>
                                                     </Link>
                                                 </SidebarMenuButton>
                                             </SidebarMenuItem>
@@ -302,7 +302,7 @@ export default function AppLayout({ children, title, breadcrumbs = [], actions }
                             <BreadcrumbList>
                                 <BreadcrumbItem>
                                     <BreadcrumbLink asChild>
-                                        <Link href="/dashboard">Home</Link>
+                                        <Link href="/dashboard">{t('Home')}</Link>
                                     </BreadcrumbLink>
                                 </BreadcrumbItem>
                                 {breadcrumbs.map((crumb, index) => (

@@ -1,11 +1,12 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "reizflut/acephalus",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Acephalus - Content Management System",
     "keywords": [
-        "laravel",
-        "framework"
+        "acephalus",
+        "cms",
+        "laravel"
     ],
     "license": "MIT",
     "require": {

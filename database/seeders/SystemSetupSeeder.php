@@ -9,7 +9,7 @@ use Illuminate\Database\Seeder;
 /**
  * System Setup Seeder
  *
- * This seeder initializes all required system data for a fresh Continy installation
+ * This seeder initializes all required system data for a fresh acephalus installation
  * WITHOUT creating any user accounts. User creation is handled via the setup wizard.
  */
 class SystemSetupSeeder extends Seeder
@@ -19,7 +19,7 @@ class SystemSetupSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->command->info('Starting Continy system setup...');
+        $this->command->info('Starting acephalus system setup...');
         $this->command->newLine();
 
         // Create roles and permissions

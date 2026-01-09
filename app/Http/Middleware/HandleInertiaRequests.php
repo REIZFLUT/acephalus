@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Http\Middleware\SetLocaleMiddleware;
 use App\Models\Mongodb\PinnedNavigationItem;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -54,6 +55,7 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
             ],
             'locale' => app()->getLocale(),
+            'availableLocales' => SetLocaleMiddleware::getAvailableLocales(),
             'timezone' => config('app.timezone'),
             'pinnedNavigation' => fn () => $user ? $this->getPinnedNavigation() : [],
         ];

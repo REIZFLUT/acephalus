@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, router } from '@inertiajs/react';
+import { useLaravelReactI18n } from 'laravel-react-i18n';
 import AppLayout from '@/components/layouts/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,6 +30,7 @@ import { WrapperPurposeIcon } from '@/components/WrapperPurposeIcon';
 import { EditionIcon } from '@/components/EditionIcon';
 import { DynamicIcon } from '@/components/DynamicIcon';
 import { Can, usePermission } from '@/hooks/use-permission';
+import { useTranslation } from '@/hooks/use-translation';
 import type { PageProps, WrapperPurpose, Edition, PinnedNavigationItem, Collection, FilterView } from '@/types';
 
 /** Roles that cannot be deleted */
@@ -71,6 +73,8 @@ interface SettingsIndexProps extends PageProps {
 export default function SettingsIndex({ purposes, editions, mediaMetaFields = [], roles = [], pinnedNavigationItems = [], activeTab = 'wrapper-purposes' }: SettingsIndexProps) {
     const [currentTab, setCurrentTab] = useState(activeTab);
     const { can } = usePermission();
+    const { t } = useLaravelReactI18n();
+    const { resolveTranslation } = useTranslation();
 
     const handleDeletePinnedNavigation = (id: string) => {
         router.delete(`/settings/pinned-navigation/${id}`, {

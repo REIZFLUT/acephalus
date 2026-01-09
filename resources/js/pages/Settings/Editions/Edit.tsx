@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import {
     AlertDialog,
@@ -18,6 +17,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { TranslatableInput } from '@/components/ui/translatable-input';
 import { ArrowLeft, Loader2, Lock, Trash2 } from 'lucide-react';
 import { EditionIcon, availableEditionIconNames } from '@/components/EditionIcon';
 import {
@@ -27,17 +27,26 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import type { PageProps, Edition } from '@/types';
+import type { PageProps, Edition, TranslatableString } from '@/types';
+import { normalizeToTranslatable, useTranslation } from '@/hooks/use-translation';
 
 interface EditionsEditProps extends PageProps {
     edition: Edition;
 }
 
 export default function EditionsEdit({ edition }: EditionsEditProps) {
-    const { data, setData, put, processing, errors } = useForm({
-        name: edition.name,
+    const { resolveTranslation } = useTranslation();
+    const editionName = resolveTranslation(edition.name);
+    
+    const { data, setData, put, processing, errors } = useForm<{
+        name: TranslatableString;
+        slug: string;
+        description: TranslatableString;
+        icon: string;
+    }>({
+        name: normalizeToTranslatable(edition.name),
         slug: edition.slug,
-        description: edition.description || '',
+        description: normalizeToTranslatable(edition.description),
         icon: edition.icon || '',
     });
 
@@ -52,11 +61,11 @@ export default function EditionsEdit({ edition }: EditionsEditProps) {
 
     return (
         <AppLayout
-            title={`Edit ${edition.name}`}
+            title={`Edit ${editionName}`}
             breadcrumbs={[
                 { label: 'Settings', href: '/settings' },
                 { label: 'Editions', href: '/settings/editions' },
-                { label: edition.name },
+                { label: editionName },
             ]}
         >
             <div className="max-w-2xl">
@@ -92,12 +101,12 @@ export default function EditionsEdit({ edition }: EditionsEditProps) {
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 <div className="space-y-2">
                                     <Label htmlFor="name">Name *</Label>
-                                    <Input
-                                        id="name"
+                                    <TranslatableInput
                                         value={data.name}
-                                        onChange={(e) => setData('name', e.target.value)}
+                                        onChange={(value) => setData('name', value)}
                                         disabled={edition.is_system}
-                                        autoFocus={!edition.is_system}
+                                        modalTitle="Name Translations"
+                                        modalDescription="Add translations for the edition name."
                                     />
                                     {errors.name && (
                                         <p className="text-sm text-destructive">{errors.name}</p>
@@ -119,11 +128,13 @@ export default function EditionsEdit({ edition }: EditionsEditProps) {
 
                                 <div className="space-y-2">
                                     <Label htmlFor="description">Description</Label>
-                                    <Textarea
-                                        id="description"
+                                    <TranslatableInput
                                         value={data.description}
-                                        onChange={(e) => setData('description', e.target.value)}
+                                        onChange={(value) => setData('description', value)}
+                                        multiline
                                         rows={2}
+                                        modalTitle="Description Translations"
+                                        modalDescription="Add translations for the edition description."
                                     />
                                     {errors.description && (
                                         <p className="text-sm text-destructive">{errors.description}</p>
@@ -195,7 +206,7 @@ export default function EditionsEdit({ edition }: EditionsEditProps) {
                                         <AlertDialogHeader>
                                             <AlertDialogTitle>Delete Edition</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                                Are you sure you want to delete "{edition.name}"? 
+                                                Are you sure you want to delete "{editionName}"? 
                                                 This action cannot be undone.
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
@@ -218,4 +229,3 @@ export default function EditionsEdit({ edition }: EditionsEditProps) {
         </AppLayout>
     );
 }
-

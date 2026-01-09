@@ -176,7 +176,7 @@ class Content extends Model
         return $query->where(function ($q) use ($edition) {
             $q->whereNull('editions')
                 ->orWhere('editions', [])
-                ->orWhere('editions', $edition);
+                ->orWhere('editions', 'elemMatch', ['$eq' => $edition]);
         });
     }
 

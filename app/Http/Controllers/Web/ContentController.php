@@ -303,6 +303,9 @@ class ContentController extends Controller
 
     public function destroy(Content $content): RedirectResponse
     {
+        // Check if content is locked
+        $this->lockService->ensureContentCanBeModified($content);
+
         $collectionSlug = $content->collection?->slug ?? 'unknown';
 
         $content->delete();

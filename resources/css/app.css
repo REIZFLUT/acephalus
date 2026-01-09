@@ -59,7 +59,7 @@
     --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* Continy CMS Dark Theme - Inspired by modern CMS interfaces */
+/* acephalus CMS Dark Theme - Inspired by modern CMS interfaces */
 :root {
     --radius: 0.5rem;
     --background: oklch(0.98 0 0);

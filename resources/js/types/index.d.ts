@@ -29,6 +29,29 @@ export interface Permission {
 }
 
 /**
+ * Translatable string - supports multiple locales
+ * English (en) is always required, other locales are optional
+ */
+export interface TranslatableString {
+    en: string;
+    de?: string;
+    [locale: string]: string | undefined;
+}
+
+/**
+ * Utility type for fields that can be either a plain string or a TranslatableString
+ * This allows backwards compatibility with existing string fields
+ */
+export type LocalizableString = string | TranslatableString;
+
+/**
+ * Helper to check if a value is a TranslatableString
+ */
+export function isTranslatableString(value: LocalizableString): value is TranslatableString {
+    return typeof value === 'object' && value !== null && 'en' in value;
+}
+
+/**
  * Permission categories as defined in the seeder
  */
 export type PermissionCategory = 
@@ -223,14 +246,14 @@ export interface MediaElementConfig extends BaseElementConfig {
 // Metadata field definition
 export interface MetaFieldDefinition {
     name: string;
-    label: string;
+    label: LocalizableString;
     type: MetaFieldType;
     required: boolean;
-    explanation?: string; // Optional explanation shown via info icon
+    explanation?: LocalizableString; // Optional explanation shown via info icon
     default_value?: unknown;
     options?: MetaFieldOption[]; // For select/multi-select with static options
-    placeholder?: string;
-    description?: string;
+    placeholder?: LocalizableString;
+    description?: LocalizableString;
     // For textarea fields
     editor_type?: 'textarea' | 'tinymce' | 'codemirror';
     target_format?: 'plain' | 'html' | 'css' | 'javascript' | 'markdown' | 'json' | 'xml';
@@ -262,7 +285,7 @@ export type SelectInputStyle =
 
 export interface MetaFieldOption {
     value: string;
-    label: string;
+    label: LocalizableString;
 }
 
 /**
@@ -429,8 +452,8 @@ export interface ReferenceElementData {
 export interface WrapperPurpose {
     _id: string;
     slug: string;
-    name: string;
-    description: string | null;
+    name: LocalizableString;
+    description: LocalizableString | null;
     icon: string | null;
     css_class: string | null;
     is_system: boolean;
@@ -441,8 +464,8 @@ export interface WrapperPurpose {
 export interface Edition {
     _id: string;
     slug: string;
-    name: string;
-    description: string | null;
+    name: LocalizableString;
+    description: LocalizableString | null;
     icon: string | null;
     is_system: boolean;
     created_at?: string;
@@ -468,8 +491,8 @@ export type CustomElementData = Record<string, unknown>;
 // Custom Element Definition (loaded from JSON files)
 export interface CustomElementDefinition {
     type: string;
-    label: string;
-    description?: string;
+    label: LocalizableString;
+    description?: LocalizableString;
     icon?: string;
     category: 'content' | 'data' | 'layout' | 'interactive' | 'media';
     canHaveChildren?: boolean;
@@ -481,10 +504,10 @@ export interface CustomElementDefinition {
 
 export interface CustomElementField {
     name: string;
-    label: string;
+    label: LocalizableString;
     inputType: CustomElementInputType;
-    placeholder?: string;
-    helpText?: string;
+    placeholder?: LocalizableString;
+    helpText?: LocalizableString;
     required?: boolean;
     defaultValue?: unknown;
     validation?: CustomElementValidation;
@@ -529,7 +552,7 @@ export type CustomElementInputType =
 
 export interface CustomElementOption {
     value: string | number | boolean;
-    label: string;
+    label: LocalizableString;
     icon?: string;
     disabled?: boolean;
 }
@@ -848,6 +871,8 @@ export type PageProps<T extends Record<string, unknown> = Record<string, unknown
         error?: string;
     };
     pinnedNavigation: PinnedNavigationItemShared[];
+    locale: string;
+    availableLocales: string[];
 };
 
 declare module '@inertiajs/react' {

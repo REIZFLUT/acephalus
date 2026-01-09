@@ -13,7 +13,7 @@ import {
     type SortingState,
     type VisibilityState,
 } from "@tanstack/react-table"
-import { MoreHorizontal, Pencil, Trash2, Download, Image as ImageIcon, File, Video, Music, FileText, Folder } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, Download, Folder } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -50,6 +50,7 @@ import { DataTableColumnHeader } from "./DataTableColumnHeader"
 import { DataTablePagination } from "./DataTablePagination"
 import { DataTableViewOptions } from "./DataTableViewOptions"
 import type { Media, MediaMetaField } from "@/types"
+import { getFileIcon, formatFileSize, getFileTypeLabel } from "@/utils/media"
 
 // Combined type for folders and media items
 interface FolderItem {
@@ -86,82 +87,6 @@ interface MediaDataTableProps {
     onFolderNavigate?: (folderId: string) => void
 }
 
-// Get file icon based on mime type
-const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) return ImageIcon
-    if (mimeType.startsWith('video/')) return Video
-    if (mimeType.startsWith('audio/')) return Music
-    if (mimeType.startsWith('text/') || mimeType.includes('pdf')) return FileText
-    return File
-}
-
-// Get user-friendly file type from filename or mime type
-const getFileTypeLabel = (filename: string, mimeType: string): string => {
-    // First try to get extension from filename
-    const ext = filename.split('.').pop()?.toLowerCase()
-    if (ext && ext !== filename.toLowerCase()) {
-        return ext.toUpperCase()
-    }
-    
-    // Fallback: derive from mime type
-    const mimeMap: Record<string, string> = {
-        'image/jpeg': 'JPG',
-        'image/jpg': 'JPG',
-        'image/png': 'PNG',
-        'image/gif': 'GIF',
-        'image/webp': 'WEBP',
-        'image/svg+xml': 'SVG',
-        'image/bmp': 'BMP',
-        'image/tiff': 'TIFF',
-        'video/mp4': 'MP4',
-        'video/webm': 'WEBM',
-        'video/quicktime': 'MOV',
-        'video/x-msvideo': 'AVI',
-        'audio/mpeg': 'MP3',
-        'audio/wav': 'WAV',
-        'audio/ogg': 'OGG',
-        'audio/flac': 'FLAC',
-        'application/pdf': 'PDF',
-        'application/msword': 'DOC',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
-        'application/vnd.ms-excel': 'XLS',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'XLSX',
-        'application/vnd.ms-powerpoint': 'PPT',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'PPTX',
-        'application/zip': 'ZIP',
-        'application/x-rar-compressed': 'RAR',
-        'application/json': 'JSON',
-        'text/plain': 'TXT',
-        'text/html': 'HTML',
-        'text/css': 'CSS',
-        'text/javascript': 'JS',
-        'application/javascript': 'JS',
-    }
-    
-    if (mimeMap[mimeType]) {
-        return mimeMap[mimeType]
-    }
-    
-    // Try to extract from mime type (e.g., "image/png" -> "PNG")
-    const parts = mimeType.split('/')
-    if (parts.length === 2) {
-        const subtype = parts[1].split('+')[0].split('.').pop()
-        if (subtype && subtype.length <= 5) {
-            return subtype.toUpperCase()
-        }
-    }
-    
-    return 'FILE'
-}
-
-// Format file size
-const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
 
 export function MediaDataTable({ 
     media,
@@ -591,7 +516,7 @@ export function MediaDataTable({
                                         <TableRow
                                             key={row.id}
                                             data-state={row.getIsSelected() && "selected"}
-                                            className="cursor-pointer hover:bg-muted/50"
+                                            className="cursor-pointer hover:bg-muted/50 select-none"
                                             onDoubleClick={() => {
                                                 if (item._type === 'folder') {
                                                     onFolderNavigate?.(item.id)

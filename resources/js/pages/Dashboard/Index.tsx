@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { useLaravelReactI18n } from 'laravel-react-i18n';
 import AppLayout from '@/components/layouts/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -90,39 +91,41 @@ const QuickAction = ({
 );
 
 export default function DashboardIndex({ stats, recentContents }: DashboardProps) {
+    const { t } = useLaravelReactI18n();
+    
     return (
-        <AppLayout title="Dashboard">
+        <AppLayout title={t('Dashboard')}>
             <div className="space-y-8">
                 {/* Welcome Section */}
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('Dashboard')}</h1>
                     <p className="text-muted-foreground mt-1">
-                        Welcome to Continy CMS. Here's an overview of your content.
+                        {t("Welcome to acephalus CMS. Here's an overview of your content.")}
                     </p>
                 </div>
 
                 {/* Stats Grid */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <StatCard
-                        title="Collections"
+                        title={t('Collections')}
                         value={stats.collections}
                         icon={FolderOpen}
                         href="/collections"
                     />
                     <StatCard
-                        title="Total Contents"
+                        title={t('Total Contents')}
                         value={stats.contents}
                         icon={FileText}
-                        description={`${stats.published} published, ${stats.drafts} drafts`}
+                        description={t(':published published, :drafts drafts', { published: stats.published, drafts: stats.drafts })}
                     />
                     <StatCard
-                        title="Media Files"
+                        title={t('Media Files')}
                         value={stats.media}
                         icon={Image}
                         href="/media"
                     />
                     <StatCard
-                        title="Users"
+                        title={t('Users')}
                         value={stats.users}
                         icon={Users}
                         href="/users"
@@ -135,28 +138,28 @@ export default function DashboardIndex({ stats, recentContents }: DashboardProps
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <TrendingUp className="size-5" />
-                                Quick Actions
+                                {t('Quick Actions')}
                             </CardTitle>
                             <CardDescription>
-                                Get started with common tasks
+                                {t('Get started with common tasks')}
                             </CardDescription>
                         </CardHeader>
-<CardContent className="space-y-5">
-                                            <QuickAction
-                                title="Create Collection"
-                                description="Define a new content structure"
+                        <CardContent className="space-y-5">
+                            <QuickAction
+                                title={t('Create Collection')}
+                                description={t('Define a new content structure')}
                                 icon={Plus}
                                 href="/collections/create"
                             />
                             <QuickAction
-                                title="Upload Media"
-                                description="Add images, videos, or documents"
+                                title={t('Upload Media')}
+                                description={t('Add images, videos, or documents')}
                                 icon={Image}
                                 href="/media"
                             />
                             <QuickAction
-                                title="Manage Users"
-                                description="Add or modify user accounts"
+                                title={t('Manage Users')}
+                                description={t('Add or modify user accounts')}
                                 icon={Users}
                                 href="/users"
                             />
@@ -168,18 +171,18 @@ export default function DashboardIndex({ stats, recentContents }: DashboardProps
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Clock className="size-5" />
-                                Recent Contents
+                                {t('Recent Contents')}
                             </CardTitle>
                             <CardDescription>
-                                Latest updated content entries
+                                {t('Latest updated content entries')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             {recentContents.length === 0 ? (
                                 <div className="text-center py-8 text-muted-foreground">
                                     <FileText className="size-12 mx-auto mb-3 opacity-50" />
-                                    <p>No content yet</p>
-                                    <p className="text-sm">Create your first collection to get started</p>
+                                    <p>{t('No content yet')}</p>
+                                    <p className="text-sm">{t('Create your first collection to get started')}</p>
                                 </div>
                             ) : (
                                 <div className="space-y-3">
@@ -192,13 +195,13 @@ export default function DashboardIndex({ stats, recentContents }: DashboardProps
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-medium truncate">{content.title}</p>
                                                 <p className="text-sm text-muted-foreground">
-                                                    {content.collection?.name ?? 'Unknown Collection'}
+                                                    {content.collection?.name ?? t('Unknown Collection')}
                                                 </p>
                                             </div>
                                             <Badge
                                                 variant={content.status === 'published' ? 'default' : 'secondary'}
                                             >
-                                                {content.status}
+                                                {content.status === 'published' ? t('published') : t('draft')}
                                             </Badge>
                                         </Link>
                                     ))}
@@ -208,7 +211,7 @@ export default function DashboardIndex({ stats, recentContents }: DashboardProps
                                 <div className="mt-4 pt-4 border-t">
                                     <Link href="/collections">
                                         <Button variant="outline" className="w-full">
-                                            View All Contents
+                                            {t('View All Contents')}
                                             <ArrowRight className="ml-2 size-4" />
                                         </Button>
                                     </Link>

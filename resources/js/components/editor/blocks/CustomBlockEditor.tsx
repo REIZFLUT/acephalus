@@ -3,9 +3,11 @@ import type {
     CustomElementDefinition, 
     CustomElementField,
     CustomElementOption,
+    LocalizableString,
 } from '@/types';
 import { BlockEditorProps } from '../BlockItem';
 import { useCustomElements } from '@/hooks/use-custom-elements';
+import { useTranslation } from '@/hooks/use-translation';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,6 +30,7 @@ interface CustomBlockEditorProps extends BlockEditorProps {
 
 export default function CustomBlockEditor({ block, onUpdate, definition: propDefinition }: CustomBlockEditorProps) {
     const { getDefinition, isLoading } = useCustomElements();
+    const { resolveTranslation } = useTranslation();
     
     // Get definition from prop or from hook
     const definition = propDefinition || getDefinition(block.type);
@@ -94,11 +97,14 @@ export default function CustomBlockEditor({ block, onUpdate, definition: propDef
         );
     }
 
+    // Resolve description
+    const descriptionText = resolveTranslation(definition.description);
+
     return (
         <div className="space-y-4">
             {/* Description if available */}
-            {definition.description && (
-                <p className="text-sm text-muted-foreground">{definition.description}</p>
+            {descriptionText && (
+                <p className="text-sm text-muted-foreground">{descriptionText}</p>
             )}
 
             {/* Fields Grid */}
@@ -113,6 +119,7 @@ export default function CustomBlockEditor({ block, onUpdate, definition: propDef
                                 field={field}
                                 value={value}
                                 onChange={(newValue) => handleFieldChange(field.name, newValue)}
+                                resolveTranslation={resolveTranslation}
                             />
                         </div>
                     );
@@ -126,10 +133,22 @@ interface FieldRendererProps {
     field: CustomElementField;
     value: unknown;
     onChange: (value: unknown) => void;
+    resolveTranslation: (value: LocalizableString | undefined | null) => string;
 }
 
-function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
-    const { inputType, label, placeholder, helpText, required, options = [] } = field;
+function FieldRenderer({ field, value, onChange, resolveTranslation }: FieldRendererProps) {
+    const { inputType, required, options = [] } = field;
+    
+    // Resolve translatable strings
+    const label = resolveTranslation(field.label);
+    const placeholder = resolveTranslation(field.placeholder);
+    const helpText = resolveTranslation(field.helpText);
+    
+    // Resolve option labels
+    const resolvedOptions = options.map(opt => ({
+        ...opt,
+        label: resolveTranslation(opt.label),
+    }));
 
     // Render label with optional required indicator
     const renderLabel = () => (
@@ -275,7 +294,7 @@ function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
                         onValueChange={(val) => val && onChange(val)}
                         className="justify-start"
                     >
-                        {options.map((option) => (
+                        {resolvedOptions.map((option) => (
                             <ToggleGroupItem
                                 key={String(option.value)}
                                 value={String(option.value)}
@@ -300,7 +319,7 @@ function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
                         onValueChange={(val) => onChange(val)}
                         className="flex flex-wrap gap-4"
                     >
-                        {options.map((option) => (
+                        {resolvedOptions.map((option) => (
                             <div key={String(option.value)} className="flex items-center gap-2">
                                 <RadioGroupItem
                                     value={String(option.value)}
@@ -334,7 +353,7 @@ function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
                             <SelectValue placeholder={placeholder || 'Select...'} />
                         </SelectTrigger>
                         <SelectContent>
-                            {options.map((option) => (
+                            {resolvedOptions.map((option) => (
                                 <SelectItem 
                                     key={String(option.value)} 
                                     value={String(option.value)}

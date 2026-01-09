@@ -2,7 +2,7 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "$id": "custom-element-definition",
     "title": "Custom Element Definition",
-    "description": "Schema for defining custom content elements in Continy",
+    "description": "Schema for defining custom content elements in acephalus",
     "type": "object",
     "required": ["type", "label", "category", "fields"],
     "properties": {
@@ -12,12 +12,12 @@
             "description": "Unique type identifier (must start with 'custom_')"
         },
         "label": {
-            "type": "string",
-            "description": "Human-readable label for the element"
+            "$ref": "#/definitions/localizableString",
+            "description": "Human-readable label for the element (string or {en: string, de?: string})"
         },
         "description": {
-            "type": "string",
-            "description": "Brief description of what this element does"
+            "$ref": "#/definitions/localizableString",
+            "description": "Brief description of what this element does (string or {en: string, de?: string})"
         },
         "icon": {
             "type": "string",
@@ -54,6 +54,21 @@
         }
     },
     "definitions": {
+        "localizableString": {
+            "oneOf": [
+                { "type": "string" },
+                {
+                    "type": "object",
+                    "properties": {
+                        "en": { "type": "string" },
+                        "de": { "type": "string" }
+                    },
+                    "required": ["en"],
+                    "additionalProperties": { "type": "string" }
+                }
+            ],
+            "description": "A string that can optionally be translated. Either a plain string or an object with locale keys (en required, others optional)"
+        },
         "field": {
             "type": "object",
             "required": ["name", "label", "inputType"],
@@ -64,8 +79,8 @@
                     "description": "Field name (used as key in data object)"
                 },
                 "label": {
-                    "type": "string",
-                    "description": "Human-readable field label"
+                    "$ref": "#/definitions/localizableString",
+                    "description": "Human-readable field label (string or {en: string, de?: string})"
                 },
                 "inputType": {
                     "type": "string",
@@ -102,12 +117,12 @@
                     "description": "Input type for the field"
                 },
                 "placeholder": {
-                    "type": "string",
-                    "description": "Placeholder text"
+                    "$ref": "#/definitions/localizableString",
+                    "description": "Placeholder text (string or {en: string, de?: string})"
                 },
                 "helpText": {
-                    "type": "string",
-                    "description": "Help text displayed below the field"
+                    "$ref": "#/definitions/localizableString",
+                    "description": "Help text displayed below the field (string or {en: string, de?: string})"
                 },
                 "required": {
                     "type": "boolean",
@@ -159,8 +174,8 @@
                     "description": "Option value"
                 },
                 "label": {
-                    "type": "string",
-                    "description": "Option label"
+                    "$ref": "#/definitions/localizableString",
+                    "description": "Option label (string or {en: string, de?: string})"
                 },
                 "icon": {
                     "type": "string",

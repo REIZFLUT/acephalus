@@ -15,7 +15,7 @@ use Laravel\Passport\Passport;
  *
  * These tests simulate complete workflows from user registration
  * through creating and managing content, demonstrating the full
- * capabilities of the Continy CMS API.
+ * capabilities of the acephalus CMS API.
  */
 describe('Complete User Journey', function () {
 
@@ -60,7 +60,7 @@ describe('Complete User Journey', function () {
 
         // Step 4: Create content in the collection
         $contentResponse = $this->postJson("/api/v1/collections/{$collectionSlug}/contents", [
-            'title' => 'Getting Started with Continy CMS',
+            'title' => 'Getting Started with acephalus CMS',
         ]);
 
         $contentResponse->assertStatus(201);
@@ -73,7 +73,7 @@ describe('Complete User Journey', function () {
         $headingResponse = $this->postJson("/api/v1/contents/{$contentId}/elements", [
             'type' => 'html',
             'data' => [
-                'content' => '<h1>Welcome to Continy</h1>',
+                'content' => '<h1>Welcome to acephalus</h1>',
             ],
         ]);
         $headingResponse->assertStatus(201);
@@ -82,7 +82,7 @@ describe('Complete User Journey', function () {
         $textResponse = $this->postJson("/api/v1/contents/{$contentId}/elements", [
             'type' => 'text',
             'data' => [
-                'content' => 'Continy is a modern headless CMS built for developers.',
+                'content' => 'acephalus is a modern headless CMS built for developers.',
                 'format' => 'plain',
             ],
         ]);
@@ -114,7 +114,7 @@ describe('Complete User Journey', function () {
         // Step 6: Update an element
         $updateElementResponse = $this->putJson("/api/v1/elements/{$textElementId}", [
             'data' => [
-                'content' => 'Updated: Continy is a powerful headless CMS built for modern developers.',
+                'content' => 'Updated: acephalus is a powerful headless CMS built for modern developers.',
                 'format' => 'plain',
             ],
         ]);
@@ -128,7 +128,7 @@ describe('Complete User Journey', function () {
 
         // Step 8: Update the content metadata
         $updateContentResponse = $this->putJson("/api/v1/contents/{$contentId}", [
-            'title' => 'Complete Guide to Getting Started with Continy CMS',
+            'title' => 'Complete Guide to Getting Started with acephalus CMS',
             'change_note' => 'Updated title to be more descriptive',
         ]);
         $updateContentResponse->assertOk();

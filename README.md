@@ -1,4 +1,4 @@
-<h1 align="center">Continy CMS</h1>
+<h1 align="center">acephalusCMS</h1>
 
 <p align="center">
   <strong>A modern, headless Content Management System built with Laravel 12 and MongoDB</strong>
@@ -86,8 +86,8 @@
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-org/continy.git
-   cd continy
+   git clone https://github.com/REIZFLUT/acephalus
+   cd acephalus
    ```
 
 2. **Run the setup script**
@@ -105,7 +105,7 @@
 
 5. **Open in browser** and complete the setup wizard
    ```
-   https://continy.test/setup
+   https://acephalus.test/setup
    ```
    The setup wizard will guide you through:
    - Creating your super admin account
@@ -156,11 +156,11 @@ Copy `.env.example` to `.env` and configure the following variables:
 #### Application Settings
 
 ```env
-APP_NAME="Continy CMS"
+APP_NAME="acephalus CMS"
 APP_ENV=local
 APP_KEY=                    # Generated with php artisan key:generate
 APP_DEBUG=true
-APP_URL=http://continy.test
+APP_URL=http://acephalus.test
 SETUP_ENABLED=false         # Set to true only during initial setup
 ```
 
@@ -177,7 +177,7 @@ DB_DATABASE=/absolute/path/to/database/database.sqlite
 **MongoDB (Content Storage)**
 ```env
 MONGO_DSN=mongodb://localhost:27017
-MONGO_DATABASE=continy
+MONGO_DATABASE=acephalus
 ```
 
 > **Important**: MongoDB stores all CMS content (Collections, Contents, Media, etc.), while SQLite stores user accounts, roles, and permissions.
@@ -187,13 +187,13 @@ MONGO_DATABASE=continy
 For MongoDB Atlas or authenticated connections:
 ```env
 MONGO_DSN=mongodb+srv://username:password@cluster.mongodb.net/?retryWrites=true&w=majority
-MONGO_DATABASE=continy_production
+MONGO_DATABASE=acephalus_production
 ```
 
 For local MongoDB with authentication:
 ```env
-MONGO_DSN=mongodb://username:password@localhost:27017/continy?authSource=admin
-MONGO_DATABASE=continy
+MONGO_DSN=mongodb://username:password@localhost:27017/acephalus?authSource=admin
+MONGO_DATABASE=acephalus
 ```
 
 #### Session & Cache
@@ -215,7 +215,7 @@ php artisan passport:keys
 
 ## 📖 API Documentation
 
-Continy provides a comprehensive RESTful API for headless content delivery.
+acephalus provides a comprehensive RESTful API for headless content delivery.
 
 ### Authentication
 
@@ -223,12 +223,12 @@ All API endpoints (except login/register) require Bearer token authentication:
 
 ```bash
 # Login to get access token
-curl -X POST https://continy.test/api/v1/auth/login \
+curl -X POST https://acephalus.test/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email": "user@example.com", "password": "password"}'
 
 # Use token in subsequent requests
-curl -X GET https://continy.test/api/v1/collections \
+curl -X GET https://acephalus.test/api/v1/collections \
   -H "Authorization: Bearer {your_access_token}"
 ```
 
@@ -253,7 +253,7 @@ curl -X GET https://continy.test/api/v1/collections \
 
 Interactive API documentation is available at:
 ```
-https://continy.test/swagger
+https://acephalus.test/swagger
 ```
 
 ---
@@ -262,7 +262,7 @@ https://continy.test/swagger
 
 ### Database Architecture
 
-Continy uses a **hybrid database approach**:
+acephalus uses a **hybrid database approach**:
 
 - **SQLite** - User management, roles, permissions, OAuth tokens
 - **MongoDB** - All CMS content (collections, contents, media, etc.)
@@ -411,7 +411,7 @@ vendor/bin/pint --dirty
 ## 📂 Project Structure
 
 ```
-continy/
+acephalus/
 ├── app/
 │   ├── Enums/              # PHP Enums (ContentStatus, ElementType, MediaType)
 │   ├── Http/
@@ -457,7 +457,7 @@ continy/
 
 ## 📜 License
 
-Continy CMS is open-sourced software licensed under the [MIT license](LICENSE).
+acephalus CMS is open-sourced software licensed under the [MIT license](LICENSE).
 
 ---
 

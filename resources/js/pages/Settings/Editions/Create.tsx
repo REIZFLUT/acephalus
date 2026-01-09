@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { TranslatableInput } from '@/components/ui/translatable-input';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { EditionIcon, availableEditionIconNames } from '@/components/EditionIcon';
 import {
@@ -15,13 +15,18 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import type { PageProps } from '@/types';
+import type { PageProps, TranslatableString } from '@/types';
 
 export default function EditionsCreate({}: PageProps) {
-    const { data, setData, post, processing, errors } = useForm({
-        name: '',
+    const { data, setData, post, processing, errors } = useForm<{
+        name: TranslatableString;
+        slug: string;
+        description: TranslatableString;
+        icon: string;
+    }>({
+        name: { en: '' },
         slug: '',
-        description: '',
+        description: { en: '' },
         icon: '',
     });
 
@@ -30,11 +35,11 @@ export default function EditionsCreate({}: PageProps) {
         post('/settings/editions');
     };
 
-    const handleNameChange = (name: string) => {
+    const handleNameChange = (name: TranslatableString) => {
         setData((prev) => ({
             ...prev,
             name,
-            slug: prev.slug || name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+            slug: prev.slug || (name.en || '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
         }));
     };
 
@@ -68,12 +73,12 @@ export default function EditionsCreate({}: PageProps) {
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="space-y-2">
                                 <Label htmlFor="name">Name *</Label>
-                                <Input
-                                    id="name"
+                                <TranslatableInput
                                     value={data.name}
-                                    onChange={(e) => handleNameChange(e.target.value)}
+                                    onChange={handleNameChange}
                                     placeholder="Print"
-                                    autoFocus
+                                    modalTitle="Name Translations"
+                                    modalDescription="Add translations for the edition name."
                                 />
                                 {errors.name && (
                                     <p className="text-sm text-destructive">{errors.name}</p>
@@ -98,12 +103,14 @@ export default function EditionsCreate({}: PageProps) {
 
                             <div className="space-y-2">
                                 <Label htmlFor="description">Description</Label>
-                                <Textarea
-                                    id="description"
+                                <TranslatableInput
                                     value={data.description}
-                                    onChange={(e) => setData('description', e.target.value)}
+                                    onChange={(value) => setData('description', value)}
                                     placeholder="Content for printed publications"
+                                    multiline
                                     rows={2}
+                                    modalTitle="Description Translations"
+                                    modalDescription="Add translations for the edition description."
                                 />
                                 {errors.description && (
                                     <p className="text-sm text-destructive">{errors.description}</p>

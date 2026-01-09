@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import {
     AlertDialog,
@@ -18,6 +17,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { TranslatableInput } from '@/components/ui/translatable-input';
 import { ArrowLeft, Loader2, Lock, Trash2 } from 'lucide-react';
 import { WrapperPurposeIcon, availableIconNames } from '@/components/WrapperPurposeIcon';
 import {
@@ -27,17 +27,28 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import type { PageProps, WrapperPurpose } from '@/types';
+import type { PageProps, WrapperPurpose, TranslatableString, LocalizableString } from '@/types';
+import { normalizeToTranslatable } from '@/hooks/use-translation';
+import { useTranslation } from '@/hooks/use-translation';
 
 interface WrapperPurposesEditProps extends PageProps {
     purpose: WrapperPurpose;
 }
 
 export default function WrapperPurposesEdit({ purpose }: WrapperPurposesEditProps) {
-    const { data, setData, put, processing, errors } = useForm({
-        name: purpose.name,
+    const { resolveTranslation } = useTranslation();
+    const purposeName = resolveTranslation(purpose.name);
+    
+    const { data, setData, put, processing, errors } = useForm<{
+        name: TranslatableString;
+        slug: string;
+        description: TranslatableString;
+        icon: string;
+        css_class: string;
+    }>({
+        name: normalizeToTranslatable(purpose.name),
         slug: purpose.slug,
-        description: purpose.description || '',
+        description: normalizeToTranslatable(purpose.description),
         icon: purpose.icon || '',
         css_class: purpose.css_class || '',
     });
@@ -53,11 +64,11 @@ export default function WrapperPurposesEdit({ purpose }: WrapperPurposesEditProp
 
     return (
         <AppLayout
-            title={`Edit ${purpose.name}`}
+            title={`Edit ${purposeName}`}
             breadcrumbs={[
                 { label: 'Settings', href: '/settings' },
                 { label: 'Wrapper Purposes', href: '/settings/wrapper-purposes' },
-                { label: purpose.name },
+                { label: purposeName },
             ]}
         >
             <div className="max-w-2xl">
@@ -93,12 +104,12 @@ export default function WrapperPurposesEdit({ purpose }: WrapperPurposesEditProp
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 <div className="space-y-2">
                                     <Label htmlFor="name">Name *</Label>
-                                    <Input
-                                        id="name"
+                                    <TranslatableInput
                                         value={data.name}
-                                        onChange={(e) => setData('name', e.target.value)}
+                                        onChange={(value) => setData('name', value)}
                                         disabled={purpose.is_system}
-                                        autoFocus={!purpose.is_system}
+                                        modalTitle="Name Translations"
+                                        modalDescription="Add translations for the wrapper purpose name."
                                     />
                                     {errors.name && (
                                         <p className="text-sm text-destructive">{errors.name}</p>
@@ -120,11 +131,13 @@ export default function WrapperPurposesEdit({ purpose }: WrapperPurposesEditProp
 
                                 <div className="space-y-2">
                                     <Label htmlFor="description">Description</Label>
-                                    <Textarea
-                                        id="description"
+                                    <TranslatableInput
                                         value={data.description}
-                                        onChange={(e) => setData('description', e.target.value)}
+                                        onChange={(value) => setData('description', value)}
+                                        multiline
                                         rows={2}
+                                        modalTitle="Description Translations"
+                                        modalDescription="Add translations for the wrapper purpose description."
                                     />
                                     {errors.description && (
                                         <p className="text-sm text-destructive">{errors.description}</p>
@@ -211,7 +224,7 @@ export default function WrapperPurposesEdit({ purpose }: WrapperPurposesEditProp
                                         <AlertDialogHeader>
                                             <AlertDialogTitle>Delete Purpose</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                                Are you sure you want to delete "{purpose.name}"? 
+                                                Are you sure you want to delete "{purposeName}"? 
                                                 This action cannot be undone.
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>

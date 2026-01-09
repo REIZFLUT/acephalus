@@ -1,4 +1,4 @@
-import type { MetaFieldDefinition, MetaFieldType, SelectInputStyle, Collection, FilterView } from '@/types';
+import type { MetaFieldDefinition, MetaFieldType, SelectInputStyle, Collection, FilterView, TranslatableString, LocalizableString } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,10 +15,12 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { TranslatableInput, TranslationButton } from '@/components/ui/translatable-input';
 import { Plus, Trash2, GripVertical, ChevronDown, Info, Database, List } from 'lucide-react';
 import { metaFieldTypes, selectInputStyles } from './constants';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { normalizeToTranslatable, hasAdditionalTranslations } from '@/hooks/use-translation';
 
 interface MetaFieldListProps {
     fields: MetaFieldDefinition[];
@@ -202,24 +204,30 @@ function MetaFieldItem({
                                 <Label className="text-xs text-muted-foreground">
                                     Description (shown below the input)
                                 </Label>
-                                <Textarea
+                                <TranslatableInput
                                     placeholder="Help text shown below the field..."
-                                    value={descriptionValue || ''}
-                                    onChange={(e) => onUpdate(index, { description: e.target.value || undefined })}
+                                    value={field.description}
+                                    onChange={(value) => onUpdate(index, { description: value.en ? value : undefined })}
+                                    multiline
                                     rows={2}
-                                    className="text-sm"
+                                    inputClassName="text-sm"
+                                    modalTitle="Description Translations"
+                                    modalDescription="Add translations for the field description."
                                 />
                             </div>
                             <div className="space-y-1.5">
                                 <Label className="text-xs text-muted-foreground">
                                     Explanation (shown via info icon tooltip)
                                 </Label>
-                                <Textarea
+                                <TranslatableInput
                                     placeholder="Detailed explanation shown when hovering the info icon..."
-                                    value={field.explanation || ''}
-                                    onChange={(e) => onUpdate(index, { explanation: e.target.value || undefined })}
+                                    value={field.explanation}
+                                    onChange={(value) => onUpdate(index, { explanation: value.en ? value : undefined })}
+                                    multiline
                                     rows={2}
-                                    className="text-sm"
+                                    inputClassName="text-sm"
+                                    modalTitle="Explanation Translations"
+                                    modalDescription="Add translations for the field explanation tooltip."
                                 />
                             </div>
                         </div>
@@ -238,22 +246,30 @@ interface MetaFieldBasicFieldsProps {
 }
 
 function MetaFieldBasicFields({ field, index, onUpdate, onRemove }: MetaFieldBasicFieldsProps) {
+    // Get the English value for display
+    const labelEn = typeof field.label === 'string' ? field.label : (field.label?.en || '');
+    
     return (
         <div className="grid gap-3 sm:grid-cols-4">
             <Input
                 placeholder="Field name"
                 value={field.name}
-                onChange={(e) => onUpdate(index, { 
-                    name: e.target.value.toLowerCase().replace(/\s+/g, '_'),
-                    label: field.label || e.target.value,
-                })}
+                onChange={(e) => {
+                    const newName = e.target.value.toLowerCase().replace(/\s+/g, '_');
+                    const updates: Partial<MetaFieldDefinition> = { name: newName };
+                    // Auto-fill label if empty
+                    if (!labelEn) {
+                        updates.label = { en: e.target.value };
+                    }
+                    onUpdate(index, updates);
+                }}
                 className="h-8"
             />
-            <Input
+            <TranslatableInput
                 placeholder="Label"
                 value={field.label}
-                onChange={(e) => onUpdate(index, { label: e.target.value })}
-                className="h-8"
+                onChange={(value) => onUpdate(index, { label: value })}
+                inputClassName="h-8"
             />
             <Select
                 value={field.type}
@@ -571,17 +587,19 @@ function SelectOptions({ field, index, onUpdate, collections, filterViews }: Sel
                                             options[optIndex] = { ...option, value: e.target.value };
                                             onUpdate(index, { options });
                                         }}
-                                        className="h-8 text-xs"
+                                        className="h-8 text-xs flex-1"
                                     />
-                                    <Input
+                                    <TranslatableInput
                                         placeholder="Label"
                                         value={option.label}
-                                        onChange={(e) => {
+                                        onChange={(value) => {
                                             const options = [...(field.options || [])];
-                                            options[optIndex] = { ...option, label: e.target.value };
+                                            options[optIndex] = { ...option, label: value };
                                             onUpdate(index, { options });
                                         }}
-                                        className="h-8 text-xs"
+                                        inputClassName="h-8 text-xs"
+                                        className="flex-1"
+                                        modalTitle="Option Label Translations"
                                     />
                                     <Button
                                         type="button"
@@ -591,7 +609,7 @@ function SelectOptions({ field, index, onUpdate, collections, filterViews }: Sel
                                             const options = (field.options || []).filter((_, i) => i !== optIndex);
                                             onUpdate(index, { options });
                                         }}
-                                        className="size-8 text-destructive hover:text-destructive"
+                                        className="size-8 text-destructive hover:text-destructive shrink-0"
                                     >
                                         <Trash2 className="size-3" />
                                     </Button>

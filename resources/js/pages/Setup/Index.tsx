@@ -109,7 +109,7 @@ export default function SetupIndex({ systemInfo, envVars }: Props) {
 
     return (
         <>
-            <Head title="Setup - Continy CMS" />
+            <Head title="Setup - acephalus CMS" />
             <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100">
                 {/* Decorative elements */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -125,7 +125,7 @@ export default function SetupIndex({ systemInfo, envVars }: Props) {
                             <Rocket className="size-8 text-white" />
                         </div>
                         <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-                            Welcome to Continy
+                            Welcome to acephalus
                         </h1>
                         <p className="text-slate-400 mt-2">Let's set up your headless CMS in just a few steps</p>
                     </div>
@@ -494,7 +494,7 @@ export default function SetupIndex({ systemInfo, envVars }: Props) {
                     {/* Help Text */}
                     <p className="text-center text-sm text-slate-500 mt-6 max-w-md">
                         Need help? Check out the{' '}
-                        <a href="https://github.com/your-org/continy" target="_blank" rel="noopener noreferrer" className="text-violet-400 hover:text-violet-300">
+                        <a href="https://github.com/REIZFLUT/acephalus" target="_blank" rel="noopener noreferrer" className="text-violet-400 hover:text-violet-300">
                             documentation
                             <ExternalLink className="inline-block ml-1 size-3" />
                         </a>

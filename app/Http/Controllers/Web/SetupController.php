@@ -216,7 +216,7 @@ class SetupController extends Controller
                 'value' => config('app.key') ? '***SET***' : null,
             ],
             'APP_URL' => [
-                'description' => 'Application URL (e.g., https://continy.test)',
+                'description' => 'Application URL (e.g., https://acephalus.test)',
                 'configured' => ! empty(config('app.url')),
                 'value' => config('app.url'),
             ],

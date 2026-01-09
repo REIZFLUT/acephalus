@@ -9,7 +9,7 @@ interface ThemeProviderContext {
 
 const ThemeProviderContext = createContext<ThemeProviderContext | undefined>(undefined);
 
-const STORAGE_KEY = 'continy-theme';
+const STORAGE_KEY = 'acephalus-theme';
 
 function getSystemTheme(): 'light' | 'dark' {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';

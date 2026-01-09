@@ -1,25 +1,63 @@
+# Logs
 *.log
+
+# OS-specific files
 .DS_Store
+Thumbs.db
+.rnd
+
+# Environment files
 .env
 .env.backup
 .env.production
-.phpactor.json
-.phpunit.result.cache
+.env.local
+.env.*.local
+
+# IDE and editor folders
+/.cursor/
 /.fleet
 /.idea
 /.nova
 /.phpunit.cache
 /.vscode
 /.zed
+.phpactor.json
+.phpunit.result.cache
+
+# Authentication
 /auth.json
+
+# Language files (generated)
 /lang/php_*.json
+
+# Dependencies
 /node_modules
+/vendor
+
+# Build artifacts
 /public/build
 /public/hot
 /public/storage
+
+# Storage
 /storage/*.key
 /storage/pail
-/vendor
+/storage/test/
+
+# Database
+*.sqlite
+*.sqlite-journal
+/database/database.sqlite
+
+# Laravel specific
 Homestead.json
 Homestead.yaml
-Thumbs.db
+
+# NPM
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage
+/coverage
+.nyc_output

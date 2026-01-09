@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Plus, Pencil, Trash2, Lock, Box } from 'lucide-react';
 import { WrapperPurposeIcon } from '@/components/WrapperPurposeIcon';
+import { useTranslation } from '@/hooks/use-translation';
 import type { PageProps, WrapperPurpose } from '@/types';
 
 interface WrapperPurposesIndexProps extends PageProps {
@@ -31,6 +32,8 @@ interface WrapperPurposesIndexProps extends PageProps {
 }
 
 export default function WrapperPurposesIndex({ purposes }: WrapperPurposesIndexProps) {
+    const { resolveTranslation } = useTranslation();
+    
     const handleDelete = (slug: string) => {
         router.delete(`/settings/wrapper-purposes/${slug}`);
     };
@@ -99,7 +102,7 @@ export default function WrapperPurposesIndex({ purposes }: WrapperPurposesIndexP
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-2">
-                                                <span className="font-medium">{purpose.name}</span>
+                                                <span className="font-medium">{resolveTranslation(purpose.name)}</span>
                                                 {purpose.is_system && (
                                                     <Badge variant="secondary" className="gap-1">
                                                         <Lock className="size-3" />
@@ -114,7 +117,7 @@ export default function WrapperPurposesIndex({ purposes }: WrapperPurposesIndexP
                                             </code>
                                         </TableCell>
                                         <TableCell className="text-muted-foreground max-w-xs truncate">
-                                            {purpose.description || '-'}
+                                            {resolveTranslation(purpose.description) || '-'}
                                         </TableCell>
                                         <TableCell>
                                             {purpose.css_class ? (
@@ -147,7 +150,7 @@ export default function WrapperPurposesIndex({ purposes }: WrapperPurposesIndexP
                                                             <AlertDialogHeader>
                                                                 <AlertDialogTitle>Delete Purpose</AlertDialogTitle>
                                                                 <AlertDialogDescription>
-                                                                    Are you sure you want to delete "{purpose.name}"? 
+                                                                    Are you sure you want to delete "{resolveTranslation(purpose.name)}"? 
                                                                     This action cannot be undone.
                                                                 </AlertDialogDescription>
                                                             </AlertDialogHeader>

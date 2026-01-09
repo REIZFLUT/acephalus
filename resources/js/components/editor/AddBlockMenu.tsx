@@ -24,6 +24,7 @@ import {
     Link2,
 } from 'lucide-react';
 import { useCustomElements } from '@/hooks/use-custom-elements';
+import { useTranslation } from '@/hooks/use-translation';
 
 interface AddBlockMenuProps {
     onAdd: (type: ElementType | string) => void;
@@ -120,6 +121,7 @@ function getLucideIcon(iconName: string): React.ComponentType<{ className?: stri
 
 export function AddBlockMenu({ onAdd, allowedTypes, allowCustomElements = true, variant = 'default', size = 'default' }: AddBlockMenuProps) {
     const { definitions: customElements, isLoading } = useCustomElements();
+    const { resolveTranslation } = useTranslation();
 
     // Combine built-in and custom block types
     const allBlockTypes = useMemo(() => {
@@ -132,18 +134,19 @@ export function AddBlockMenu({ onAdd, allowedTypes, allowCustomElements = true, 
         }
 
         // Convert custom elements to BlockTypeInfo format
+        // Note: ce.label and ce.description are LocalizableString, so we resolve them here
         const customBlocks: BlockTypeInfo[] = customElements
             .filter(ce => !allowedTypes || allowedTypes.includes(ce.type))
             .map(ce => ({
                 type: ce.type as ElementType,
-                label: ce.label,
-                description: ce.description || '',
+                label: resolveTranslation(ce.label),
+                description: resolveTranslation(ce.description) || '',
                 icon: getLucideIcon(ce.icon || 'box'),
                 category: ce.category as 'content' | 'data' | 'layout',
             }));
 
         return [...builtIn, ...customBlocks];
-    }, [allowedTypes, customElements, allowCustomElements, isLoading]);
+    }, [allowedTypes, customElements, allowCustomElements, isLoading, resolveTranslation]);
 
     const contentBlocks = allBlockTypes.filter(bt => bt.category === 'content');
     const dataBlocks = allBlockTypes.filter(bt => bt.category === 'data');

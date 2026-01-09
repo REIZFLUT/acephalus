@@ -11,9 +11,11 @@ import { BlockEditorProps } from '../BlockItem';
 import { useSchema } from '../SchemaContext';
 import { MetaFieldInput } from '../MetaFieldInput';
 import { WrapperPurposeIcon, getWrapperPurposeIcon } from '@/components/WrapperPurposeIcon';
+import { useTranslation } from '@/hooks/use-translation';
 
 export default function WrapperBlockEditor({ block, onUpdate }: BlockEditorProps) {
     const { wrapperPurposes: contextPurposes, schema } = useSchema();
+    const { resolveTranslation } = useTranslation();
     const wrapperData = block.data as WrapperElementData;
     
     // Use purposes from context, or fallback to default
@@ -44,7 +46,7 @@ export default function WrapperBlockEditor({ block, onUpdate }: BlockEditorProps
                         <SelectValue>
                             <div className="flex items-center gap-2">
                                 <SelectedIcon className="size-4" />
-                                <span>{selectedPurpose?.name || 'Select purpose'}</span>
+                                <span>{resolveTranslation(selectedPurpose?.name) || 'Select purpose'}</span>
                             </div>
                         </SelectValue>
                     </SelectTrigger>
@@ -54,10 +56,10 @@ export default function WrapperBlockEditor({ block, onUpdate }: BlockEditorProps
                                 <div className="flex items-center gap-2">
                                     <WrapperPurposeIcon iconName={purpose.icon} className="size-4" />
                                     <div>
-                                        <span className="font-medium">{purpose.name}</span>
+                                        <span className="font-medium">{resolveTranslation(purpose.name)}</span>
                                         {purpose.description && (
                                             <span className="text-muted-foreground text-xs ml-2">
-                                                — {purpose.description}
+                                                — {resolveTranslation(purpose.description)}
                                             </span>
                                         )}
                                     </div>

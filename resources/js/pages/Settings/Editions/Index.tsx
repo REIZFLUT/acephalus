@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Plus, Pencil, Trash2, Lock, Layers } from 'lucide-react';
 import { EditionIcon } from '@/components/EditionIcon';
+import { useTranslation } from '@/hooks/use-translation';
 import type { PageProps, Edition } from '@/types';
 
 interface EditionsIndexProps extends PageProps {
@@ -31,6 +32,8 @@ interface EditionsIndexProps extends PageProps {
 }
 
 export default function EditionsIndex({ editions }: EditionsIndexProps) {
+    const { resolveTranslation } = useTranslation();
+    
     const handleDelete = (slug: string) => {
         router.delete(`/settings/editions/${slug}`);
     };
@@ -98,7 +101,7 @@ export default function EditionsIndex({ editions }: EditionsIndexProps) {
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-2">
-                                                <span className="font-medium">{edition.name}</span>
+                                                <span className="font-medium">{resolveTranslation(edition.name)}</span>
                                                 {edition.is_system && (
                                                     <Badge variant="secondary" className="gap-1">
                                                         <Lock className="size-3" />
@@ -113,7 +116,7 @@ export default function EditionsIndex({ editions }: EditionsIndexProps) {
                                             </code>
                                         </TableCell>
                                         <TableCell className="text-muted-foreground max-w-xs truncate">
-                                            {edition.description || '-'}
+                                            {resolveTranslation(edition.description) || '-'}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex items-center justify-end gap-2">
@@ -137,7 +140,7 @@ export default function EditionsIndex({ editions }: EditionsIndexProps) {
                                                             <AlertDialogHeader>
                                                                 <AlertDialogTitle>Delete Edition</AlertDialogTitle>
                                                                 <AlertDialogDescription>
-                                                                    Are you sure you want to delete "{edition.name}"? 
+                                                                    Are you sure you want to delete "{resolveTranslation(edition.name)}"? 
                                                                     This action cannot be undone.
                                                                 </AlertDialogDescription>
                                                             </AlertDialogHeader>

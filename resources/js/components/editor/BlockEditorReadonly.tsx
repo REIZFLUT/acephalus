@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { WrapperPurposeIcon } from '@/components/WrapperPurposeIcon';
 import { useCustomElements } from '@/hooks/use-custom-elements';
+import { useTranslation } from '@/hooks/use-translation';
 import { useState } from 'react';
 
 interface BlockEditorReadonlyProps {
@@ -85,13 +86,15 @@ interface BlockReadonlyProps {
 
 function BlockReadonly({ element, wrapperPurposes, getDefinition, depth = 0 }: BlockReadonlyProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const { resolveTranslation } = useTranslation();
     const data = element.data as Record<string, unknown>;
     
     const typeConfig = ELEMENT_TYPE_CONFIG[element.type as keyof typeof ELEMENT_TYPE_CONFIG];
     const customDefinition = !typeConfig ? getDefinition(element.type) : null;
     
     const Icon = typeConfig?.icon || Layers;
-    const label = typeConfig?.label || customDefinition?.label || element.type;
+    // customDefinition?.label can be a LocalizableString, so resolve it
+    const label = typeConfig?.label || resolveTranslation(customDefinition?.label) || element.type;
     const colorClass = typeConfig?.color || 'bg-gray-500/10 text-gray-700 dark:text-gray-400';
 
     const hasChildren = element.type === 'wrapper' && element.children && element.children.length > 0;

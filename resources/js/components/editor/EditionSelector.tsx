@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { BookCopy, X } from 'lucide-react';
 import { EditionIcon } from '@/components/EditionIcon';
+import { useTranslation } from '@/hooks/use-translation';
 import type { Edition } from '@/types';
 
 interface EditionSelectorProps {
@@ -23,6 +24,8 @@ export function EditionSelector({
     allowedEditions,
     compact = false,
 }: EditionSelectorProps) {
+    const { resolveTranslation } = useTranslation();
+    
     // Filter editions based on allowed list
     const availableEditions = useMemo(() => {
         if (!allowedEditions || allowedEditions.length === 0) {
@@ -52,10 +55,10 @@ export function EditionSelector({
         }
         if (selectedEditions.length === 1) {
             const edition = availableEditions.find(e => e.slug === selectedEditions[0]);
-            return edition?.name || selectedEditions[0];
+            return resolveTranslation(edition?.name) || selectedEditions[0];
         }
         return `${selectedEditions.length} Editions`;
-    }, [isAllEditions, selectedEditions, availableEditions]);
+    }, [isAllEditions, selectedEditions, availableEditions, resolveTranslation]);
 
     if (availableEditions.length === 0) {
         return null;
@@ -115,7 +118,7 @@ export function EditionSelector({
                                     onCheckedChange={() => toggleEdition(edition.slug)}
                                 />
                                 <EditionIcon iconName={edition.icon} className="size-4 text-muted-foreground" />
-                                <span className="text-sm">{edition.name}</span>
+                                <span className="text-sm">{resolveTranslation(edition.name)}</span>
                             </label>
                         ))}
                     </div>
@@ -133,6 +136,8 @@ interface EditionBadgesProps {
 }
 
 export function EditionBadges({ editions, allEditions, onRemove }: EditionBadgesProps) {
+    const { resolveTranslation } = useTranslation();
+    
     if (editions.length === 0) {
         return null;
     }
@@ -148,7 +153,7 @@ export function EditionBadges({ editions, allEditions, onRemove }: EditionBadges
                         className="gap-1 text-xs"
                     >
                         <EditionIcon iconName={edition?.icon} className="size-3" />
-                        {edition?.name || slug}
+                        {resolveTranslation(edition?.name) || slug}
                         {onRemove && (
                             <button
                                 onClick={(e) => {

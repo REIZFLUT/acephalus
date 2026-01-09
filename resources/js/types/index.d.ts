@@ -800,7 +800,7 @@ export interface FilterView {
  */
 export interface FilterField {
     field: string;
-    label: string;
+    label: LocalizableString;
     type: string;
     options?: MetaFieldOption[];
 }

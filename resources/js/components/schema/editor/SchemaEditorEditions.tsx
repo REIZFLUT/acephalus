@@ -3,6 +3,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Layers } from 'lucide-react';
 import { buildCurrentSchema } from './constants';
+import { useTranslation } from '@/hooks/use-translation';
 import type { SchemaEditorEditionsProps } from './types';
 
 export function SchemaEditorEditions({ schema, onChange, editions = [] }: SchemaEditorEditionsProps) {
@@ -56,6 +57,8 @@ interface EditionsListProps {
 }
 
 function EditionsList({ currentSchema, editions, onChange }: EditionsListProps) {
+    const { resolveTranslation } = useTranslation();
+    
     if (!editions) {
         return null;
     }
@@ -126,14 +129,14 @@ function EditionsList({ currentSchema, editions, onChange }: EditionsListProps) 
                             />
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                    <span className="font-medium text-sm">{edition.name}</span>
+                                    <span className="font-medium text-sm">{resolveTranslation(edition.name)}</span>
                                     {edition.is_system && (
                                         <span className="text-xs bg-muted px-1.5 py-0.5 rounded">System</span>
                                     )}
                                 </div>
                                 {edition.description && (
                                     <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                                        {edition.description}
+                                        {resolveTranslation(edition.description)}
                                     </p>
                                 )}
                             </div>

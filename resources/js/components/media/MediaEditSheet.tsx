@@ -61,6 +61,9 @@ export function MediaEditSheet({
     onOpenChange,
     onSave,
 }: MediaEditSheetProps) {
+    // Note: MediaMetaField currently uses plain strings (not LocalizableString).
+    // resolveTranslation is not imported or used in this file. If the data structure
+    // changes to use LocalizableString, import resolveTranslation from @/lib/utils.
     const [saving, setSaving] = useState(false);
     const [formData, setFormData] = useState<Record<string, unknown>>({});
     const [focusArea, setFocusArea] = useState<FocusArea | null>(null);

@@ -7,6 +7,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useTranslation } from '@/hooks/use-translation';
 import type { FilterField, FilterSortRule } from '@/types';
 
 interface SortEditorProps {
@@ -16,6 +17,8 @@ interface SortEditorProps {
 }
 
 export function SortEditor({ sort, availableFields, onChange }: SortEditorProps) {
+    const { resolveTranslation } = useTranslation();
+    
     const addSort = () => {
         const usedFields = sort.map(s => s.field);
         const availableForSort = availableFields.filter(f => !usedFields.includes(f.field));
@@ -48,7 +51,7 @@ export function SortEditor({ sort, availableFields, onChange }: SortEditorProps)
                             <SelectContent>
                                 {availableFields.map((field) => (
                                     <SelectItem key={field.field} value={field.field}>
-                                        {field.label}
+                                        {resolveTranslation(field.label)}
                                     </SelectItem>
                                 ))}
                             </SelectContent>

@@ -3,6 +3,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Layers } from 'lucide-react';
 import { buildCurrentSchema } from './constants';
+import { useTranslation } from '@/hooks/use-translation';
 import type { SchemaEditorWrappersProps } from './types';
 
 export function SchemaEditorWrappers({ schema, onChange, wrapperPurposes = [] }: SchemaEditorWrappersProps) {
@@ -56,6 +57,8 @@ interface WrapperPurposesListProps {
 }
 
 function WrapperPurposesList({ currentSchema, wrapperPurposes, onChange }: WrapperPurposesListProps) {
+    const { resolveTranslation } = useTranslation();
+    
     if (!wrapperPurposes) {
         return null;
     }
@@ -125,14 +128,14 @@ function WrapperPurposesList({ currentSchema, wrapperPurposes, onChange }: Wrapp
                             />
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
-                                    <span className="font-medium text-sm">{purpose.name}</span>
+                                    <span className="font-medium text-sm">{resolveTranslation(purpose.name)}</span>
                                     {purpose.is_system && (
                                         <span className="text-xs bg-muted px-1.5 py-0.5 rounded">System</span>
                                     )}
                                 </div>
                                 {purpose.description && (
                                     <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                                        {purpose.description}
+                                        {resolveTranslation(purpose.description)}
                                     </p>
                                 )}
                             </div>

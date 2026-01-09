@@ -305,7 +305,7 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="font-medium">{purpose.name}</span>
+                                                        <span className="font-medium">{resolveTranslation(purpose.name)}</span>
                                                         {purpose.is_system && (
                                                             <Badge variant="secondary" className="gap-1">
                                                                 <Lock className="size-3" />
@@ -320,7 +320,7 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                                                     </code>
                                                 </TableCell>
                                                 <TableCell className="text-muted-foreground max-w-xs truncate">
-                                                    {purpose.description || '-'}
+                                                    {resolveTranslation(purpose.description) || '-'}
                                                 </TableCell>
                                                 <TableCell>
                                                     {purpose.css_class ? (
@@ -356,7 +356,7 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                                                                         <AlertDialogHeader>
                                                                             <AlertDialogTitle>Delete Purpose</AlertDialogTitle>
                                                                             <AlertDialogDescription>
-                                                                                Are you sure you want to delete "{purpose.name}"? 
+                                                                                Are you sure you want to delete "{resolveTranslation(purpose.name)}"? 
                                                                                 This action cannot be undone.
                                                                             </AlertDialogDescription>
                                                                         </AlertDialogHeader>
@@ -435,7 +435,7 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="font-medium">{edition.name}</span>
+                                                        <span className="font-medium">{resolveTranslation(edition.name)}</span>
                                                         {edition.is_system && (
                                                             <Badge variant="secondary" className="gap-1">
                                                                 <Lock className="size-3" />
@@ -450,7 +450,7 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                                                     </code>
                                                 </TableCell>
                                                 <TableCell className="text-muted-foreground max-w-xs truncate">
-                                                    {edition.description || '-'}
+                                                    {resolveTranslation(edition.description) || '-'}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex items-center justify-end gap-2">
@@ -477,7 +477,7 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                                                                         <AlertDialogHeader>
                                                                             <AlertDialogTitle>Delete Edition</AlertDialogTitle>
                                                                             <AlertDialogDescription>
-                                                                                Are you sure you want to delete "{edition.name}"? 
+                                                                                Are you sure you want to delete "{resolveTranslation(edition.name)}"? 
                                                                                 This action cannot be undone.
                                                                             </AlertDialogDescription>
                                                                         </AlertDialogHeader>

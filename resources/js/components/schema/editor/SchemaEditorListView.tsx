@@ -21,8 +21,10 @@ import {
 } from 'lucide-react';
 import { buildCurrentSchema, defaultListViewSettings, baseColumnDefinitions } from './constants';
 import type { SchemaEditorBaseProps } from './types';
+import { useTranslation } from '@/hooks/use-translation';
 
 export function SchemaEditorListView({ schema, onChange }: SchemaEditorBaseProps) {
+    const { resolveTranslation } = useTranslation();
     const currentSchema = buildCurrentSchema(schema);
     const listViewSettings = currentSchema.list_view_settings || defaultListViewSettings;
     const contentMetaFields = currentSchema.content_meta_fields || [];
@@ -38,14 +40,14 @@ export function SchemaEditorListView({ schema, onChange }: SchemaEditorBaseProps
 
         const metaColumns = contentMetaFields.map(field => ({
             id: `meta_${field.name}`,
-            label: field.label,
+            label: resolveTranslation(field.label),
             type: 'meta' as const,
             meta_field: field.name,
             description: `Custom metadata field (${field.type})`,
         }));
 
         return [...baseColumns, ...metaColumns];
-    }, [contentMetaFields]);
+    }, [contentMetaFields, resolveTranslation]);
 
     // Get current column configuration or build from defaults
     const getCurrentColumns = (): ListViewColumn[] => {

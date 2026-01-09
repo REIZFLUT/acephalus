@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLaravelReactI18n } from 'laravel-react-i18n';
 import { Filter, Plus, Pencil, Trash2, Check, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,6 +75,7 @@ export function FilterViewSelector({
     onDelete,
     readOnly = false,
 }: FilterViewSelectorProps) {
+    const { t } = useLaravelReactI18n();
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -203,7 +205,7 @@ export function FilterViewSelector({
         <div className="flex items-center gap-2">
             <div className="flex items-center gap-2">
                 <Filter className="size-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Filter:</span>
+                <span className="text-sm font-medium">{t('Filter')}:</span>
             </div>
 
             <Select
@@ -220,17 +222,17 @@ export function FilterViewSelector({
                 }}
             >
                 <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="No filter" />
+                    <SelectValue placeholder={t('No filter')} />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="none">No filter</SelectItem>
+                    <SelectItem value="none">{t('No filter')}</SelectItem>
                     
                     {collectionViews.map((view) => (
                         <SelectItem key={view._id} value={view._id}>
                             <div className="flex items-center gap-2">
                                 {view.name}
                                 {view.is_system && (
-                                    <Badge variant="outline" className="text-[10px] px-1">System</Badge>
+                                    <Badge variant="outline" className="text-[10px] px-1">{t('System')}</Badge>
                                 )}
                             </div>
                         </SelectItem>
@@ -243,7 +245,7 @@ export function FilterViewSelector({
                 <div className="flex items-center gap-1">
                     <Badge variant="secondary">
                         <Check className="size-3 mr-1" />
-                        Active
+                        {t('Active')}
                     </Badge>
                     
                     {!readOnly && !selectedFilterView.is_system && (
@@ -256,7 +258,7 @@ export function FilterViewSelector({
                             <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleEditClick(selectedFilterView)}>
                                     <Pencil className="size-4 mr-2" />
-                                    Edit Filter
+                                    {t('Edit Filter')}
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem 
@@ -264,7 +266,7 @@ export function FilterViewSelector({
                                     className="text-destructive focus:text-destructive"
                                 >
                                     <Trash2 className="size-4 mr-2" />
-                                    Delete Filter
+                                    {t('Delete Filter')}
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -285,7 +287,7 @@ export function FilterViewSelector({
             {!readOnly && onSave && (
                 <Button variant="outline" size="sm" onClick={handleCreateClick}>
                     <Plus className="size-4 mr-1" />
-                    Save Filter
+                    {t('Add Filter')}
                 </Button>
             )}
 
@@ -293,16 +295,16 @@ export function FilterViewSelector({
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                 <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>Create Filter View</DialogTitle>
+                        <DialogTitle>{t('Create Filter View')}</DialogTitle>
                         <DialogDescription>
-                            Save a reusable filter configuration
+                            {t('Create a reusable filter configuration')}
                         </DialogDescription>
                     </DialogHeader>
                     
                     <div className="space-y-4 py-4">
                         <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="name">Name</Label>
+                                <Label htmlFor="name">{t('Name')}</Label>
                                 <Input
                                     id="name"
                                     value={formName}
@@ -313,11 +315,11 @@ export function FilterViewSelector({
                                             setFormSlug(generateSlug(e.target.value));
                                         }
                                     }}
-                                    placeholder="My Filter"
+                                    placeholder={t('My Filter')}
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="slug">Slug</Label>
+                                <Label htmlFor="slug">{t('Slug')}</Label>
                                 <Input
                                     id="slug"
                                     value={formSlug}
@@ -326,12 +328,12 @@ export function FilterViewSelector({
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="description">Description</Label>
+                                <Label htmlFor="description">{t('Description')}</Label>
                                 <Input
                                     id="description"
                                     value={formDescription}
                                     onChange={(e) => setFormDescription(e.target.value)}
-                                    placeholder="Optional description"
+                                    placeholder={t('Optional description')}
                                 />
                             </div>
                         </div>
@@ -348,11 +350,11 @@ export function FilterViewSelector({
 
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button type="button" onClick={handleSaveNew} disabled={isSaving || !formName.trim()}>
                             <Save className="size-4 mr-2" />
-                            {isSaving ? 'Saving...' : 'Save Filter'}
+                            {isSaving ? t('Saving...') : t('Create Filter')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -362,25 +364,25 @@ export function FilterViewSelector({
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                 <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>Edit Filter View</DialogTitle>
+                        <DialogTitle>{t('Edit Filter View')}</DialogTitle>
                         <DialogDescription>
-                            Modify your filter configuration
+                            {t('Modify your filter configuration')}
                         </DialogDescription>
                     </DialogHeader>
                     
                     <div className="space-y-4 py-4">
                         <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="edit-name">Name</Label>
+                                <Label htmlFor="edit-name">{t('Name')}</Label>
                                 <Input
                                     id="edit-name"
                                     value={formName}
                                     onChange={(e) => setFormName(e.target.value)}
-                                    placeholder="My Filter"
+                                    placeholder={t('My Filter')}
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="edit-slug">Slug</Label>
+                                <Label htmlFor="edit-slug">{t('Slug')}</Label>
                                 <Input
                                     id="edit-slug"
                                     value={formSlug}
@@ -389,12 +391,12 @@ export function FilterViewSelector({
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="edit-description">Description</Label>
+                                <Label htmlFor="edit-description">{t('Description')}</Label>
                                 <Input
                                     id="edit-description"
                                     value={formDescription}
                                     onChange={(e) => setFormDescription(e.target.value)}
-                                    placeholder="Optional description"
+                                    placeholder={t('Optional description')}
                                 />
                             </div>
                         </div>
@@ -420,15 +422,15 @@ export function FilterViewSelector({
                             disabled={isSaving}
                         >
                             <Trash2 className="size-4 mr-2" />
-                            Delete
+                            {t('Delete')}
                         </Button>
                         <div className="flex gap-2">
                             <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                                Cancel
+                                {t('Cancel')}
                             </Button>
                             <Button type="button" onClick={handleSaveEdit} disabled={isSaving || !formName.trim()}>
                                 <Save className="size-4 mr-2" />
-                                {isSaving ? 'Saving...' : 'Save Changes'}
+                                {isSaving ? t('Saving...') : t('Save Changes')}
                             </Button>
                         </div>
                     </DialogFooter>
@@ -439,18 +441,18 @@ export function FilterViewSelector({
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Filter View</AlertDialogTitle>
+                        <AlertDialogTitle>{t('Delete Filter View')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to delete "{editingFilterView?.name}"? This action cannot be undone.
+                            {t('Are you sure you want to delete ":name"? This action cannot be undone.', { name: editingFilterView?.name ?? '' })}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleConfirmDelete}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                            {isSaving ? 'Deleting...' : 'Delete'}
+                            {isSaving ? t('Deleting...') : t('Delete')}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

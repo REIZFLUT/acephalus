@@ -9,6 +9,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import type { FilterCondition, FilterField, FilterOperator } from '@/types';
+import { useTranslation } from '@/hooks/use-translation';
 import {
     operatorLabels,
     operatorsForType,
@@ -24,6 +25,7 @@ interface ConditionEditorProps {
 }
 
 export function ConditionEditor({ condition, availableFields, onChange, onRemove }: ConditionEditorProps) {
+    const { resolveTranslation } = useTranslation();
     const selectedField = availableFields.find(f => f.field === condition.field);
     const fieldType = selectedField?.type || 'text';
     const operators = operatorsForType[fieldType] || operatorsForType.text;
@@ -70,7 +72,7 @@ export function ConditionEditor({ condition, availableFields, onChange, onRemove
                     <SelectContent>
                         {availableFields.map((field) => (
                             <SelectItem key={field.field} value={field.field}>
-                                {field.label}
+                                {resolveTranslation(field.label)}
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -107,7 +109,7 @@ export function ConditionEditor({ condition, availableFields, onChange, onRemove
                             <SelectContent>
                                 {selectedField.options.map((option) => (
                                     <SelectItem key={option.value} value={option.value}>
-                                        {option.label}
+                                        {resolveTranslation(option.label)}
                                     </SelectItem>
                                 ))}
                             </SelectContent>

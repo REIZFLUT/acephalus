@@ -32,6 +32,10 @@ interface BlockEditorProps {
     contentId?: string | null;
     collapsedBlocks?: Set<string>;
     onToggleCollapse?: (id: string) => void;
+    onLockElement?: (block: BlockElement, reason?: string) => void;
+    onUnlockElement?: (block: BlockElement) => void;
+    isContentLocked?: boolean;
+    isCollectionLocked?: boolean;
 }
 
 export function BlockEditor({ 
@@ -47,6 +51,10 @@ export function BlockEditor({
     contentId = null,
     collapsedBlocks: externalCollapsedBlocks,
     onToggleCollapse: externalToggleCollapse,
+    onLockElement,
+    onUnlockElement,
+    isContentLocked = false,
+    isCollectionLocked = false,
 }: BlockEditorProps) {
     const [draggedId, setDraggedId] = useState<string | null>(null);
     const [internalCollapsedBlocks, setInternalCollapsedBlocks] = useState<Set<string>>(new Set());
@@ -261,6 +269,10 @@ export function BlockEditor({
                             onDragEnd={() => setDraggedId(null)}
                             allowedTypes={allowedTypes}
                             depth={0}
+                            onLockElement={onLockElement}
+                            onUnlockElement={onUnlockElement}
+                            isContentLocked={isContentLocked}
+                            isCollectionLocked={isCollectionLocked}
                         />
                         <AddBlockMenu 
                             onAdd={(type) => addBlock(type)} 

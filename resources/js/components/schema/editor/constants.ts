@@ -69,6 +69,7 @@ export const selectInputStyles: { value: SelectInputStyle; label: string; single
 export const defaultListViewColumns: ListViewColumn[] = [
     { id: 'title', label: 'Title', type: 'base', visible: true, toggleable: false, sortable: true },
     { id: 'status', label: 'Status', type: 'base', visible: true, toggleable: true, sortable: true },
+    { id: 'is_locked', label: 'Lock', type: 'base', visible: false, toggleable: true, sortable: true },
     { id: 'current_version', label: 'Version', type: 'base', visible: true, toggleable: true, sortable: true },
     { id: 'updated_at', label: 'Updated', type: 'base', visible: true, toggleable: true, sortable: true },
     { id: 'slug', label: 'Slug', type: 'base', visible: false, toggleable: true, sortable: true },
@@ -88,6 +89,7 @@ export const baseColumnDefinitions: { id: ListViewBaseColumn; label: string; des
     { id: 'title', label: 'Title', description: 'Content title and slug path' },
     { id: 'slug', label: 'Slug', description: 'URL-friendly identifier' },
     { id: 'status', label: 'Status', description: 'Publication status (draft, published, archived)' },
+    { id: 'is_locked', label: 'Lock', description: 'Shows if the content is locked' },
     { id: 'current_version', label: 'Version', description: 'Current version number' },
     { id: 'updated_at', label: 'Updated', description: 'Last modification date' },
     { id: 'created_at', label: 'Created', description: 'Creation date' },

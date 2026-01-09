@@ -18,6 +18,10 @@ interface BlockListProps {
     allowedTypes?: ElementType[];
     depth: number;
     parentId?: string;
+    onLockElement?: (block: BlockElement, reason?: string) => void;
+    onUnlockElement?: (block: BlockElement) => void;
+    isContentLocked?: boolean;
+    isCollectionLocked?: boolean;
 }
 
 export function BlockList({
@@ -33,6 +37,10 @@ export function BlockList({
     allowedTypes,
     depth,
     parentId,
+    onLockElement,
+    onUnlockElement,
+    isContentLocked = false,
+    isCollectionLocked = false,
 }: BlockListProps) {
     const [dropIndicator, setDropIndicator] = useState<number | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -97,6 +105,10 @@ export function BlockList({
                         onDragEnd={onDragEnd}
                         isDragging={draggedId === block.id}
                         depth={depth}
+                        onLock={onLockElement}
+                        onUnlock={onUnlockElement}
+                        isContentLocked={isContentLocked}
+                        isCollectionLocked={isCollectionLocked}
                     >
                         {/* Render children for wrapper elements */}
                         {block.type === 'wrapper' && block.children !== undefined && (
@@ -113,6 +125,10 @@ export function BlockList({
                                 onDragEnd={onDragEnd}
                                 allowedTypes={allowedTypes}
                                 depth={depth}
+                                onLockElement={onLockElement}
+                                onUnlockElement={onUnlockElement}
+                                isContentLocked={isContentLocked}
+                                isCollectionLocked={isCollectionLocked}
                             />
                         )}
                     </BlockItem>
@@ -179,6 +195,10 @@ interface WrapperContentProps {
     onDragEnd: () => void;
     allowedTypes?: ElementType[];
     depth: number;
+    onLockElement?: (block: BlockElement, reason?: string) => void;
+    onUnlockElement?: (block: BlockElement) => void;
+    isContentLocked?: boolean;
+    isCollectionLocked?: boolean;
 }
 
 function WrapperContent({
@@ -194,6 +214,10 @@ function WrapperContent({
     onDragEnd,
     allowedTypes,
     depth,
+    onLockElement,
+    onUnlockElement,
+    isContentLocked = false,
+    isCollectionLocked = false,
 }: WrapperContentProps) {
     const [isDropTarget, setIsDropTarget] = useState(false);
     const isDragActive = draggedId !== null;
@@ -240,6 +264,10 @@ function WrapperContent({
                         allowedTypes={allowedTypes}
                         depth={depth + 1}
                         parentId={block.id}
+                        onLockElement={onLockElement}
+                        onUnlockElement={onUnlockElement}
+                        isContentLocked={isContentLocked}
+                        isCollectionLocked={isCollectionLocked}
                     />
                     
                     {/* Additional drop zone at the bottom of non-empty wrapper */}

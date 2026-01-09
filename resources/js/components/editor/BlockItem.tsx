@@ -1,5 +1,5 @@
-import { useState, type ReactNode, useEffect } from 'react';
-import type { BlockElement, Edition } from '@/types';
+import { useState, type ReactNode } from 'react';
+import type { BlockElement } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,7 +29,12 @@ import {
     Box,
     BookCopy,
     EyeOff,
+    Lock,
+    Unlock,
 } from 'lucide-react';
+import { LockBadge } from '@/components/ui/lock-badge';
+import { LockDialog } from '@/components/ui/lock-dialog';
+import { usePermission } from '@/hooks/use-permission';
 import { cn } from '@/lib/utils';
 import TextBlockEditor from './blocks/TextBlockEditor';
 import MediaBlockEditor from './blocks/MediaBlockEditor';
@@ -60,6 +65,10 @@ interface BlockItemProps {
     isDragging: boolean;
     depth: number;
     children?: ReactNode;
+    onLock?: (block: BlockElement, reason?: string) => void;
+    onUnlock?: (block: BlockElement) => void;
+    isContentLocked?: boolean;
+    isCollectionLocked?: boolean;
 }
 
 // Export this interface for block editors to use
@@ -114,10 +123,24 @@ export function BlockItem({
     isDragging,
     depth,
     children,
+    onLock,
+    onUnlock,
+    isContentLocked = false,
+    isCollectionLocked = false,
 }: BlockItemProps) {
+    const { can } = usePermission();
     const { collapsedBlocks, toggleCollapse, editions, previewEdition, contentEditions } = useSchema();
     const { getDefinition } = useCustomElements();
     const isCollapsed = collapsedBlocks.has(block.id);
+    
+    // Lock state
+    const [lockDialogOpen, setLockDialogOpen] = useState(false);
+    const [lockDialogIsLocking, setLockDialogIsLocking] = useState(true);
+    
+    // Lock status
+    const isElementLocked = block.is_locked ?? false;
+    const isEffectivelyLocked = isElementLocked || isContentLocked || isCollectionLocked;
+    const effectiveLockSource = isElementLocked ? 'self' : isContentLocked ? 'content' : isCollectionLocked ? 'collection' : null;
     
     // Get element editions
     const elementEditions = block.editions || [];
@@ -129,6 +152,20 @@ export function BlockItem({
     
     // Get custom element definition if applicable
     const customDefinition = isCustomElementType(block.type) ? getDefinition(block.type) : null;
+    
+    const openLockDialog = (isLocking: boolean) => {
+        setLockDialogIsLocking(isLocking);
+        setLockDialogOpen(true);
+    };
+    
+    const handleLockConfirm = (reason?: string) => {
+        if (lockDialogIsLocking && onLock) {
+            onLock(block, reason);
+        } else if (!lockDialogIsLocking && onUnlock) {
+            onUnlock(block);
+        }
+        setLockDialogOpen(false);
+    };
 
     const toggleExpand = () => {
         toggleCollapse(block.id);
@@ -306,6 +343,15 @@ export function BlockItem({
                                 Hidden
                             </span>
                         )}
+                        {/* Lock badge */}
+                        {isEffectivelyLocked && (
+                            <LockBadge
+                                isLocked={true}
+                                lockedAt={block.locked_at}
+                                lockReason={block.lock_reason}
+                                source={effectiveLockSource}
+                            />
+                        )}
                         {/* Edition badges */}
                         {hasEditions && !isHiddenInPreview && (
                             <EditionBadges 
@@ -374,14 +420,38 @@ export function BlockItem({
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={onDuplicate}>
+                            <DropdownMenuItem 
+                                onClick={onDuplicate}
+                                disabled={isEffectivelyLocked}
+                            >
                                 <Copy className="size-4 mr-2" />
                                 Duplicate
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
+                            {/* Lock/Unlock options - only for saved elements with _id */}
+                            {block._id && (
+                                <>
+                                    {isElementLocked ? (
+                                        can('elements.unlock') && onUnlock && (
+                                            <DropdownMenuItem onClick={() => openLockDialog(false)}>
+                                                <Unlock className="size-4 mr-2" />
+                                                Unlock Element
+                                            </DropdownMenuItem>
+                                        )
+                                    ) : (
+                                        can('elements.lock') && onLock && !isContentLocked && !isCollectionLocked && (
+                                            <DropdownMenuItem onClick={() => openLockDialog(true)}>
+                                                <Lock className="size-4 mr-2" />
+                                                Lock Element
+                                            </DropdownMenuItem>
+                                        )
+                                    )}
+                                </>
+                            )}
                             <DropdownMenuItem 
                                 onClick={onRemove}
                                 className="text-destructive focus:text-destructive"
+                                disabled={isEffectivelyLocked}
                             >
                                 <Trash2 className="size-4 mr-2" />
                                 Delete
@@ -390,6 +460,16 @@ export function BlockItem({
                     </DropdownMenu>
                 </div>
             </div>
+
+            {/* Lock Dialog */}
+            <LockDialog
+                open={lockDialogOpen}
+                onOpenChange={setLockDialogOpen}
+                onConfirm={handleLockConfirm}
+                isLocking={lockDialogIsLocking}
+                resourceType="element"
+                resourceName={blockLabel}
+            />
 
             {!isCollapsed && (
                 <CardContent className="pt-0 pb-2 px-3">

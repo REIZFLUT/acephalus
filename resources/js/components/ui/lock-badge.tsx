@@ -1,7 +1,6 @@
 import * as React from "react"
 import { Lock, LockOpen } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Badge } from "./badge"
 import {
     Tooltip,
     TooltipContent,
@@ -58,10 +57,18 @@ function LockBadge({
 
     if (!isLocked) {
         return (
-            <Badge variant="outline" className={cn("gap-1", className)}>
-                <LockOpen className="size-3" />
-                Unlocked
-            </Badge>
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <span className={cn("inline-flex cursor-help", className)}>
+                            <LockOpen className="size-4 text-muted-foreground" />
+                        </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                        Editable
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
         )
     }
 
@@ -82,13 +89,9 @@ function LockBadge({
         <TooltipProvider>
             <Tooltip>
                 <TooltipTrigger asChild>
-                    <Badge 
-                        variant={source === 'self' ? 'destructive' : 'secondary'} 
-                        className={cn("gap-1 cursor-help", className)}
-                    >
-                        <Lock className="size-3" />
-                        {getSourceLabel(source)}
-                    </Badge>
+                    <span className={cn("inline-flex cursor-help", className)}>
+                        <Lock className="size-4 text-destructive" />
+                    </span>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" align="start">
                     {tooltipContent}

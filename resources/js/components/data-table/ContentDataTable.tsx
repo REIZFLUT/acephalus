@@ -14,7 +14,7 @@ import {
     type VisibilityState,
 } from "@tanstack/react-table"
 import { Link, router } from "@inertiajs/react"
-import { MoreHorizontal, Edit, Trash2, Send, Archive, Copy, Loader2 } from "lucide-react"
+import { MoreHorizontal, Edit, Trash2, Send, Archive, Copy, Loader2, Lock, Unlock } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -58,6 +58,9 @@ import { Card } from "@/components/ui/card"
 import { DataTableColumnHeader } from "./DataTableColumnHeader"
 import { DataTablePagination } from "./DataTablePagination"
 import { DataTableViewOptions } from "./DataTableViewOptions"
+import { LockBadge } from "@/components/ui/lock-badge"
+import { LockDialog } from "@/components/ui/lock-dialog"
+import { usePermission } from "@/hooks/use-permission"
 import { formatDate } from "@/utils/date"
 import type { Content, Collection, ListViewSettings, ListViewColumn, MetaFieldDefinition, Edition } from "@/types"
 
@@ -148,6 +151,22 @@ function getCellValue(
                         })}
                     </div>
                 )
+            case 'is_locked':
+                // Determine effective lock status (content or collection)
+                const isContentLocked = content.is_locked ?? false
+                const isCollectionLocked = collection.is_locked ?? false
+                const isEffectivelyLocked = isContentLocked || isCollectionLocked
+                const lockSource = isContentLocked ? 'self' : isCollectionLocked ? 'collection' : null
+
+                return (
+                    <LockBadge
+                        isLocked={isEffectivelyLocked}
+                        lockedAt={isContentLocked ? content.locked_at : collection.locked_at}
+                        lockReason={isContentLocked ? content.lock_reason : collection.lock_reason}
+                        source={lockSource}
+                        showUnlocked
+                    />
+                )
             default:
                 return null
         }
@@ -216,12 +235,23 @@ export function ContentDataTable({
     listViewSettings,
     editions = [],
 }: ContentDataTableProps) {
+    const { can } = usePermission()
+    
     // Duplicate dialog state
     const [duplicateDialogOpen, setDuplicateDialogOpen] = React.useState(false)
     const [duplicateContent, setDuplicateContent] = React.useState<Content | null>(null)
     const [duplicateSlug, setDuplicateSlug] = React.useState('')
     const [duplicateError, setDuplicateError] = React.useState<string | null>(null)
     const [isDuplicating, setIsDuplicating] = React.useState(false)
+
+    // Lock dialog state
+    const [lockDialogOpen, setLockDialogOpen] = React.useState(false)
+    const [lockDialogContent, setLockDialogContent] = React.useState<Content | null>(null)
+    const [lockDialogIsLocking, setLockDialogIsLocking] = React.useState(true)
+    const [isLockProcessing, setIsLockProcessing] = React.useState(false)
+
+    // Check if collection is locked (affects all contents)
+    const isCollectionLocked = collection.is_locked ?? false
 
     // Get content metadata fields from schema (must be defined first)
     const contentMetaFields: MetaFieldDefinition[] = React.useMemo(() => {
@@ -327,6 +357,31 @@ export function ContentDataTable({
         )
     }
 
+    const openLockDialog = (content: Content, isLocking: boolean) => {
+        setLockDialogContent(content)
+        setLockDialogIsLocking(isLocking)
+        setLockDialogOpen(true)
+    }
+
+    const handleLockConfirm = (reason?: string) => {
+        if (!lockDialogContent) return
+        setIsLockProcessing(true)
+
+        if (lockDialogIsLocking) {
+            router.post(`/contents/${lockDialogContent._id}/lock`, { reason }, {
+                preserveScroll: true,
+                onSuccess: () => setLockDialogOpen(false),
+                onFinish: () => setIsLockProcessing(false),
+            })
+        } else {
+            router.delete(`/contents/${lockDialogContent._id}/lock`, {
+                preserveScroll: true,
+                onSuccess: () => setLockDialogOpen(false),
+                onFinish: () => setIsLockProcessing(false),
+            })
+        }
+    }
+
     // Build columns from list view settings (using valid columns only)
     const columns: ColumnDef<Content>[] = React.useMemo(() => {
         const cols: ColumnDef<Content>[] = []
@@ -356,6 +411,9 @@ export function ContentDataTable({
             enableHiding: false,
             cell: ({ row }) => {
                 const content = row.original
+                const isContentLocked = content.is_locked ?? false
+                const isEffectivelyLocked = isContentLocked || isCollectionLocked
+                
                 return (
                     <AlertDialog>
                         <DropdownMenu>
@@ -377,19 +435,44 @@ export function ContentDataTable({
                                     Duplicate
                                 </DropdownMenuItem>
                                 {content.status === 'draft' ? (
-                                    <DropdownMenuItem onClick={() => handlePublish(content)}>
+                                    <DropdownMenuItem 
+                                        onClick={() => handlePublish(content)}
+                                        disabled={isEffectivelyLocked}
+                                    >
                                         <Send className="size-4 mr-2" />
                                         Publish
                                     </DropdownMenuItem>
                                 ) : content.status === 'published' ? (
-                                    <DropdownMenuItem onClick={() => handleUnpublish(content)}>
+                                    <DropdownMenuItem 
+                                        onClick={() => handleUnpublish(content)}
+                                        disabled={isEffectivelyLocked}
+                                    >
                                         <Archive className="size-4 mr-2" />
                                         Unpublish
                                     </DropdownMenuItem>
                                 ) : null}
                                 <DropdownMenuSeparator />
+                                {/* Lock/Unlock options */}
+                                {isContentLocked ? (
+                                    can('contents.unlock') && (
+                                        <DropdownMenuItem onClick={() => openLockDialog(content, false)}>
+                                            <Unlock className="size-4 mr-2" />
+                                            Unlock
+                                        </DropdownMenuItem>
+                                    )
+                                ) : (
+                                    can('contents.lock') && !isCollectionLocked && (
+                                        <DropdownMenuItem onClick={() => openLockDialog(content, true)}>
+                                            <Lock className="size-4 mr-2" />
+                                            Lock
+                                        </DropdownMenuItem>
+                                    )
+                                )}
                                 <AlertDialogTrigger asChild>
-                                    <DropdownMenuItem className="text-destructive focus:text-destructive">
+                                    <DropdownMenuItem 
+                                        className="text-destructive focus:text-destructive"
+                                        disabled={isEffectivelyLocked}
+                                    >
                                         <Trash2 className="size-4 mr-2" />
                                         Delete
                                     </DropdownMenuItem>
@@ -562,6 +645,17 @@ export function ContentDataTable({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Lock Dialog */}
+            <LockDialog
+                open={lockDialogOpen}
+                onOpenChange={setLockDialogOpen}
+                onConfirm={handleLockConfirm}
+                isLocking={lockDialogIsLocking}
+                resourceType="content"
+                resourceName={lockDialogContent?.title}
+                processing={isLockProcessing}
+            />
         </div>
     )
 }

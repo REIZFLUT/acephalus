@@ -151,6 +151,66 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
         setData('elements', elements);
     }, [setData]);
 
+    // Element lock/unlock handlers (via API)
+    // Note: Elements need a MongoDB _id to be locked (they must be saved first)
+    const handleLockElement = useCallback(async (block: BlockElement, reason?: string) => {
+        const elementId = block._id;
+        if (!elementId) {
+            // Element hasn't been saved yet, can't lock it
+            console.warn('Cannot lock an unsaved element');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/v1/elements/${elementId}/lock`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-XSRF-TOKEN': decodeURIComponent(
+                        document.cookie.split('; ').find(row => row.startsWith('XSRF-TOKEN='))?.split('=')[1] || ''
+                    ),
+                },
+                credentials: 'include',
+                body: JSON.stringify({ reason }),
+            });
+            
+            if (response.ok) {
+                // Refresh the page to get updated lock state
+                router.reload({ preserveScroll: true });
+            }
+        } catch (error) {
+            console.error('Failed to lock element:', error);
+        }
+    }, []);
+
+    const handleUnlockElement = useCallback(async (block: BlockElement) => {
+        const elementId = block._id;
+        if (!elementId) {
+            console.warn('Cannot unlock an unsaved element');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/v1/elements/${elementId}/lock`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-XSRF-TOKEN': decodeURIComponent(
+                        document.cookie.split('; ').find(row => row.startsWith('XSRF-TOKEN='))?.split('=')[1] || ''
+                    ),
+                },
+                credentials: 'include',
+            });
+            
+            if (response.ok) {
+                router.reload({ preserveScroll: true });
+            }
+        } catch (error) {
+            console.error('Failed to unlock element:', error);
+        }
+    }, []);
+
     // Get schema from collection
     const schema = content.collection?.schema as CollectionSchema | null;
     
@@ -410,6 +470,10 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
                                         contentId={content._id}
                                         collapsedBlocks={collapsedBlocks}
                                         onToggleCollapse={toggleCollapseBlock}
+                                        onLockElement={handleLockElement}
+                                        onUnlockElement={handleUnlockElement}
+                                        isContentLocked={isContentLocked}
+                                        isCollectionLocked={isCollectionLocked}
                                     />
                                 </>
                             )}

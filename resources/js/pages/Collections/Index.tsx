@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, router } from '@inertiajs/react';
 import AppLayout from '@/components/layouts/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -29,16 +30,50 @@ import {
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, MoreHorizontal, FolderOpen, Edit, Trash2, Eye } from 'lucide-react';
+import { Plus, MoreHorizontal, FolderOpen, Edit, Trash2, Eye, Lock as LockIcon, Unlock } from 'lucide-react';
 import type { PageProps, Collection } from '@/types';
+import { LockBadge } from '@/components/ui/lock-badge';
+import { LockDialog } from '@/components/ui/lock-dialog';
+import { usePermission } from '@/hooks/use-permission';
 
 interface CollectionsIndexProps extends PageProps {
     collections: (Collection & { contents_count: number })[];
 }
 
 export default function CollectionsIndex({ collections }: CollectionsIndexProps) {
+    const { can } = usePermission();
+    const [lockDialogOpen, setLockDialogOpen] = useState(false);
+    const [lockDialogCollection, setLockDialogCollection] = useState<Collection | null>(null);
+    const [lockDialogIsLocking, setLockDialogIsLocking] = useState(true);
+    const [isProcessing, setIsProcessing] = useState(false);
+
     const handleDelete = (collection: Collection) => {
         router.delete(`/collections/${collection.slug}`);
+    };
+
+    const openLockDialog = (collection: Collection, isLocking: boolean) => {
+        setLockDialogCollection(collection);
+        setLockDialogIsLocking(isLocking);
+        setLockDialogOpen(true);
+    };
+
+    const handleLockConfirm = (reason?: string) => {
+        if (!lockDialogCollection) return;
+        setIsProcessing(true);
+
+        if (lockDialogIsLocking) {
+            router.post(`/collections/${lockDialogCollection.slug}/lock`, { reason }, {
+                preserveScroll: true,
+                onSuccess: () => setLockDialogOpen(false),
+                onFinish: () => setIsProcessing(false),
+            });
+        } else {
+            router.delete(`/collections/${lockDialogCollection.slug}/lock`, {
+                preserveScroll: true,
+                onSuccess: () => setLockDialogOpen(false),
+                onFinish: () => setIsProcessing(false),
+            });
+        }
     };
 
     return (
@@ -85,6 +120,7 @@ export default function CollectionsIndex({ collections }: CollectionsIndexProps)
                                 <TableRow>
                                     <TableHead>Name</TableHead>
                                     <TableHead>Slug</TableHead>
+                                    <TableHead>Lock</TableHead>
                                     <TableHead>Contents</TableHead>
                                     <TableHead>Description</TableHead>
                                     <TableHead className="w-[70px]"></TableHead>
@@ -105,6 +141,15 @@ export default function CollectionsIndex({ collections }: CollectionsIndexProps)
                                             <code className="text-sm bg-muted px-2 py-1 rounded">
                                                 {collection.slug}
                                             </code>
+                                        </TableCell>
+                                        <TableCell>
+                                            <LockBadge
+                                                isLocked={collection.is_locked ?? false}
+                                                lockedAt={collection.locked_at}
+                                                lockReason={collection.lock_reason}
+                                                source="self"
+                                                showUnlocked
+                                            />
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant="secondary">
@@ -129,15 +174,33 @@ export default function CollectionsIndex({ collections }: CollectionsIndexProps)
                                                                 View Contents
                                                             </Link>
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem asChild>
+                                                        <DropdownMenuItem asChild disabled={collection.is_locked}>
                                                             <Link href={`/collections/${collection.slug}/edit`}>
                                                                 <Edit className="size-4 mr-2" />
                                                                 Edit Collection
                                                             </Link>
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
+                                                        {collection.is_locked ? (
+                                                            can('collections.unlock') && (
+                                                                <DropdownMenuItem onClick={() => openLockDialog(collection, false)}>
+                                                                    <Unlock className="size-4 mr-2" />
+                                                                    Unlock Collection
+                                                                </DropdownMenuItem>
+                                                            )
+                                                        ) : (
+                                                            can('collections.lock') && (
+                                                                <DropdownMenuItem onClick={() => openLockDialog(collection, true)}>
+                                                                    <LockIcon className="size-4 mr-2" />
+                                                                    Lock Collection
+                                                                </DropdownMenuItem>
+                                                            )
+                                                        )}
                                                         <AlertDialogTrigger asChild>
-                                                            <DropdownMenuItem className="text-destructive focus:text-destructive">
+                                                            <DropdownMenuItem 
+                                                                className="text-destructive focus:text-destructive"
+                                                                disabled={collection.is_locked}
+                                                            >
                                                                 <Trash2 className="size-4 mr-2" />
                                                                 Delete Collection
                                                             </DropdownMenuItem>
@@ -169,8 +232,18 @@ export default function CollectionsIndex({ collections }: CollectionsIndexProps)
                         </Table>
                     </Card>
                 )}
+
+                {/* Lock Dialog */}
+                <LockDialog
+                    open={lockDialogOpen}
+                    onOpenChange={setLockDialogOpen}
+                    onConfirm={handleLockConfirm}
+                    isLocking={lockDialogIsLocking}
+                    resourceType="collection"
+                    resourceName={lockDialogCollection?.name}
+                    processing={isProcessing}
+                />
             </div>
         </AppLayout>
     );
 }
-

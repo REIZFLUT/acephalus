@@ -185,14 +185,15 @@ export interface ListViewColumn {
 }
 
 // Available base columns for content list view
-export type ListViewBaseColumn = 
+export type ListViewBaseColumn =
     | 'title'
     | 'slug'
     | 'status'
     | 'current_version'
     | 'updated_at'
     | 'created_at'
-    | 'editions';
+    | 'editions'
+    | 'is_locked';
 
 // Element-specific configurations
 export interface ElementConfigs {

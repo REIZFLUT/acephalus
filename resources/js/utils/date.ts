@@ -24,22 +24,38 @@ function getLocale(): string {
 
 /**
  * Format a date according to the application's locale
+ * Uses 2-digit day and month by default (e.g., 01.01.2000 instead of 1.1.2000)
  */
 export function formatDate(date: string | Date, options?: Intl.DateTimeFormatOptions): string {
     const locale = getLocale();
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     
-    return dateObj.toLocaleDateString(locale, options);
+    const defaultOptions: Intl.DateTimeFormatOptions = {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+    };
+    
+    return dateObj.toLocaleDateString(locale, { ...defaultOptions, ...options });
 }
 
 /**
  * Format a date and time according to the application's locale
+ * Uses 2-digit day, month, hour, and minute by default
  */
 export function formatDateTime(date: string | Date, options?: Intl.DateTimeFormatOptions): string {
     const locale = getLocale();
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     
-    return dateObj.toLocaleString(locale, options);
+    const defaultOptions: Intl.DateTimeFormatOptions = {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    };
+    
+    return dateObj.toLocaleString(locale, { ...defaultOptions, ...options });
 }
 
 /**

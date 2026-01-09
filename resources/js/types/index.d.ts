@@ -80,6 +80,11 @@ export type PermissionName =
     | 'wrapper-purposes.create'
     | 'wrapper-purposes.update'
     | 'wrapper-purposes.delete'
+    // Pinned Navigation
+    | 'pinned-navigation.view'
+    | 'pinned-navigation.create'
+    | 'pinned-navigation.update'
+    | 'pinned-navigation.delete'
     // Users
     | 'users.view'
     | 'users.create'
@@ -197,7 +202,7 @@ export interface MetaFieldDefinition {
     required: boolean;
     explanation?: string; // Optional explanation shown via info icon
     default_value?: unknown;
-    options?: MetaFieldOption[]; // For select/multi-select
+    options?: MetaFieldOption[]; // For select/multi-select with static options
     placeholder?: string;
     description?: string;
     // For textarea fields
@@ -206,8 +211,18 @@ export interface MetaFieldDefinition {
     // For select/multi-select fields
     input_style?: SelectInputStyle;
     allow_custom?: boolean; // For tags/combobox: allow custom values
+    options_source?: 'static' | 'collection'; // Source for select options
+    collection_config?: SelectCollectionConfig; // Configuration when options_source is 'collection'
     // For media fields
     media_config?: MediaMetaFieldConfig;
+}
+
+/**
+ * Configuration for select fields that source options from a collection
+ */
+export interface SelectCollectionConfig {
+    collection_id: string; // The collection to fetch options from
+    filter_view_id?: string; // Optional filter view to apply
 }
 
 // Input styles for select/multi-select fields
@@ -750,6 +765,33 @@ export interface CollectionFilterDefinition {
 }
 
 /**
+ * Pinned navigation item for the sidebar
+ */
+export interface PinnedNavigationItem {
+    _id: string;
+    name: string;
+    collection_id: string;
+    filter_view_id: string | null;
+    icon: string | null;
+    order: number;
+    is_active: boolean;
+    collection?: Pick<Collection, '_id' | 'name' | 'slug'>;
+    filter_view?: Pick<FilterView, '_id' | 'name' | 'slug'>;
+}
+
+/**
+ * Pinned navigation item as shared via Inertia (simplified for sidebar)
+ */
+export interface PinnedNavigationItemShared {
+    _id: string;
+    name: string;
+    icon: string | null;
+    url: string;
+    collection_slug: string | null;
+    filter_view_id: string | null;
+}
+
+/**
  * Auth data shared via Inertia
  */
 export interface AuthData {
@@ -766,6 +808,7 @@ export type PageProps<T extends Record<string, unknown> = Record<string, unknown
         success?: string;
         error?: string;
     };
+    pinnedNavigation: PinnedNavigationItemShared[];
 };
 
 declare module '@inertiajs/react' {

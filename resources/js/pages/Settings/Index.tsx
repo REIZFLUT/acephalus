@@ -24,11 +24,12 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Lock, Box, Layers, BookCopy, Image, Shield, Key, Users } from 'lucide-react';
+import { Plus, Pencil, Trash2, Lock, Box, Layers, BookCopy, Image, Shield, Key, Users, Pin, FolderOpen, Filter, Check, X, ChevronUp, ChevronDown } from 'lucide-react';
 import { WrapperPurposeIcon } from '@/components/WrapperPurposeIcon';
 import { EditionIcon } from '@/components/EditionIcon';
+import { DynamicIcon } from '@/components/DynamicIcon';
 import { Can, usePermission } from '@/hooks/use-permission';
-import type { PageProps, WrapperPurpose, Edition } from '@/types';
+import type { PageProps, WrapperPurpose, Edition, PinnedNavigationItem, Collection, FilterView } from '@/types';
 
 /** Roles that cannot be deleted */
 const PROTECTED_ROLES = ['super-admin', 'admin', 'editor', 'author'];
@@ -53,17 +54,46 @@ interface Role {
     users_count?: number;
 }
 
+interface PinnedNavigationItemWithRelations extends PinnedNavigationItem {
+    collection?: Pick<Collection, '_id' | 'name' | 'slug'>;
+    filter_view?: Pick<FilterView, '_id' | 'name' | 'slug'>;
+}
+
 interface SettingsIndexProps extends PageProps {
     purposes: WrapperPurpose[];
     editions: Edition[];
     mediaMetaFields?: MediaMetaField[];
     roles?: Role[];
+    pinnedNavigationItems?: PinnedNavigationItemWithRelations[];
     activeTab?: string;
 }
 
-export default function SettingsIndex({ purposes, editions, mediaMetaFields = [], roles = [], activeTab = 'wrapper-purposes' }: SettingsIndexProps) {
+export default function SettingsIndex({ purposes, editions, mediaMetaFields = [], roles = [], pinnedNavigationItems = [], activeTab = 'wrapper-purposes' }: SettingsIndexProps) {
     const [currentTab, setCurrentTab] = useState(activeTab);
     const { can } = usePermission();
+
+    const handleDeletePinnedNavigation = (id: string) => {
+        router.delete(`/settings/pinned-navigation/${id}`, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    };
+
+    const handleReorderPinnedNavigation = (index: number, direction: 'up' | 'down') => {
+        const items = [...pinnedNavigationItems];
+        const newIndex = direction === 'up' ? index - 1 : index + 1;
+        
+        // Swap items
+        [items[index], items[newIndex]] = [items[newIndex], items[index]];
+        
+        // Send new order to backend
+        router.post('/settings/pinned-navigation/reorder', {
+            items: items.map((item) => item._id),
+        }, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    };
 
     const handleDeletePurpose = (slug: string) => {
         router.delete(`/settings/wrapper-purposes/${slug}`, {
@@ -164,6 +194,17 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                         </Button>
                     </Can>
                 );
+            case 'pinned-navigation':
+                return (
+                    <Can permission="pinned-navigation.create">
+                        <Button asChild>
+                            <Link href="/settings/pinned-navigation/create">
+                                <Plus className="size-4 mr-2" />
+                                Add Item
+                            </Link>
+                        </Button>
+                    </Can>
+                );
             default:
                 return null;
         }
@@ -178,7 +219,7 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
             actions={getActionButton()}
         >
             <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6">
-                <TabsList className="grid w-full max-w-3xl grid-cols-4">
+                <TabsList className="grid w-full max-w-4xl grid-cols-5">
                     <TabsTrigger value="wrapper-purposes" className="gap-2">
                         <Layers className="size-4" />
                         <span className="hidden sm:inline">Wrapper Purposes</span>
@@ -197,6 +238,13 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                         <TabsTrigger value="roles" className="gap-2">
                             <Shield className="size-4" />
                             Roles
+                        </TabsTrigger>
+                    )}
+                    {can('pinned-navigation.view') && (
+                        <TabsTrigger value="pinned-navigation" className="gap-2">
+                            <Pin className="size-4" />
+                            <span className="hidden sm:inline">Navigation</span>
+                            <span className="sm:hidden">Nav</span>
                         </TabsTrigger>
                     )}
                 </TabsList>
@@ -709,6 +757,163 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                                                     </TableRow>
                                                 );
                                             })}
+                                        </TableBody>
+                                    </Table>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Can>
+
+                {/* Pinned Navigation Tab */}
+                <Can permission="pinned-navigation.view">
+                    <TabsContent value="pinned-navigation">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Pin className="size-5" />
+                                    Pinned Navigation
+                                </CardTitle>
+                                <CardDescription>
+                                    Configure pinned navigation items that appear at the top of the sidebar.
+                                    Link directly to collections with optional filter views.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {pinnedNavigationItems.length === 0 ? (
+                                    <div className="text-center py-12">
+                                        <Pin className="size-12 mx-auto text-muted-foreground/50 mb-4" />
+                                        <h3 className="text-lg font-medium mb-2">No Pinned Items</h3>
+                                        <p className="text-muted-foreground mb-4">
+                                            Add navigation shortcuts to frequently used collections.
+                                        </p>
+                                        <Can permission="pinned-navigation.create">
+                                            <Button asChild>
+                                                <Link href="/settings/pinned-navigation/create">
+                                                    <Plus className="size-4 mr-2" />
+                                                    Add Item
+                                                </Link>
+                                            </Button>
+                                        </Can>
+                                    </div>
+                                ) : (
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-16 text-center">Order</TableHead>
+                                                <TableHead className="w-12">Icon</TableHead>
+                                                <TableHead>Name</TableHead>
+                                                <TableHead>Collection</TableHead>
+                                                <TableHead>Filter View</TableHead>
+                                                <TableHead className="text-center">Active</TableHead>
+                                                <TableHead className="text-right">Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {pinnedNavigationItems.map((item, index) => (
+                                                <TableRow key={item._id}>
+                                                    <TableCell>
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            <Can permission="pinned-navigation.update">
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="size-7"
+                                                                    disabled={index === 0}
+                                                                    onClick={() => handleReorderPinnedNavigation(index, 'up')}
+                                                                >
+                                                                    <ChevronUp className="size-4" />
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="size-7"
+                                                                    disabled={index === pinnedNavigationItems.length - 1}
+                                                                    onClick={() => handleReorderPinnedNavigation(index, 'down')}
+                                                                >
+                                                                    <ChevronDown className="size-4" />
+                                                                </Button>
+                                                            </Can>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center justify-center">
+                                                            <DynamicIcon 
+                                                                name={item.icon} 
+                                                                className="size-5 text-muted-foreground" 
+                                                            />
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <span className="font-medium">{item.name}</span>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-2">
+                                                            <FolderOpen className="size-4 text-muted-foreground" />
+                                                            <span>{item.collection?.name || '-'}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {item.filter_view ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <Filter className="size-4 text-muted-foreground" />
+                                                                <span>{item.filter_view.name}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-muted-foreground">-</span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        {item.is_active ? (
+                                                            <Check className="size-4 text-green-600 mx-auto" />
+                                                        ) : (
+                                                            <X className="size-4 text-muted-foreground mx-auto" />
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <Can permission="pinned-navigation.update">
+                                                                <Button variant="ghost" size="icon" asChild>
+                                                                    <Link href={`/settings/pinned-navigation/${item._id}/edit`}>
+                                                                        <Pencil className="size-4" />
+                                                                    </Link>
+                                                                </Button>
+                                                            </Can>
+                                                            <Can permission="pinned-navigation.delete">
+                                                                <AlertDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="text-destructive hover:text-destructive"
+                                                                        >
+                                                                            <Trash2 className="size-4" />
+                                                                        </Button>
+                                                                    </AlertDialogTrigger>
+                                                                    <AlertDialogContent>
+                                                                        <AlertDialogHeader>
+                                                                            <AlertDialogTitle>Delete Pinned Item</AlertDialogTitle>
+                                                                            <AlertDialogDescription>
+                                                                                Are you sure you want to delete "{item.name}"? 
+                                                                                This action cannot be undone.
+                                                                            </AlertDialogDescription>
+                                                                        </AlertDialogHeader>
+                                                                        <AlertDialogFooter>
+                                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                            <AlertDialogAction
+                                                                                onClick={() => handleDeletePinnedNavigation(item._id)}
+                                                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                                            >
+                                                                                Delete
+                                                                            </AlertDialogAction>
+                                                                        </AlertDialogFooter>
+                                                                    </AlertDialogContent>
+                                                                </AlertDialog>
+                                                            </Can>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
                                         </TableBody>
                                     </Table>
                                 )}

@@ -58,6 +58,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'wrapper-purposes.update',
             'wrapper-purposes.delete',
         ],
+        'pinned_navigation' => [
+            'pinned-navigation.view',
+            'pinned-navigation.create',
+            'pinned-navigation.update',
+            'pinned-navigation.delete',
+        ],
         'users' => [
             'users.view',
             'users.create',
@@ -115,6 +121,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'wrapper-purposes.create',
             'wrapper-purposes.update',
             'wrapper-purposes.delete',
+            'pinned-navigation.view',
+            'pinned-navigation.create',
+            'pinned-navigation.update',
+            'pinned-navigation.delete',
             // Users & Roles
             'users.view',
             'users.create',

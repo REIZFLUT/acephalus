@@ -51,7 +51,8 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Separator } from '@/components/ui/separator';
 import { useTheme } from '@/components/theme-provider';
-import type { PageProps } from '@/types';
+import { DynamicIcon } from '@/components/DynamicIcon';
+import type { PageProps, PinnedNavigationItemShared } from '@/types';
 
 interface AppLayoutProps extends PropsWithChildren {
     title: string;
@@ -158,8 +159,9 @@ function UserMenu({ auth, getInitials, handleLogout }: UserMenuProps) {
 }
 
 export default function AppLayout({ children, title, breadcrumbs = [], actions }: AppLayoutProps) {
-    const { auth } = usePage<PageProps>().props;
+    const { auth, pinnedNavigation = [] } = usePage<PageProps>().props;
     const currentPath = window.location.pathname;
+    const currentSearch = window.location.search;
 
     const handleLogout = () => {
         router.post('/logout');
@@ -172,6 +174,27 @@ export default function AppLayout({ children, title, breadcrumbs = [], actions }
             .join('')
             .toUpperCase()
             .slice(0, 2);
+    };
+
+    // Check if a pinned navigation item is active
+    const isPinnedItemActive = (item: PinnedNavigationItemShared) => {
+        // Extract path from the item URL (before any query params)
+        const itemPath = item.url.split('?')[0];
+        
+        // Check if current path matches the item's base path
+        if (!currentPath.startsWith(itemPath)) {
+            return false;
+        }
+        
+        // If the item has a filter view, also check if the query param matches
+        if (item.filter_view_id) {
+            const params = new URLSearchParams(currentSearch);
+            return params.get('filter_view') === item.filter_view_id;
+        }
+        
+        // For items without filter view, only match if there's no filter_view in the URL
+        const params = new URLSearchParams(currentSearch);
+        return !params.has('filter_view');
     };
 
     return (
@@ -208,6 +231,31 @@ export default function AppLayout({ children, title, breadcrumbs = [], actions }
                     </SidebarHeader>
 
                     <SidebarContent>
+                        {/* Pinned Navigation Items */}
+                        {pinnedNavigation.length > 0 && (
+                            <SidebarGroup>
+                                <SidebarGroupLabel>Pinned</SidebarGroupLabel>
+                                <SidebarGroupContent>
+                                    <SidebarMenu>
+                                        {pinnedNavigation.map((item) => (
+                                            <SidebarMenuItem key={item._id}>
+                                                <SidebarMenuButton
+                                                    asChild
+                                                    isActive={isPinnedItemActive(item)}
+                                                >
+                                                    <Link href={item.url}>
+                                                        <DynamicIcon name={item.icon} className="size-4" />
+                                                        <span>{item.name}</span>
+                                                    </Link>
+                                                </SidebarMenuButton>
+                                            </SidebarMenuItem>
+                                        ))}
+                                    </SidebarMenu>
+                                </SidebarGroupContent>
+                            </SidebarGroup>
+                        )}
+
+                        {/* Main Navigation Groups */}
                         {navigationItems.map((group) => (
                             <SidebarGroup key={group.label}>
                                 <SidebarGroupLabel>{group.label}</SidebarGroupLabel>

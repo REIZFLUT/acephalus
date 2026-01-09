@@ -11,6 +11,7 @@ use App\Http\Controllers\Web\FilterViewController;
 use App\Http\Controllers\Web\MediaController;
 use App\Http\Controllers\Web\MediaFolderController;
 use App\Http\Controllers\Web\MediaMetaFieldController;
+use App\Http\Controllers\Web\PinnedNavigationController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\RoleController;
 use App\Http\Controllers\Web\SettingsController;
@@ -318,9 +319,43 @@ Route::middleware('auth')->group(function () {
             Route::delete('filter-views/{filterView}', [FilterViewController::class, 'destroy'])->name('filter-views.destroy');
             Route::delete('filter-views/{filterView}/json', [FilterViewController::class, 'destroyJson'])->name('filter-views.destroy.json');
         });
+
+        // Pinned Navigation Items
+        Route::middleware('permission:pinned-navigation.view')->group(function () {
+            Route::get('pinned-navigation', [PinnedNavigationController::class, 'index'])
+                ->name('pinned-navigation.index');
+            Route::get('pinned-navigation/filter-views/{collectionId}', [PinnedNavigationController::class, 'filterViews'])
+                ->name('pinned-navigation.filter-views');
+        });
+
+        Route::middleware('permission:pinned-navigation.create')->group(function () {
+            Route::get('pinned-navigation/create', [PinnedNavigationController::class, 'create'])
+                ->name('pinned-navigation.create');
+            Route::post('pinned-navigation', [PinnedNavigationController::class, 'store'])
+                ->name('pinned-navigation.store');
+        });
+
+        Route::middleware('permission:pinned-navigation.update')->group(function () {
+            Route::get('pinned-navigation/{item}/edit', [PinnedNavigationController::class, 'edit'])
+                ->name('pinned-navigation.edit');
+            Route::put('pinned-navigation/{item}', [PinnedNavigationController::class, 'update'])
+                ->name('pinned-navigation.update');
+            Route::post('pinned-navigation/reorder', [PinnedNavigationController::class, 'reorder'])
+                ->name('pinned-navigation.reorder');
+        });
+
+        Route::middleware('permission:pinned-navigation.delete')->group(function () {
+            Route::delete('pinned-navigation/{item}', [PinnedNavigationController::class, 'destroy'])
+                ->name('pinned-navigation.destroy');
+        });
     });
 
     // Internal API routes for the admin panel (JSON responses, but with web session auth)
+    Route::prefix('api')->group(function () {
+        // Select Options API (for schema editor select fields)
+        Route::get('select-options', [CollectionController::class, 'selectOptions'])->name('api.select-options');
+    });
+
     Route::prefix('api/v1')->name('api.v1.')->group(function () {
         // Custom Elements
         Route::prefix('custom-elements')->name('custom-elements.')->group(function () {

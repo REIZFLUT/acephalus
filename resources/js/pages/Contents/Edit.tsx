@@ -162,6 +162,7 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
         
         router.post(`/contents/${content._id}/elements/${elementId}/lock`, { reason }, {
             preserveScroll: true,
+            preserveState: false, // Force full state reset to reflect lock status
         });
     }, [content._id]);
 
@@ -174,6 +175,7 @@ export default function ContentsEdit({ content, elementTypes, wrapperPurposes, e
         
         router.delete(`/contents/${content._id}/elements/${elementId}/lock`, {
             preserveScroll: true,
+            preserveState: false, // Force full state reset to reflect lock status
         });
     }, [content._id]);
 

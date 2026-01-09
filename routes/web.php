@@ -154,6 +154,17 @@ Route::middleware('auth')->group(function () {
         Route::delete('contents/{content}/lock', [ContentController::class, 'unlock'])->name('contents.unlock');
     });
 
+    // Elements - Lock/Unlock (within a content)
+    Route::middleware('permission:elements.lock')->group(function () {
+        Route::post('contents/{content}/elements/{elementId}/lock', [ContentController::class, 'lockElement'])
+            ->name('contents.elements.lock');
+    });
+
+    Route::middleware('permission:elements.unlock')->group(function () {
+        Route::delete('contents/{content}/elements/{elementId}/lock', [ContentController::class, 'unlockElement'])
+            ->name('contents.elements.unlock');
+    });
+
     // Media - View
     Route::middleware('permission:media.view')->group(function () {
         Route::get('media', [MediaController::class, 'index'])->name('media.index');

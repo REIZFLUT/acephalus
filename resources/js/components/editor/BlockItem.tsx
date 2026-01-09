@@ -428,25 +428,21 @@ export function BlockItem({
                                 Duplicate
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            {/* Lock/Unlock options - only for saved elements with _id */}
-                            {block._id && (
-                                <>
-                                    {isElementLocked ? (
-                                        can('elements.unlock') && onUnlock && (
-                                            <DropdownMenuItem onClick={() => openLockDialog(false)}>
-                                                <Unlock className="size-4 mr-2" />
-                                                Unlock Element
-                                            </DropdownMenuItem>
-                                        )
-                                    ) : (
-                                        can('elements.lock') && onLock && !isContentLocked && !isCollectionLocked && (
-                                            <DropdownMenuItem onClick={() => openLockDialog(true)}>
-                                                <Lock className="size-4 mr-2" />
-                                                Lock Element
-                                            </DropdownMenuItem>
-                                        )
-                                    )}
-                                </>
+                            {/* Lock/Unlock options */}
+                            {isElementLocked ? (
+                                can('elements.unlock') && onUnlock && (
+                                    <DropdownMenuItem onClick={() => openLockDialog(false)}>
+                                        <Unlock className="size-4 mr-2" />
+                                        Unlock Element
+                                    </DropdownMenuItem>
+                                )
+                            ) : (
+                                can('elements.lock') && onLock && !isContentLocked && !isCollectionLocked && (
+                                    <DropdownMenuItem onClick={() => openLockDialog(true)}>
+                                        <Lock className="size-4 mr-2" />
+                                        Lock Element
+                                    </DropdownMenuItem>
+                                )
                             )}
                             <DropdownMenuItem 
                                 onClick={onRemove}

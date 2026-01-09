@@ -429,4 +429,106 @@ class ContentController extends Controller
             ->back()
             ->with('success', 'Content unlocked successfully.');
     }
+
+    /**
+     * Lock an element within a content.
+     */
+    public function lockElement(Request $request, Content $content, string $elementId): RedirectResponse
+    {
+        // Check if content is locked
+        $this->lockService->ensureContentCanBeModified($content);
+
+        $validated = $request->validate([
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $elements = $content->elements ?? [];
+        $updated = $this->updateElementLockStatus(
+            $elements,
+            $elementId,
+            true,
+            $request->user()?->id,
+            $validated['reason'] ?? null
+        );
+
+        if (! $updated) {
+            return redirect()
+                ->back()
+                ->with('error', 'Element not found.');
+        }
+
+        $content->update(['elements' => $elements]);
+
+        return redirect()
+            ->back()
+            ->with('success', 'Element locked successfully.');
+    }
+
+    /**
+     * Unlock an element within a content.
+     */
+    public function unlockElement(Content $content, string $elementId): RedirectResponse
+    {
+        $elements = $content->elements ?? [];
+        $updated = $this->updateElementLockStatus(
+            $elements,
+            $elementId,
+            false
+        );
+
+        if (! $updated) {
+            return redirect()
+                ->back()
+                ->with('error', 'Element not found.');
+        }
+
+        $content->update(['elements' => $elements]);
+
+        return redirect()
+            ->back()
+            ->with('success', 'Element unlocked successfully.');
+    }
+
+    /**
+     * Recursively update the lock status of an element in the elements array.
+     *
+     * @param  array<mixed>  $elements
+     */
+    protected function updateElementLockStatus(
+        array &$elements,
+        string $elementId,
+        bool $lock,
+        ?int $userId = null,
+        ?string $reason = null
+    ): bool {
+        foreach ($elements as &$element) {
+            // Check both 'id' (frontend) and '_id' (database) fields
+            $id = $element['id'] ?? $element['_id'] ?? null;
+
+            if ($id === $elementId) {
+                if ($lock) {
+                    $element['is_locked'] = true;
+                    $element['locked_by'] = $userId;
+                    $element['locked_at'] = now()->toIso8601String();
+                    $element['lock_reason'] = $reason;
+                } else {
+                    $element['is_locked'] = false;
+                    $element['locked_by'] = null;
+                    $element['locked_at'] = null;
+                    $element['lock_reason'] = null;
+                }
+
+                return true;
+            }
+
+            // Check children recursively
+            if (isset($element['children']) && is_array($element['children'])) {
+                if ($this->updateElementLockStatus($element['children'], $elementId, $lock, $userId, $reason)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 }

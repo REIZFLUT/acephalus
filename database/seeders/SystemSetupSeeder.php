@@ -42,6 +42,10 @@ class SystemSetupSeeder extends Seeder
         $this->command->info('Creating default editions...');
         $this->call(EditionSeeder::class);
 
+        // Create custom elements
+        $this->command->info('Creating custom elements...');
+        $this->call(CustomElementSeeder::class);
+
         $this->command->newLine();
         $this->command->info('✓ System setup completed successfully!');
         $this->command->newLine();

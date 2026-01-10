@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\Mongodb\CustomElement;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
@@ -12,7 +13,7 @@ class CustomElementService
 {
     private const CACHE_KEY = 'custom_elements_definitions';
 
-    private const CACHE_TTL = 3600; // 1 hour, but invalidated on file change
+    private const CACHE_TTL = 3600; // 1 hour
 
     /**
      * Get all custom element definitions.
@@ -22,7 +23,7 @@ class CustomElementService
     public function all(): Collection
     {
         return Cache::remember(self::CACHE_KEY, self::CACHE_TTL, function () {
-            return $this->loadFromFiles();
+            return $this->loadFromDatabase();
         });
     }
 
@@ -152,7 +153,7 @@ class CustomElementService
     }
 
     /**
-     * Refresh the cache by reloading from files.
+     * Refresh the cache by reloading from database.
      *
      * @return Collection<string, array<string, mixed>>
      */
@@ -164,21 +165,42 @@ class CustomElementService
     }
 
     /**
-     * Get the path to the custom elements directory.
+     * Get the path to the legacy custom elements directory.
      */
-    public function getPath(): string
+    public function getLegacyPath(): string
     {
         return resource_path('custom-elements');
     }
 
     /**
-     * Load all custom element definitions from JSON files.
+     * Load all custom element definitions from MongoDB.
      *
      * @return Collection<string, array<string, mixed>>
      */
-    private function loadFromFiles(): Collection
+    private function loadFromDatabase(): Collection
     {
-        $path = $this->getPath();
+        $elements = collect();
+
+        $customElements = CustomElement::orderBy('category')
+            ->orderBy('order')
+            ->get();
+
+        foreach ($customElements as $element) {
+            $elements->put($element->type, $element->toLegacyFormat());
+        }
+
+        return $elements;
+    }
+
+    /**
+     * Load all custom element definitions from legacy JSON files.
+     * Used for migration purposes.
+     *
+     * @return Collection<string, array<string, mixed>>
+     */
+    public function loadFromFiles(): Collection
+    {
+        $path = $this->getLegacyPath();
 
         if (! File::isDirectory($path)) {
             return collect();
@@ -232,6 +254,11 @@ class CustomElementService
     {
         $errors = [];
         $label = $field['label'] ?? $field['name'];
+
+        // Handle translatable labels
+        if (is_array($label)) {
+            $label = $label['en'] ?? $label['de'] ?? $field['name'];
+        }
 
         // Check conditional visibility
         if (isset($field['conditional']) && ! $this->evaluateCondition($field['conditional'], $allData)) {

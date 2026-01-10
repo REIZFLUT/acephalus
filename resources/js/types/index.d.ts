@@ -62,6 +62,8 @@ export type PermissionCategory =
     | 'media_meta_fields'
     | 'editions'
     | 'wrapper_purposes'
+    | 'pinned_navigation'
+    | 'custom_elements'
     | 'users'
     | 'roles'
     | 'settings'
@@ -109,6 +111,11 @@ export type PermissionName =
     | 'pinned-navigation.create'
     | 'pinned-navigation.update'
     | 'pinned-navigation.delete'
+    // Custom Elements
+    | 'custom-elements.view'
+    | 'custom-elements.create'
+    | 'custom-elements.update'
+    | 'custom-elements.delete'
     // Users
     | 'users.view'
     | 'users.create'
@@ -471,6 +478,33 @@ export interface Edition {
     created_at?: string;
     updated_at?: string;
 }
+
+/**
+ * Custom Element Model (MongoDB)
+ * Represents a custom element definition stored in the database
+ */
+export interface CustomElementModel {
+    _id: string;
+    type: string;
+    label: LocalizableString;
+    description: LocalizableString | null;
+    icon: string | null;
+    category: 'content' | 'data' | 'layout' | 'interactive' | 'media';
+    can_have_children: boolean;
+    fields: CustomElementField[];
+    default_data: Record<string, unknown>;
+    preview_template: string | null;
+    css_class: string | null;
+    is_system: boolean;
+    order: number;
+    created_at?: string;
+    updated_at?: string;
+}
+
+/**
+ * Custom Element categories
+ */
+export type CustomElementCategory = 'content' | 'data' | 'layout' | 'interactive' | 'media';
 
 export type ElementData = 
     | TextElementData

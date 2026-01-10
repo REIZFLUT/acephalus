@@ -3,6 +3,7 @@
 use App\Models\Mongodb\Collection;
 use App\Models\Mongodb\Content;
 use App\Models\Mongodb\ContentVersion;
+use App\Models\Mongodb\CustomElement;
 use App\Models\Mongodb\Element;
 use App\Models\Mongodb\Media;
 use App\Models\Mongodb\WrapperPurpose;
@@ -39,6 +40,7 @@ pest()->extend(Tests\TestCase::class)
         Collection::truncate();
         Content::truncate();
         ContentVersion::truncate();
+        CustomElement::truncate();
         Element::truncate();
         Media::truncate();
         WrapperPurpose::truncate();

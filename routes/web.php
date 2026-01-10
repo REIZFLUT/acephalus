@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\CustomElementController as ApiCustomElementController;
 use App\Http\Controllers\Api\V1\ReferenceController;
+use App\Http\Controllers\Web\AgentController;
 use App\Http\Controllers\Web\CustomElementController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\CollectionController;
@@ -409,6 +410,48 @@ Route::middleware('auth')->group(function () {
         Route::middleware('permission:custom-elements.delete')->group(function () {
             Route::delete('custom-elements/{customElement}', [CustomElementController::class, 'destroy'])
                 ->name('custom-elements.destroy');
+        });
+    });
+
+    // AI Agents
+    Route::prefix('agents')->name('agents.')->group(function () {
+        // View agents
+        Route::middleware('permission:agents.view')->group(function () {
+            Route::get('/', [AgentController::class, 'index'])->name('index');
+        });
+
+        // Create agents
+        Route::middleware('permission:agents.create')->group(function () {
+            Route::get('/create', [AgentController::class, 'create'])->name('create');
+            Route::post('/', [AgentController::class, 'store'])->name('store');
+        });
+
+        // Update agents
+        Route::middleware('permission:agents.update')->group(function () {
+            Route::get('/{agent}/edit', [AgentController::class, 'edit'])->name('edit');
+            Route::put('/{agent}', [AgentController::class, 'update'])->name('update');
+        });
+
+        // Delete agents
+        Route::middleware('permission:agents.delete')->group(function () {
+            Route::delete('/{agent}', [AgentController::class, 'destroy'])->name('destroy');
+        });
+
+        // Chat with agents
+        Route::middleware('permission:agents.chat')->group(function () {
+            Route::get('/{agent}', [AgentController::class, 'show'])->name('show');
+            Route::post('/{agent}/chat', [AgentController::class, 'chat'])->name('chat');
+            Route::post('/{agent}/approve', [AgentController::class, 'approveToolCall'])->name('approve');
+            Route::post('/{agent}/deny', [AgentController::class, 'denyToolCall'])->name('deny');
+            Route::post('/{agent}/chats', [AgentController::class, 'createChat'])->name('chats.create');
+            Route::get('/{agent}/chats/{chatId}', [AgentController::class, 'loadChat'])->name('chats.load');
+            Route::put('/{agent}/chats/{chatId}/title', [AgentController::class, 'updateChatTitle'])->name('chats.update-title');
+            Route::delete('/{agent}/chats/{chatId}', [AgentController::class, 'deleteChat'])->name('chats.delete');
+        });
+
+        // View activity log
+        Route::middleware('permission:agents.view-activity')->group(function () {
+            Route::get('/{agent}/activity', [AgentController::class, 'activityLog'])->name('activity');
         });
     });
 

@@ -93,6 +93,15 @@ class RolesAndPermissionsSeeder extends Seeder
             'elements.lock',
             'elements.unlock',
         ],
+        'agents' => [
+            'agents.view',
+            'agents.create',
+            'agents.update',
+            'agents.delete',
+            'agents.chat',
+            'agents.configure',
+            'agents.view-activity',
+        ],
     ];
 
     /**
@@ -159,6 +168,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'contents.unlock',
             'elements.lock',
             'elements.unlock',
+            // Agents
+            'agents.view',
+            'agents.create',
+            'agents.update',
+            'agents.delete',
+            'agents.chat',
+            'agents.configure',
+            'agents.view-activity',
         ],
         // Editor: Contents erstellen/bearbeiten/veröffentlichen, Media verwalten
         'editor' => [

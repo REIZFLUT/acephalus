@@ -134,7 +134,15 @@ export type PermissionName =
     | 'contents.lock'
     | 'contents.unlock'
     | 'elements.lock'
-    | 'elements.unlock';
+    | 'elements.unlock'
+    // Agents
+    | 'agents.view'
+    | 'agents.create'
+    | 'agents.update'
+    | 'agents.delete'
+    | 'agents.chat'
+    | 'agents.configure'
+    | 'agents.view-activity';
 
 /**
  * Lock information for a resource
@@ -896,6 +904,104 @@ export interface AuthData {
         permissions: string[];
         is_super_admin: boolean;
     }) | null;
+}
+
+// AI Agent Types
+
+/**
+ * Approval modes for agent tools (like Cursor)
+ */
+export type ToolApprovalMode = 'auto' | 'ask' | 'deny';
+
+/**
+ * AI Agent model
+ */
+export interface Agent {
+    _id: string;
+    name: string;
+    description: string | null;
+    user_id: number;
+    provider: 'openai' | 'anthropic';
+    model: string | null;
+    is_active: boolean;
+    tool_approvals: Record<string, ToolApprovalMode>;
+    user?: User;
+    created_at: string;
+    updated_at: string;
+}
+
+/**
+ * Agent chat session
+ */
+export interface AgentChat {
+    _id: string;
+    agent_id: string;
+    title: string | null;
+    messages: AgentMessage[];
+    pending_tool_call?: PendingToolCall | null;
+    created_by: number;
+    is_archived: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+/**
+ * Chat message
+ */
+export interface AgentMessage {
+    id: string;
+    role: 'user' | 'assistant' | 'tool';
+    content: string;
+    tool_calls?: ToolCall[];
+    tool_call_id?: string;
+    tool_name?: string;
+    created_at: string;
+}
+
+/**
+ * Tool call from LLM
+ */
+export interface ToolCall {
+    id: string;
+    name: string;
+    arguments: Record<string, unknown>;
+    result?: unknown;
+    status?: 'pending' | 'approved' | 'denied' | 'executed' | 'failed';
+}
+
+/**
+ * Pending tool call awaiting user approval
+ */
+export interface PendingToolCall {
+    id: string;
+    tool: string;
+    parameters: Record<string, unknown>;
+    explanation: string;
+    log_id: string;
+}
+
+/**
+ * Agent activity log entry
+ */
+export interface AgentActivityLog {
+    _id: string;
+    agent_id: string;
+    chat_id: string;
+    user_id: number;
+    tool: string;
+    parameters: Record<string, unknown>;
+    approval_mode: ToolApprovalMode;
+    approval_status: 'pending' | 'approved' | 'denied' | 'auto';
+    approved_by: number | null;
+    approved_at: string | null;
+    result: unknown;
+    error: string | null;
+    execution_time_ms: number | null;
+    created_at: string;
+    // Resolved relations
+    user_name?: string;
+    agent_name?: string;
+    approved_by_name?: string;
 }
 
 export type PageProps<T extends Record<string, unknown> = Record<string, unknown>> = T & {

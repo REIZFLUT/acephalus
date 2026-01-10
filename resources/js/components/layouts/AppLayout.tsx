@@ -16,6 +16,7 @@ import {
     Moon,
     Monitor,
     ScanFace,
+    Bot,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -70,6 +71,7 @@ const navigationItems = [
             { nameKey: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
             { nameKey: 'Collections', href: '/collections', icon: FolderOpen },
             { nameKey: 'Media', href: '/media', icon: Image },
+            { nameKey: 'AI Agent', href: '/agents', icon: Bot },
         ],
     },
     {

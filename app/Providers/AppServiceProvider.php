@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\Mongodb\Agent;
 use App\Models\Mongodb\Collection;
 use App\Models\Mongodb\Content;
 use App\Models\Mongodb\Element;
@@ -58,6 +59,10 @@ class AppServiceProvider extends ServiceProvider
 
         Route::bind('media', function (string $value) {
             return Media::findOrFail($value);
+        });
+
+        Route::bind('agent', function (string $value) {
+            return Agent::findOrFail($value);
         });
     }
 

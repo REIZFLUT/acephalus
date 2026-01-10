@@ -70,7 +70,8 @@ export function MetaFieldList({ fields, onUpdate, onRemove, onReorder, collectio
         <div className="space-y-3">
             {fields.map((field, index) => (
                 <MetaFieldItem
-                    key={`${field.name}-${index}`}
+                    key={index}
+
                     field={field}
                     index={index}
                     onUpdate={onUpdate}
@@ -104,12 +105,12 @@ interface MetaFieldItemProps {
     onDragLeave: () => void;
 }
 
-function MetaFieldItem({ 
-    field, 
-    index, 
-    onUpdate, 
-    onRemove, 
-    collections, 
+function MetaFieldItem({
+    field,
+    index,
+    onUpdate,
+    onRemove,
+    collections,
     filterViews,
     isDragging,
     isDragOver,
@@ -127,7 +128,7 @@ function MetaFieldItem({
         const parts = [];
         if (descriptionValue) parts.push('Description');
         if (field.explanation) parts.push('Explanation');
-        
+
         if (parts.length > 0) {
             return (
                 <span className="flex items-center gap-1">
@@ -151,7 +152,7 @@ function MetaFieldItem({
     };
 
     return (
-        <div 
+        <div
             className={cn(
                 "flex items-start gap-2 p-3 border rounded-md bg-background transition-all duration-200",
                 isDragging && "opacity-50 scale-[0.98]",
@@ -170,7 +171,7 @@ function MetaFieldItem({
             </div>
             <div className="flex-1 space-y-3">
                 <MetaFieldBasicFields field={field} index={index} onUpdate={onUpdate} onRemove={onRemove} />
-                
+
                 {/* Textarea-specific options */}
                 {field.type === 'textarea' && (
                     <TextareaOptions field={field} index={index} onUpdate={onUpdate} />
@@ -178,10 +179,10 @@ function MetaFieldItem({
 
                 {/* Select/MultiSelect options */}
                 {(field.type === 'select' || field.type === 'multi_select') && (
-                    <SelectOptions 
-                        field={field} 
-                        index={index} 
-                        onUpdate={onUpdate} 
+                    <SelectOptions
+                        field={field}
+                        index={index}
+                        onUpdate={onUpdate}
                         collections={collections}
                         filterViews={filterViews}
                     />
@@ -190,8 +191,8 @@ function MetaFieldItem({
                 {/* Advanced options (Description & Explanation) */}
                 <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
                     <CollapsibleTrigger asChild>
-                        <button 
-                            type="button" 
+                        <button
+                            type="button"
                             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                         >
                             <ChevronDown className={`size-3 transition-transform ${showAdvanced ? '' : '-rotate-90'}`} />
@@ -248,7 +249,7 @@ interface MetaFieldBasicFieldsProps {
 function MetaFieldBasicFields({ field, index, onUpdate, onRemove }: MetaFieldBasicFieldsProps) {
     // Get the English value for display
     const labelEn = typeof field.label === 'string' ? field.label : (field.label?.en || '');
-    
+
     return (
         <div className="grid gap-3 sm:grid-cols-4">
             <Input
@@ -342,7 +343,7 @@ function TextareaOptions({ field, index, onUpdate }: TextareaOptionsProps) {
                 <Select
                     value={field.editor_type || 'textarea'}
                     onValueChange={(value) => {
-                        const updates: Partial<MetaFieldDefinition> = { 
+                        const updates: Partial<MetaFieldDefinition> = {
                             editor_type: value as 'textarea' | 'tinymce' | 'codemirror'
                         };
                         // Reset target_format when changing editor
@@ -370,7 +371,7 @@ function TextareaOptions({ field, index, onUpdate }: TextareaOptionsProps) {
                 <Label className="text-xs">Target Format</Label>
                 <Select
                     value={field.target_format || 'plain'}
-                    onValueChange={(value) => onUpdate(index, { 
+                    onValueChange={(value) => onUpdate(index, {
                         target_format: value as 'plain' | 'html' | 'css' | 'javascript' | 'markdown' | 'json' | 'xml'
                     })}
                     disabled={field.editor_type === 'textarea'}
@@ -415,17 +416,17 @@ interface SelectOptionsProps {
 function SelectOptions({ field, index, onUpdate, collections, filterViews }: SelectOptionsProps) {
     const optionsSource = field.options_source || 'static';
     const selectedCollectionId = field.collection_config?.collection_id;
-    
+
     // Filter views for the selected collection
     const collectionFilterViews = filterViews?.filter(
         fv => fv.collection_id === selectedCollectionId
     ) || [];
 
     const handleSourceChange = (source: 'static' | 'collection') => {
-        const updates: Partial<MetaFieldDefinition> = { 
-            options_source: source 
+        const updates: Partial<MetaFieldDefinition> = {
+            options_source: source
         };
-        
+
         if (source === 'static') {
             // Clear collection config when switching to static
             updates.collection_config = undefined;
@@ -438,15 +439,15 @@ function SelectOptions({ field, index, onUpdate, collections, filterViews }: Sel
             // Disable allow_custom when using collection (values are UUIDs)
             updates.allow_custom = false;
         }
-        
+
         onUpdate(index, updates);
     };
-    
+
     const handleAllowCustomChange = (checked: boolean) => {
-        const updates: Partial<MetaFieldDefinition> = { 
-            allow_custom: checked 
+        const updates: Partial<MetaFieldDefinition> = {
+            allow_custom: checked
         };
-        
+
         // If enabling custom values and currently using collection, switch to static
         if (checked && optionsSource === 'collection') {
             updates.options_source = 'static';
@@ -455,7 +456,7 @@ function SelectOptions({ field, index, onUpdate, collections, filterViews }: Sel
                 updates.options = [];
             }
         }
-        
+
         onUpdate(index, updates);
     };
 
@@ -499,7 +500,7 @@ function SelectOptions({ field, index, onUpdate, collections, filterViews }: Sel
                         </SelectTrigger>
                         <SelectContent>
                             {selectInputStyles
-                                .filter(style => 
+                                .filter(style =>
                                     field.type === 'select' ? style.singleSelect : style.multiSelect
                                 )
                                 .map(({ value, label }) => (
@@ -678,7 +679,7 @@ function SelectOptions({ field, index, onUpdate, collections, filterViews }: Sel
                         </div>
                         {selectedCollectionId && (
                             <p className="text-xs text-muted-foreground">
-                                Options will be loaded from contents in this collection. 
+                                Options will be loaded from contents in this collection.
                                 Value: content UUID, Label: content title.
                             </p>
                         )}

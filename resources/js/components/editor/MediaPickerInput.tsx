@@ -416,6 +416,13 @@ function LibraryContent({
                                             sizes="120px"
                                             className="w-full h-full object-cover"
                                         />
+                                    ) : media.media_type === 'document' && media.thumbnail_urls && Object.keys(media.thumbnail_urls).length > 0 ? (
+                                        <ThumbnailImage
+                                            thumbnailUrls={media.thumbnail_urls}
+                                            alt={media.alt || media.original_filename}
+                                            sizes="120px"
+                                            className="w-full h-full object-cover"
+                                        />
                                     ) : (
                                         <div className="w-full h-full bg-muted flex flex-col items-center justify-center gap-1 p-2">
                                             {getMediaIcon(media.media_type)}

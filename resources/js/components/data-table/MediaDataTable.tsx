@@ -174,6 +174,8 @@ export function MediaDataTable({
                 
                 // Media item
                 const isImage = item.mime_type.startsWith('image/')
+                const isPdf = item.mime_type === 'application/pdf'
+                const hasThumbnail = item.thumbnail_urls && Object.keys(item.thumbnail_urls).length > 0
                 const Icon = getFileIcon(item.mime_type)
                 
                 return (
@@ -182,6 +184,13 @@ export function MediaDataTable({
                             <ThumbnailImage
                                 thumbnailUrls={item.thumbnail_urls}
                                 fallbackUrl={item.url}
+                                alt={item.original_filename}
+                                sizes="40px"
+                                className="w-full h-full object-cover"
+                            />
+                        ) : isPdf && hasThumbnail ? (
+                            <ThumbnailImage
+                                thumbnailUrls={item.thumbnail_urls}
                                 alt={item.original_filename}
                                 sizes="40px"
                                 className="w-full h-full object-cover"

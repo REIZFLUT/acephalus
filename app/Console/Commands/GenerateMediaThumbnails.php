@@ -49,13 +49,14 @@ class GenerateMediaThumbnails extends Command
             $query->where('_id', $specificId);
         }
 
-        // Only process images that the thumbnail service supports
+        // Process images and PDFs that the thumbnail service supports
         $supportedMimeTypes = [
             'image/jpeg',
             'image/jpg',
             'image/png',
             'image/gif',
             'image/webp',
+            'application/pdf',
         ];
 
         $query->whereIn('mime_type', $supportedMimeTypes);

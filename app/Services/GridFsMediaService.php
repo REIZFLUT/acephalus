@@ -84,12 +84,17 @@ class GridFsMediaService
             fclose($stream);
         }
 
-        // Generate thumbnails for images
+        // Generate thumbnails for images and PDFs
         $thumbnails = [];
         if ($this->thumbnailService->isSupported($mimeType)) {
             $imageData = file_get_contents($file->getPathname());
             if ($imageData !== false) {
                 $thumbnails = $this->generateAndStoreThumbnails($imageData, $filename);
+            }
+        } elseif ($this->thumbnailService->isPdfSupported($mimeType)) {
+            $pdfData = file_get_contents($file->getPathname());
+            if ($pdfData !== false) {
+                $thumbnails = $this->generateAndStorePdfThumbnails($pdfData, $filename);
             }
         }
 
@@ -321,19 +326,20 @@ class GridFsMediaService
      */
     public function generateThumbnailsForMedia(Media $media): array
     {
-        // Skip if not an image
-        if (! $this->thumbnailService->isSupported($media->mime_type)) {
+        // Get contents
+        $data = $this->getContents($media);
+        if ($data === null) {
             return [];
         }
 
-        // Get original image contents
-        $imageData = $this->getContents($media);
-        if ($imageData === null) {
-            return [];
-        }
+        $thumbnails = [];
 
-        // Generate and store thumbnails
-        $thumbnails = $this->generateAndStoreThumbnails($imageData, $media->filename);
+        // Generate thumbnails based on media type
+        if ($this->thumbnailService->isSupported($media->mime_type)) {
+            $thumbnails = $this->generateAndStoreThumbnails($data, $media->filename);
+        } elseif ($this->thumbnailService->isPdfSupported($media->mime_type)) {
+            $thumbnails = $this->generateAndStorePdfThumbnails($data, $media->filename);
+        }
 
         // Update media record with thumbnail IDs
         if (! empty($thumbnails)) {
@@ -341,6 +347,46 @@ class GridFsMediaService
         }
 
         return $thumbnails;
+    }
+
+    /**
+     * Generate and store PDF thumbnails (first page) in GridFS.
+     *
+     * @param  string  $pdfData  Raw PDF data
+     * @param  string  $originalFilename  Original filename for naming thumbnails
+     * @return array<string, string> Map of size => GridFS ID
+     */
+    protected function generateAndStorePdfThumbnails(string $pdfData, string $originalFilename): array
+    {
+        $thumbnails = $this->thumbnailService->generateAllFromPdf($pdfData);
+        $stored = [];
+
+        $baseName = pathinfo($originalFilename, PATHINFO_FILENAME);
+
+        foreach ($thumbnails as $size => $encodedImage) {
+            $thumbnailFilename = "{$baseName}-thumb-{$size}.webp";
+
+            try {
+                $gridFsId = $this->getBucket()->uploadFromStream(
+                    $thumbnailFilename,
+                    $this->createStreamFromString($encodedImage->toString()),
+                    [
+                        'metadata' => [
+                            'type' => 'thumbnail',
+                            'size' => $size,
+                            'mime_type' => 'image/webp',
+                            'original_filename' => $originalFilename,
+                            'source_type' => 'pdf',
+                        ],
+                    ]
+                );
+                $stored[$size] = (string) $gridFsId;
+            } catch (\Exception $exception) {
+                report($exception);
+            }
+        }
+
+        return $stored;
     }
 
     /**

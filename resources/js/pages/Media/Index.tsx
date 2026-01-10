@@ -108,20 +108,31 @@ function MediaCard({
 }) {
     const Icon = getFileIcon(item.mime_type);
     const isImage = item.mime_type.startsWith('image/');
+    const isPdf = item.mime_type === 'application/pdf';
+    const hasThumbnail = item.thumbnail_urls && Object.keys(item.thumbnail_urls).length > 0;
 
     return (
         <Card className="group overflow-hidden">
-            <div className="aspect-square relative bg-muted flex items-center justify-center">
+            <div className="aspect-square relative bg-muted overflow-hidden">
                 {isImage && (item.thumbnail_urls || item.url) ? (
                     <ThumbnailImage
                         thumbnailUrls={item.thumbnail_urls}
                         fallbackUrl={item.url}
                         alt={item.original_filename}
                         sizes="(min-width: 1280px) 200px, (min-width: 768px) 180px, 150px"
-                        className="w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-cover"
+                    />
+                ) : isPdf && hasThumbnail ? (
+                    <ThumbnailImage
+                        thumbnailUrls={item.thumbnail_urls}
+                        alt={item.original_filename}
+                        sizes="(min-width: 1280px) 200px, (min-width: 768px) 180px, 150px"
+                        className="absolute inset-0 w-full h-full object-cover"
                     />
                 ) : (
-                    <Icon className="size-12 text-muted-foreground" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <Icon className="size-12 text-muted-foreground" />
+                    </div>
                 )}
                 <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                     <Button size="icon" variant="secondary" onClick={() => onEdit(item)}>
@@ -176,6 +187,8 @@ function MediaListItem({
 }) {
     const Icon = getFileIcon(item.mime_type);
     const isImage = item.mime_type.startsWith('image/');
+    const isPdf = item.mime_type === 'application/pdf';
+    const hasThumbnail = item.thumbnail_urls && Object.keys(item.thumbnail_urls).length > 0;
 
     return (
         <Card className="group">
@@ -186,6 +199,13 @@ function MediaListItem({
                         <ThumbnailImage
                             thumbnailUrls={item.thumbnail_urls}
                             fallbackUrl={item.url}
+                            alt={item.original_filename}
+                            sizes="56px"
+                            className="w-full h-full object-cover"
+                        />
+                    ) : isPdf && hasThumbnail ? (
+                        <ThumbnailImage
+                            thumbnailUrls={item.thumbnail_urls}
                             alt={item.original_filename}
                             sizes="56px"
                             className="w-full h-full object-cover"

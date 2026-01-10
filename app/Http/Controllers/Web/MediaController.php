@@ -75,6 +75,15 @@ class MediaController extends Controller
                 $item->thumbnail_url = $item->thumbnail_urls['small'];
             }
 
+            // Add thumbnail URLs for PDFs (first page preview)
+            if ($item->mime_type === 'application/pdf' && $item->hasThumbnails()) {
+                $item->thumbnail_urls = [
+                    'small' => route('media.thumbnail', ['media' => $item->_id, 'size' => 'small']),
+                    'medium' => route('media.thumbnail', ['media' => $item->_id, 'size' => 'medium']),
+                    'large' => route('media.thumbnail', ['media' => $item->_id, 'size' => 'large']),
+                ];
+            }
+
             $item->_id = (string) $item->_id;
 
             // Add folder path information if media is in a folder
@@ -255,6 +264,15 @@ class MediaController extends Controller
                 ];
                 // Keep backward compatibility
                 $mediaData['thumbnail_url'] = $mediaData['thumbnail_urls']['small'];
+            }
+
+            // Add thumbnail URLs for PDFs (first page preview)
+            if ($media->mime_type === 'application/pdf' && $media->hasThumbnails()) {
+                $mediaData['thumbnail_urls'] = [
+                    'small' => route('media.thumbnail', ['media' => $media->_id, 'size' => 'small']),
+                    'medium' => route('media.thumbnail', ['media' => $media->_id, 'size' => 'medium']),
+                    'large' => route('media.thumbnail', ['media' => $media->_id, 'size' => 'large']),
+                ];
             }
 
             return response()->json([

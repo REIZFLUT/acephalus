@@ -1,11 +1,10 @@
-import { useState } from 'react';
-import { Link, router } from '@inertiajs/react';
+import { useState, useEffect } from 'react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { useLaravelReactI18n } from 'laravel-react-i18n';
 import AppLayout from '@/components/layouts/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     Table,
     TableBody,
@@ -25,10 +24,11 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, Lock, Box, Layers, BookCopy, Image, Shield, Key, Users, Pin, FolderOpen, Filter, Check, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, Lock, Box, Key, Users, FolderOpen, Filter, Check, X, ChevronUp, ChevronDown, Shield, Pin, BookCopy, Image } from 'lucide-react';
 import { WrapperPurposeIcon } from '@/components/WrapperPurposeIcon';
 import { EditionIcon } from '@/components/EditionIcon';
 import { DynamicIcon } from '@/components/DynamicIcon';
+import { SettingsNavigation, SettingsTabContent, type SettingsTab } from '@/components/settings';
 import { Can, usePermission } from '@/hooks/use-permission';
 import { useTranslation } from '@/hooks/use-translation';
 import type { PageProps, WrapperPurpose, Edition, PinnedNavigationItem, Collection, FilterView } from '@/types';
@@ -71,10 +71,23 @@ interface SettingsIndexProps extends PageProps {
 }
 
 export default function SettingsIndex({ purposes, editions, mediaMetaFields = [], roles = [], pinnedNavigationItems = [], activeTab = 'wrapper-purposes' }: SettingsIndexProps) {
-    const [currentTab, setCurrentTab] = useState(activeTab);
+    const { url } = usePage();
+    
+    // Check for tab parameter in URL
+    const urlParams = new URLSearchParams(url.split('?')[1] || '');
+    const tabFromUrl = urlParams.get('tab') as SettingsTab | null;
+    
+    const [currentTab, setCurrentTab] = useState<SettingsTab>(tabFromUrl || activeTab as SettingsTab);
     const { can } = usePermission();
     const { t } = useLaravelReactI18n();
     const { resolveTranslation } = useTranslation();
+    
+    // Update tab when URL changes
+    useEffect(() => {
+        if (tabFromUrl && tabFromUrl !== currentTab) {
+            setCurrentTab(tabFromUrl);
+        }
+    }, [tabFromUrl]);
 
     const handleDeletePinnedNavigation = (id: string) => {
         router.delete(`/settings/pinned-navigation/${id}`, {
@@ -222,39 +235,12 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
             ]}
             actions={getActionButton()}
         >
-            <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6">
-                <TabsList className="grid w-full max-w-4xl grid-cols-5">
-                    <TabsTrigger value="wrapper-purposes" className="gap-2">
-                        <Layers className="size-4" />
-                        <span className="hidden sm:inline">Wrapper Purposes</span>
-                        <span className="sm:hidden">Wrappers</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="editions" className="gap-2">
-                        <BookCopy className="size-4" />
-                        Editions
-                    </TabsTrigger>
-                    <TabsTrigger value="media-meta-fields" className="gap-2">
-                        <Image className="size-4" />
-                        <span className="hidden sm:inline">Media Fields</span>
-                        <span className="sm:hidden">Media</span>
-                    </TabsTrigger>
-                    {can('roles.view') && (
-                        <TabsTrigger value="roles" className="gap-2">
-                            <Shield className="size-4" />
-                            Roles
-                        </TabsTrigger>
-                    )}
-                    {can('pinned-navigation.view') && (
-                        <TabsTrigger value="pinned-navigation" className="gap-2">
-                            <Pin className="size-4" />
-                            <span className="hidden sm:inline">Navigation</span>
-                            <span className="sm:hidden">Nav</span>
-                        </TabsTrigger>
-                    )}
-                </TabsList>
-
+            <SettingsNavigation 
+                activeTab={currentTab} 
+                onTabChange={setCurrentTab}
+            >
                 {/* Wrapper Purposes Tab */}
-                <TabsContent value="wrapper-purposes">
+                <SettingsTabContent value="wrapper-purposes">
                     <Card>
                         <CardHeader>
                             <CardTitle>Wrapper Purposes</CardTitle>
@@ -382,10 +368,10 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                             )}
                         </CardContent>
                     </Card>
-                </TabsContent>
+                </SettingsTabContent>
 
                 {/* Editions Tab */}
-                <TabsContent value="editions">
+                <SettingsTabContent value="editions">
                     <Card>
                         <CardHeader>
                             <CardTitle>Editions</CardTitle>
@@ -503,10 +489,10 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                             )}
                         </CardContent>
                     </Card>
-                </TabsContent>
+                </SettingsTabContent>
 
                 {/* Media Meta Fields Tab */}
-                <TabsContent value="media-meta-fields">
+                <SettingsTabContent value="media-meta-fields">
                     <Card>
                         <CardHeader>
                             <CardTitle>Media Meta Fields</CardTitle>
@@ -629,11 +615,11 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                             )}
                         </CardContent>
                     </Card>
-                </TabsContent>
+                </SettingsTabContent>
 
                 {/* Roles Tab */}
                 <Can permission="roles.view">
-                    <TabsContent value="roles">
+                    <SettingsTabContent value="roles">
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
@@ -766,12 +752,12 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                                 )}
                             </CardContent>
                         </Card>
-                    </TabsContent>
+                    </SettingsTabContent>
                 </Can>
 
                 {/* Pinned Navigation Tab */}
                 <Can permission="pinned-navigation.view">
-                    <TabsContent value="pinned-navigation">
+                    <SettingsTabContent value="pinned-navigation">
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
@@ -923,9 +909,9 @@ export default function SettingsIndex({ purposes, editions, mediaMetaFields = []
                                 )}
                             </CardContent>
                         </Card>
-                    </TabsContent>
+                    </SettingsTabContent>
                 </Can>
-            </Tabs>
+            </SettingsNavigation>
         </AppLayout>
     );
 }

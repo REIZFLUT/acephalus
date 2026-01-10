@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Loader2, Shield, Trash2, Lock, Info } from 'lucide-react';
 import { Can } from '@/hooks/use-permission';
+import { CATEGORY_LABELS, getPermissionAction } from '@/lib/permissions';
 import type { PageProps, Role, Permission, PermissionCategory } from '@/types';
 
 interface RolesEditProps extends PageProps {
@@ -31,33 +32,6 @@ interface RolesEditProps extends PageProps {
 }
 
 const PROTECTED_ROLES = ['super-admin', 'admin', 'editor', 'author', 'viewer'];
-
-const CATEGORY_LABELS: Record<string, string> = {
-    contents: 'Contents',
-    collections: 'Collections',
-    collections_schema: 'Collection Schema',
-    media: 'Media',
-    media_meta_fields: 'Media Meta Fields',
-    editions: 'Editions',
-    wrapper_purposes: 'Wrapper Purposes',
-    users: 'Users',
-    roles: 'Roles',
-    settings: 'Settings',
-};
-
-const PERMISSION_LABELS: Record<string, string> = {
-    view: 'View',
-    create: 'Create',
-    update: 'Update',
-    delete: 'Delete',
-    publish: 'Publish',
-};
-
-function getPermissionAction(permission: string): string {
-    const parts = permission.split('.');
-    const action = parts[parts.length - 1];
-    return PERMISSION_LABELS[action] || action;
-}
 
 export default function RolesEdit({ role, permissions, permissionCategories, isProtected }: RolesEditProps) {
     const currentPermissions = role.permissions?.map((p) => p.name) ?? [];

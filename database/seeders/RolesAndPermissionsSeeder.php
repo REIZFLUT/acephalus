@@ -64,6 +64,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'pinned-navigation.update',
             'pinned-navigation.delete',
         ],
+        'custom_elements' => [
+            'custom-elements.view',
+            'custom-elements.create',
+            'custom-elements.update',
+            'custom-elements.delete',
+        ],
         'users' => [
             'users.view',
             'users.create',
@@ -133,6 +139,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'pinned-navigation.create',
             'pinned-navigation.update',
             'pinned-navigation.delete',
+            'custom-elements.view',
+            'custom-elements.create',
+            'custom-elements.update',
+            'custom-elements.delete',
             // Users & Roles
             'users.view',
             'users.create',

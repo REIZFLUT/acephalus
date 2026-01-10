@@ -8,38 +8,12 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Loader2, Shield } from 'lucide-react';
+import { CATEGORY_LABELS, getPermissionAction } from '@/lib/permissions';
 import type { PageProps, Permission, PermissionCategory } from '@/types';
 
 interface RolesCreateProps extends PageProps {
     permissions: Permission[];
     permissionCategories: Record<PermissionCategory, string[]>;
-}
-
-const CATEGORY_LABELS: Record<string, string> = {
-    contents: 'Contents',
-    collections: 'Collections',
-    collections_schema: 'Collection Schema',
-    media: 'Media',
-    media_meta_fields: 'Media Meta Fields',
-    editions: 'Editions',
-    wrapper_purposes: 'Wrapper Purposes',
-    users: 'Users',
-    roles: 'Roles',
-    settings: 'Settings',
-};
-
-const PERMISSION_LABELS: Record<string, string> = {
-    view: 'View',
-    create: 'Create',
-    update: 'Update',
-    delete: 'Delete',
-    publish: 'Publish',
-};
-
-function getPermissionAction(permission: string): string {
-    const parts = permission.split('.');
-    const action = parts[parts.length - 1];
-    return PERMISSION_LABELS[action] || action;
 }
 
 export default function RolesCreate({ permissions, permissionCategories }: RolesCreateProps) {

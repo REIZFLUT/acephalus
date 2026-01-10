@@ -1,7 +1,8 @@
 <?php
 
-use App\Http\Controllers\Api\V1\CustomElementController;
+use App\Http\Controllers\Api\V1\CustomElementController as ApiCustomElementController;
 use App\Http\Controllers\Api\V1\ReferenceController;
+use App\Http\Controllers\Web\CustomElementController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\CollectionController;
 use App\Http\Controllers\Web\ContentController;
@@ -377,6 +378,38 @@ Route::middleware('auth')->group(function () {
             Route::delete('pinned-navigation/{item}', [PinnedNavigationController::class, 'destroy'])
                 ->name('pinned-navigation.destroy');
         });
+
+        // Custom Elements
+        Route::middleware('permission:custom-elements.view')->group(function () {
+            Route::get('custom-elements/list', [CustomElementController::class, 'list'])
+                ->name('custom-elements.list');
+            Route::get('custom-elements', [CustomElementController::class, 'index'])
+                ->name('custom-elements.index');
+        });
+
+        Route::middleware('permission:custom-elements.create')->group(function () {
+            Route::get('custom-elements/create', [CustomElementController::class, 'create'])
+                ->name('custom-elements.create');
+            Route::post('custom-elements', [CustomElementController::class, 'store'])
+                ->name('custom-elements.store');
+        });
+
+        Route::middleware('permission:custom-elements.update')->group(function () {
+            Route::get('custom-elements/{customElement}/edit', [CustomElementController::class, 'edit'])
+                ->name('custom-elements.edit');
+            Route::put('custom-elements/{customElement}', [CustomElementController::class, 'update'])
+                ->name('custom-elements.update');
+            Route::patch('custom-elements/{customElement}', [CustomElementController::class, 'update']);
+            Route::post('custom-elements/{customElement}/duplicate', [CustomElementController::class, 'duplicate'])
+                ->name('custom-elements.duplicate');
+            Route::post('custom-elements/reorder', [CustomElementController::class, 'reorder'])
+                ->name('custom-elements.reorder');
+        });
+
+        Route::middleware('permission:custom-elements.delete')->group(function () {
+            Route::delete('custom-elements/{customElement}', [CustomElementController::class, 'destroy'])
+                ->name('custom-elements.destroy');
+        });
     });
 
     // Internal API routes for the admin panel (JSON responses, but with web session auth)
@@ -389,13 +422,13 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('api/v1')->name('api.v1.')->group(function () {
-        // Custom Elements
+        // Custom Elements API
         Route::prefix('custom-elements')->name('custom-elements.')->group(function () {
-            Route::get('/', [CustomElementController::class, 'index'])->name('index');
-            Route::get('{type}', [CustomElementController::class, 'show'])->name('show');
-            Route::get('{type}/defaults', [CustomElementController::class, 'defaults'])->name('defaults');
-            Route::post('{type}/validate', [CustomElementController::class, 'validate'])->name('validate');
-            Route::post('refresh', [CustomElementController::class, 'refresh'])->name('refresh');
+            Route::get('/', [ApiCustomElementController::class, 'index'])->name('index');
+            Route::get('{type}', [ApiCustomElementController::class, 'show'])->name('show');
+            Route::get('{type}/defaults', [ApiCustomElementController::class, 'defaults'])->name('defaults');
+            Route::post('{type}/validate', [ApiCustomElementController::class, 'validate'])->name('validate');
+            Route::post('refresh', [ApiCustomElementController::class, 'refresh'])->name('refresh');
         });
 
         // Reference Picker (for internal references)
